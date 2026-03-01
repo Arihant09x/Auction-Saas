@@ -1,0 +1,275 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output = "../prisma/generated/"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      =   "postgresql://neondb_owner:npg_LB32OGWqDdFy@ep-rapid-haze-ahjafp6t.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+}
+
+model User {
+  id             String    @id @default(uuid())
+  firebaseUid    String    @unique // Link to Firebase Auth
+  name           String
+  email          String    @unique
+  role           Role      @default(USER) // Your Admin Role
+  password       String?
+  mobile         String?   @unique
+  city           String? 
+  profileUrl     String?
+  createdAt      DateTime  @default(now())
+  stripeCustomerId String? @unique
+  auctions       Auction[]
+  auditLogs     AuditLog[]
+  feedback Feedback?
+}
+// 2. Create Enum
+enum Role {
+  USER
+  ADMIN
+}
+
+// 2. The Pricing Plans (Based on Screenshot 17)
+enum PlanTier {
+  FREE        // Up to 2 Teams
+  BASIC       // 3000/- Up to 4 Teams
+  STANDARD    // 4000/- Up to 7 Teams
+  PREMIUM     // 5000/- Up to 12 Teams
+  ELITE       // 6000/- Up to 16 Teams
+  ULTIMATE    // 7000/- Up to 22 Teams
+}
+enum AuctionStatus {
+  DRAFT
+  UPCOMING
+  LIVE
+  COMPLETED
+  ARCHIVED
+}
+
+// 3. The Auction Event (The Core)
+model Auction {
+  id              String      @id @default(uuid())
+  organizerId     String
+  organizer       User        @relation(fields: [organizerId], references: [id])
+  
+  // Basic Info (Screenshot 8 & 14)
+  name            String
+  location        String?
+  logo            String?
+  sportsType      String      @default("Cricket")
+  season          String?
+  auctionDate     DateTime
+  auctionStartTime String?    // Stores display time 
+  
+  // Rules (Screenshot 14)
+  budgetPerTeam   Decimal     @default(10000000) // Points/Money
+  minBid          Decimal     @default(500)
+  bidIncrease     Decimal     @default(500)
+  minPlayersPerTeam Int       @default(11)
+  maxPlayersPerTeam Int       @default(15)
+
+  // 1. AUTO BOOSTER SETTINGS
+  isBoosterEnabled        Boolean @default(false)
+  boosterAmount           Int?     @default(0) // Amount to add (e.g., 10000)
+  boosterTriggerPlayerCount Int?   @default(0) // Trigger after X players (e.g., 9)
+
+  // 2. DYNAMIC BID INCREMENT RULES
+  // We will store this as JSON because rules can be complex (array of rules)
+  // Format: [ { "threshold": 2000, "increment": 2000 }, { "threshold": 10000, "increment": 5000 } ]
+  bidRules                Json?   @default("[]")
+  
+  // Payment & Premium Logic 
+  planTier        PlanTier    @default(FREE)
+  isPaid          Boolean     @default(false)
+  // RAZORPAY FIELDS
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?   // To verify authenticity
+  
+  // State
+  status          AuctionStatus @default(UPCOMING) // UPCOMING, LIVE, COMPLETED
+  
+  // Relations
+  teams           Team[]
+  players         Player[]
+  categories      Category[]
+  bidhistories    BidHistory[]
+  AuctionInsight  AuctionInsight?
+  
+  createdAt       DateTime    @default(now())
+  ArchivedAt      DateTime?
+  // Speed up: "Find all auctions by this organizer"
+  @@index([organizerId])
+  @@unique([razorpayPaymentId])
+  @@index([organizerId, status])
+  @@index([status])
+}
+
+
+// 4. Categories / Sets (Screenshot 4 & 10)
+model Category {
+  id              String    @id @default(uuid())
+  auctionId       String
+  auction         Auction   @relation(fields: [auctionId], references: [id])
+  
+  name            String    // e.g., "Batsman", "Grade A"
+  color           String?   // For UI display
+  
+  // Overrides (Screenshot 10)
+  baseBid         Decimal?  // Overrides auction default
+  minIncrement    Decimal?
+  maxPlayersPerTeam Int?    // Some categories might have limits
+  minPlayersPerTeam Int?
+  players         Player[]
+  @@index([auctionId])
+}
+
+// 5. Teams (Screenshot 6, 12, 16)
+model Team {
+  id              String    @id @default(uuid())
+  auctionId       String
+  auction         Auction   @relation(fields: [auctionId], references: [id])
+  
+  name            String
+  shortName       String    // e.g. "CSK"
+  shortcutKey     String?   // "A", "B", "C" for keyboard bidding
+  logo            String?
+  
+  // Economics
+  originalPurse   Decimal
+  purseSpent      Decimal   @default(0)
+  playersCount    Int       @default(0)
+  
+  players         Player[]  // Players bought by this team
+  bidHistories    BidHistory[]
+  // Speed up: "Find all teams in this auction"
+  @@index([auctionId])
+}
+
+enum PlayerRole {
+  // --- Cricket Specific (From your Image) ---
+  BATSMAN
+  BOWLER
+  WICKET_KEEPER
+  ALL_ROUNDER
+  BATTING_ALL_ROUNDER
+  BOWLING_ALL_ROUNDER
+  ALL_ROUNDER_WICKET_KEEPER
+  BATTER   // Included as per image, even if redundant with Batsman
+  
+  // --- Football Specific (Added for 30% support) ---
+  GOALKEEPER
+  DEFENDER
+  MIDFIELDER
+  FORWARD
+  
+  // --- Generic ---
+  OTHER
+}
+enum PlayerStatus {
+  UPCOMING
+  BIDDING   // Currently on screen  
+  SOLD
+  UNSOLD
+}
+// 6. Players (Screenshot 5 & 16)
+model Player {
+  id              String    @id @default(uuid())
+  auctionId       String
+  auction         Auction   @relation(fields: [auctionId], references: [id])
+  
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+  
+  // Personal Details (Screenshot 5)
+  name            String
+  mobile          String?
+  age             Int
+  fatherName      String?
+  profilePic      String?   // Cloudinary URL
+  
+  // Stats (Screenshot 5 - Playing Style)
+  role            PlayerRole @default(ALL_ROUNDER)
+  battingStyle    String?    // RHB/LHB
+  bowlingStyle    String?    // RAF/RAS/
+  
+  // Specs (Screenshot 5 - Jersey, etc)
+  tshirtSize      String?
+  trouserSize     String?
+  jerseyName      String?
+  jerseyNumber    Int?
+  
+  // Auction Status
+  status          PlayerStatus @default(UPCOMING) // UPCOMING, UNSOLD, SOLD
+  basePrice       Decimal?
+  
+  // Sold Details
+  teamId          String?
+  team            Team?     @relation(fields: [teamId], references: [id])
+  soldPrice       Decimal?
+  
+  bidHistory      BidHistory[]
+  // Speed up: "Show me all players in Auction X"
+  @@index([auctionId])
+  
+  // Speed up: "Show me all Batsmen"
+  @@index([role])
+  
+  // Speed up: "Show me players in Category Y"
+  @@index([categoryId])
+}
+
+// 7. Bid History (For Analytics & "Undo" feature)
+model BidHistory {
+  id              String    @id @default(uuid())
+  playerId        String
+  player          Player    @relation(fields: [playerId], references: [id])
+  // Relations
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id])
+  
+  teamId          String
+  team      Team    @relation(fields: [teamId], references: [id])
+  amount          Decimal
+  timestamp       DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   // e.g., "CREATE_AUCTION", "DELETE_PLAYER"
+  endpoint  String   // e.g., "/auction"
+  details   Json?    // Store the request body or specific IDs
+  ipAddress String?
+  createdAt DateTime @default(now())
+  
+  // Optional: Relation to User if you want foreign keys
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String   @unique // One feedback per user
+  user      User     @relation(fields: [userId], references: [id])
+  
+  rating    Int      // 1 to 5
+  message   String?
+  createdAt DateTime @default(now())
+}
+
+model AuctionInsight{
+  id              String    @id @default(uuid())
+  auctionId       String    @unique
+  auction         Auction   @relation(fields: [auctionId], references: [id])
+  
+  data            Json      // Store all insights as JSON (e.g., top teams, player demand, etc)
+  
+  createdAt       DateTime  @default(now())
+}

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Player Upload (Preview & Confirm)</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 30px;
+        max-width: 800px;
+        margin: auto;
+      }
+      .box {
+        border: 1px solid #ccc;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        background: #f9f9f9;
+      }
+      input,
+      button {
+        display: block;
+        width: 100%;
+        margin: 10px 0;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+      button {
+        cursor: pointer;
+        background: #007bff;
+        color: white;
+        border: none;
+        font-weight: bold;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      button.success {
+        background: #28a745;
+      }
+      .log {
+        background: #333;
+        color: #fff;
+        padding: 15px;
+        border-radius: 5px;
+        height: 200px;
+        overflow-y: scroll;
+        white-space: pre-wrap;
+        font-family: monospace;
+      }
+      .stats {
+        display: flex;
+        gap: 20px;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+      .error-row {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>📂 Bulk Player Upload Test</h2>
+
+    <div class="box">
+      <h3>1. Authentication</h3>
+      <input
+        type="text"
+        id="token"
+        placeholder="Paste Firebase Bearer Token here..."
+      />
+      <input
+        type="text"
+        id="auctionId"
+        placeholder="Paste Auction UUID here..."
+      />
+    </div>
+
+    <div class="box">
+      <h3>2. Upload File</h3>
+      <input
+        type="file"
+        id="fileInput"
+        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+      />
+      <button onclick="previewUpload()">🔍 Preview & Validate</button>
+    </div>
+
+    <div class="box" id="confirmBox" style="opacity: 0.5; pointer-events: none">
+      <h3>3. Confirmation</h3>
+      <div class="stats">
+        <span style="color: green">Valid: <span id="validCount">0</span></span>
+        <span style="color: red">Errors: <span id="errorCount">0</span></span>
+      </div>
+      <p id="statusMsg">Waiting for preview...</p>
+      <button
+        id="confirmBtn"
+        class="success"
+        onclick="confirmUpload()"
+        disabled
+      >
+        ✅ Confirm & Save to Database
+      </button>
+    </div>
+
+    <h3>Logs & Errors:</h3>
+    <div class="log" id="logs">Ready...</div>
+
+    <script>
+      let stagedPlayers = []; // We store the valid players here temporarily
+
+      function log(msg) {
+        const logDiv = document.getElementById("logs");
+        logDiv.innerText += "\n" + msg;
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      async function previewUpload() {
+        const token = document.getElementById("token").value;
+        const auctionId = document.getElementById("auctionId").value;
+        const fileInput = document.getElementById("fileInput");
+
+        if (!token || !auctionId || fileInput.files.length === 0) {
+          alert("Please fill Token, Auction ID and select a file.");
+          return;
+        }
+
+        log("⏳ Sending file for Preview...");
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+        formData.append("auctionId", auctionId);
+
+        try {
+          const response = await fetch(
+            "http://localhost:3000/player/upload/preview",
+            {
+              method: "POST",
+              headers: { Authorization: "Bearer " + token }, // No Content-Type for FormData!
+              body: formData,
+            }
+          );
+
+          const result = await response.json();
+
+          // Handle different response structures (Interceptor wrapper)
+          const data = result.data || result;
+
+          if (response.ok) {
+            log("✅ Preview Successful!");
+            log(
+              `Total: ${data.totalRows} | Valid: ${data.validCount} | Invalid: ${data.invalidCount}`
+            );
+
+            // Update UI
+            document.getElementById("validCount").innerText = data.validCount;
+            document.getElementById("errorCount").innerText = data.invalidCount;
+
+            // Store valid data for step 2
+            stagedPlayers = data.previewData;
+
+            // Show Errors in Log
+            if (data.errors && data.errors.length > 0) {
+              log("❌ ERRORS FOUND:");
+              data.errors.forEach((err) => {
+                log(
+                  `Row ${err.rowNumber} (${err.name}): ${err.errors.join(", ")}`
+                );
+              });
+              document.getElementById("statusMsg").innerText =
+                "⚠️ Fix errors in Excel and try again, or confirm only valid rows.";
+            } else {
+              document.getElementById("statusMsg").innerText =
+                "✨ File is perfect. Ready to upload.";
+            }
+
+            // Enable Confirm Section
+            const confirmBox = document.getElementById("confirmBox");
+            confirmBox.style.opacity = "1";
+            confirmBox.style.pointerEvents = "auto";
+
+            const confirmBtn = document.getElementById("confirmBtn");
+            // Logic: You can decide if you allow partial uploads or require 0 errors
+            // Here we allow uploading valid rows even if some are invalid
+            if (data.validCount > 0) {
+              confirmBtn.disabled = false;
+              confirmBtn.innerText = `✅ Confirm & Save (${data.validCount} Players)`;
+            } else {
+              confirmBtn.disabled = true;
+            }
+          } else {
+            log("❌ Error: " + (data.message || JSON.stringify(data)));
+          }
+        } catch (err) {
+          log("❌ Network Error: " + err.message);
+        }
+      }
+
+      async function confirmUpload() {
+        const token = document.getElementById("token").value;
+        const auctionId = document.getElementById("auctionId").value;
+
+        if (stagedPlayers.length === 0) {
+          alert("No valid players to upload.");
+          return;
+        }
+
+        log("⏳ Confirming Upload to Database...");
+
+        try {
+          const response = await fetch(
+            "http://localhost:3000/player/upload/confirm",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+              },
+              body: JSON.stringify({
+                auctionId: auctionId,
+                players: stagedPlayers, // Send the valid JSON array back
+              }),
+            }
+          );
+
+          const result = await response.json();
+          const data = result.data || result;
+
+          if (response.ok || data.success) {
+            log(
+              "🎉 SUCCESS! Saved " +
+                (data.count || data.affected || "all") +
+                " players to Database."
+            );
+            document.getElementById("confirmBtn").disabled = true;
+            document.getElementById("confirmBtn").innerText = "Upload Complete";
+            stagedPlayers = []; // Clear
+          } else {
+            log("❌ Save Failed: " + (data.message || JSON.stringify(data)));
+          }
+        } catch (err) {
+          log("❌ Network Error: " + err.message);
+        }
+      }
+    </script>
+  </body>
+</html>

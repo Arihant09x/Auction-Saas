@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Public Live Auction Display</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <style>
+      :root {
+        --bg: #0f111a;
+        --panel: #1a1d2d;
+        --accent: #00f2c3;
+        --gold: #ffc107;
+        --text: #ffffff;
+        --subtext: #8892b0;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* HEADER */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 30px;
+        background: var(--panel);
+        border-bottom: 2px solid #2a2d3d;
+      }
+      .banner {
+        font-size: 1.5em;
+        color: var(--accent);
+        font-weight: bold;
+      }
+      .timer-box {
+        font-size: 1.5em;
+        color: var(--gold);
+        font-weight: bold;
+        background: rgba(255, 193, 7, 0.1);
+        padding: 5px 15px;
+        border-radius: 8px;
+        border: 1px solid var(--gold);
+      }
+
+      /* MAIN CONTENT GRID */
+      .container {
+        display: flex;
+        flex: 1;
+        padding: 20px;
+        gap: 20px;
+        overflow: hidden;
+      }
+
+      /* LEFT: LIVE PLAYER STAGE */
+      .stage {
+        flex: 1.5;
+        background: var(--panel);
+        border-radius: 15px;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        border: 1px solid #2a2d3d;
+      }
+      .player-img {
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        border: 6px solid var(--accent);
+        object-fit: cover;
+        margin-bottom: 20px;
+        box-shadow: 0 0 30px rgba(0, 242, 195, 0.2);
+      }
+      .p-name {
+        font-size: 3.5em;
+        margin: 0;
+        text-transform: uppercase;
+        font-weight: 900;
+        text-align: center;
+        line-height: 1.1;
+      }
+      .p-role {
+        font-size: 1.5em;
+        color: var(--subtext);
+        margin: 10px 0;
+      }
+
+      .p-meta-grid {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+      }
+      .meta-tag {
+        background: #23273a;
+        padding: 8px 15px;
+        border-radius: 6px;
+        font-size: 0.9em;
+        color: #bbb;
+      }
+
+      .bid-box {
+        margin-top: 30px;
+        background: #23273a;
+        padding: 20px 40px;
+        border-radius: 15px;
+        text-align: center;
+        width: 80%;
+        border: 2px solid #333;
+      }
+      .price {
+        font-size: 4.5em;
+        font-weight: bold;
+        color: var(--accent);
+        margin: 10px 0;
+        line-height: 1;
+      }
+      .team {
+        font-size: 1.8em;
+        color: white;
+        text-transform: uppercase;
+      }
+
+      /* RIGHT: DASHBOARD TABLES */
+      .dashboard {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow: hidden;
+      }
+      .dash-panel {
+        flex: 1;
+        background: var(--panel);
+        border-radius: 15px;
+        padding: 15px;
+        overflow-y: auto;
+        border: 1px solid #2a2d3d;
+      }
+      .dash-panel h3 {
+        margin-top: 0;
+        color: var(--subtext);
+        border-bottom: 1px solid #333;
+        padding-bottom: 10px;
+      }
+
+      .dash-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9em;
+      }
+      .dash-table th {
+        text-align: left;
+        color: #888;
+        padding: 10px 5px;
+        border-bottom: 1px solid #333;
+      }
+      .dash-table td {
+        padding: 8px 5px;
+        border-bottom: 1px solid #222;
+      }
+
+      /* OVERLAY */
+      .status-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8em;
+        font-weight: 900;
+        color: #ff3737;
+        transform: scale(1.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.3s ease-out;
+        z-index: 10;
+        border-radius: 15px;
+      }
+      .status-overlay.visible {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      /* CONNECTION BOX */
+      .connect-box {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        opacity: 0.2;
+        transition: 0.3s;
+        background: #000;
+        padding: 10px;
+        border-radius: 8px;
+        z-index: 100;
+      }
+      .connect-box:hover {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div id="banner" class="banner">Waiting to Start...</div>
+      <div id="timer" class="timer-box">⏰ 00s</div>
+    </div>
+
+    <div class="container">
+      <div class="stage">
+        <div id="soldOverlay" class="status-overlay">SOLD</div>
+
+        <img
+          id="pImg"
+          class="player-img"
+          src="https://via.placeholder.com/250"
+          alt="Player"
+        />
+        <h1 id="pName" class="p-name">No Player</h1>
+        <div id="pRole" class="p-role">--</div>
+
+        <div class="p-meta-grid">
+          <span class="meta-tag" id="pCategory">Cat: --</span>
+          <span class="meta-tag" id="pBat">Bat: --</span>
+          <span class="meta-tag" id="pBowl">Bowl: --</span>
+        </div>
+
+        <div class="bid-box">
+          <div style="font-size: 1.1em; color: #888; text-transform: uppercase">
+            Current Bid
+          </div>
+          <div id="price" class="price">₹0</div>
+          <div id="team" class="team">--</div>
+          <div style="margin-top: 15px; color: var(--gold); font-size: 1.1em">
+            Next Valid Bid: <span id="nextBid">₹0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard">
+        <div style="display: flex; gap: 20px; flex: 1; overflow: hidden">
+          <div class="dash-panel">
+            <h3>🛡 Live Teams</h3>
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Team</th>
+                  <th>Spent</th>
+                  <th>Players</th>
+                </tr>
+              </thead>
+              <tbody id="tblTeams"></tbody>
+            </table>
+          </div>
+          <div class="dash-panel">
+            <h3>✅ Sold Players</h3>
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Sold To</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+              <tbody id="tblSold"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="dash-panel">
+          <h3>🟢 Upcoming / Unsold Players</h3>
+          <table class="dash-table">
+            <thead>
+              <tr>
+                <th>Player Name</th>
+                <th>Role</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tblUnsold"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="connect-box">
+      <input
+        type="text"
+        id="auctionId"
+        placeholder="Auction ID"
+        style="padding: 5px"
+      />
+      <button onclick="startView()" style="padding: 5px; cursor: pointer">
+        Launch View
+      </button>
+    </div>
+
+    <script>
+      let socket;
+      let timerInterval;
+      let dashboardSnapshot = null;
+      let teamsCache = []; // To store teams for fast lookup
+
+      function startView() {
+        const auctionId = document.getElementById("auctionId").value;
+
+        socket = io("http://localhost:3000/live-auction", {
+          query: { token: "VIEWER", auctionId },
+          reconnection: true,
+        });
+
+        socket.on("connect", () => {
+          console.log("Connected to auction:", auctionId);
+          setBanner("🟢 CONNECTED TO SERVER");
+        });
+
+        // --- DASHBOARD SNAPSHOT (FIXED) ---
+        socket.on("dashboard_snapshot", (data) => {
+          // FIX: Save data to variable first
+          dashboardSnapshot = data;
+          if (data.teams) teamsCache = data.teams;
+          renderDashboard();
+        });
+
+        // --- STATE UPDATE ---
+        socket.on("auction_state_update", (data) => {
+          if (data.status !== "BIDDING") {
+            setBanner("STATUS: " + data.status);
+          }
+          if (data.teams) {
+            teamsCache = data.teams;
+            // If we have a snapshot, update its teams and re-render
+            if (dashboardSnapshot) {
+              dashboardSnapshot.teams = data.teams;
+              renderDashboard();
+            }
+          }
+        });
+
+        // --- NEW PLAYER (FIXED) ---
+        socket.on("new_player_revealed", (data) => {
+          document.getElementById("soldOverlay").classList.remove("visible");
+
+          document.getElementById("pName").innerText = data.player.name;
+          document.getElementById("pRole").innerText = data.player.role || "--";
+
+          // FIX: Added HTML IDs and safe checks
+          document.getElementById("pCategory").innerText =
+            "Cat: " + (data.player.category?.name || "--");
+          document.getElementById("pBat").innerText =
+            "Bat: " + (data.player.battingStyle || "--");
+          document.getElementById("pBowl").innerText =
+            "Bowl: " + (data.player.bowlingStyle || "--");
+          document.getElementById("pImg").src =
+            data.player.profilePic || "https://via.placeholder.com/250";
+
+          document.getElementById("price").innerText = "₹" + data.currentBid;
+          document.getElementById("nextBid").innerText = "₹" + data.nextBid;
+          document.getElementById("team").innerText = "Waiting for Bids...";
+
+          // FIX: Changed data.timer to data.Timer based on your backend logs
+          if (data.Timer) {
+            startTimer(data.Timer);
+          }
+          setBanner("🔴 LIVE BIDDING");
+        });
+
+        // --- NEW BID ---
+        socket.on("new_bid_patch", (data) => {
+          document.getElementById("price").innerText = "₹" + data.amount;
+          document.getElementById("nextBid").innerText = "₹" + data.nextBid;
+
+          // Map Team ID to Team Name
+          const t = teamsCache.find((x) => x.id === data.teamId);
+          document.getElementById("team").innerText = t
+            ? t.name
+            : "Unknown Team";
+        });
+
+        // --- SOLD EVENT ---
+        socket.on("player_sold_confirmed", (data) => {
+          const overlay = document.getElementById("soldOverlay");
+          overlay.innerText = `SOLD TO\n${data.soldTo}`; // Added line break
+          overlay.style.color = "#00f2c3";
+          overlay.classList.add("visible");
+
+          stopTimer();
+          setBanner("🟢 PLAYER SOLD!");
+        });
+
+        // --- UNSOLD EVENT ---
+        socket.on("player_unsold_confirmed", () => {
+          const overlay = document.getElementById("soldOverlay");
+          overlay.innerText = `UNSOLD`;
+          overlay.style.color = "#ff3737";
+          overlay.classList.add("visible");
+
+          stopTimer();
+          setBanner("🔴 PLAYER UNSOLD");
+        });
+
+        // --- TIMER LOGIC (FIXED) ---
+        function startTimer(timerObj) {
+          stopTimer();
+          if (!timerObj || !timerObj.startTime || !timerObj.duration) return;
+
+          function tick() {
+            const elapsed = Date.now() - timerObj.startTime;
+            const remaining = timerObj.duration - elapsed;
+
+            if (remaining <= 0) {
+              stopTimer();
+              document.getElementById("timer").innerText = "🕛 TIME'S UP!"; // FIX: Changed innerTextq
+              return;
+            }
+            document.getElementById("timer").innerText =
+              `⏰ ${Math.ceil(remaining / 1000)}s`; // FIX: Changed innerTextq
+          }
+
+          tick();
+          timerInterval = setInterval(tick, 1000);
+        }
+
+        function stopTimer() {
+          if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+        }
+
+        function setBanner(text) {
+          document.getElementById("banner").innerText = text;
+        }
+
+        // --- RENDER DASHBOARD TABLES ---
+        function renderDashboard() {
+          if (!dashboardSnapshot) return;
+          const data = dashboardSnapshot;
+
+          // 1. Unsold / Upcoming
+          const tblUnsold = document.getElementById("tblUnsold");
+          tblUnsold.innerHTML = "";
+          const upcoming = data.players?.upcoming || [];
+          const unsold = data.players?.unsold || [];
+
+          [...upcoming, ...unsold].forEach((p) => {
+            tblUnsold.innerHTML += `<tr>
+                <td style="display:flex; align-items:center; gap:10px;">
+                    <img src="${p.profilePic || "https://via.placeholder.com/30"}" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" />
+                    ${p.name}
+                </td>
+                <td>${p.role}</td>
+                <td style="color:${p.status === "UNSOLD" ? "#ff3737" : "#00f2c3"}">${p.status || "UPCOMING"}</td>
+            </tr>`;
+          });
+
+          // 2. Sold
+          const tblSold = document.getElementById("tblSold");
+          tblSold.innerHTML = "";
+          if (data.players?.sold) {
+            data.players.sold.forEach((p) => {
+              tblSold.innerHTML += `<tr>
+                  <td>${p.name}</td>
+                  <td style="color:var(--accent); font-weight:bold;">${p.teamName || "Unknown"}</td>
+                  <td>₹${p.soldPrice}</td>
+              </tr>`;
+            });
+          }
+
+          // 3. Teams
+          const tblTeams = document.getElementById("tblTeams");
+          tblTeams.innerHTML = "";
+          if (data.teams) {
+            data.teams.forEach((t) => {
+              tblTeams.innerHTML += `<tr>
+                  <td style="font-weight:bold;">${t.name}</td>
+                  <td style="color:var(--gold);">₹${t.purseSpent || 0}</td>
+                  <td>${t.playersCount || 0}</td>
+              </tr>`;
+            });
+          }
+        }
+      }
+    </script>
+  </body>
+</html>

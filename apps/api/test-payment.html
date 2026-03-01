@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Test Razorpay Payment</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 40px;
+      }
+      input,
+      select,
+      button {
+        display: block;
+        margin: 10px 0;
+        padding: 10px;
+        width: 300px;
+      }
+      .log {
+        background: #f0f0f0;
+        padding: 10px;
+        border: 1px solid #ccc;
+        margin-top: 20px;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>🚀 Buy Auction Plan (Test Mode)</h2>
+
+    <label>1. Paste your Firebase Bearer Token:</label>
+    <input type="text" id="token" placeholder="eyJhbGciOiJSUzI1NiIs..." />
+
+    <label>2. Paste Auction ID (UUID):</label>
+    <input
+      type="text"
+      id="auctionId"
+      placeholder="e.g. 550e8400-e29b-41d4..."
+    />
+
+    <label>3. Select Plan:</label>
+    <select id="planTier">
+      <option value="BASIC">BASIC (3000 INR)</option>
+      <option value="STANDARD">STANDARD (4000 INR)</option>
+      <option value="PREMIUM">PREMIUM (5000 INR)</option>
+      <option value="ELITE">ELITE (6000 INR)</option>
+      <option value="ULTIMATE">ULTIMATE (7000 INR)</option>
+    </select>
+
+    <button onclick="startPayment()">💸 Buy Now</button>
+
+    <h3>Logs:</h3>
+    <div id="logs" class="log">Ready...</div>
+
+    <script>
+      function log(msg) {
+        document.getElementById("logs").innerText += "\n" + msg;
+        console.log(msg);
+      }
+
+      async function startPayment() {
+        const token = document.getElementById("token").value;
+        const auctionId = document.getElementById("auctionId").value;
+        const planTier = document.getElementById("planTier").value;
+
+        if (!token || !auctionId) {
+          alert("Please enter Token and Auction ID");
+          return;
+        }
+
+        log("🔄 Creating Order on Backend...");
+
+        // 1. Call Backend to Create Order
+        try {
+          const response = await fetch(
+            "http://localhost:3000/payment/create-order",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token,
+              },
+              body: JSON.stringify({ auctionId, planTier }),
+            }
+          );
+
+          const result = await response.json();
+
+          if (!result.success && !result.orderId) {
+            // Handle case where interceptor format might differ or error occurred
+            if (result.statusCode) {
+              log("❌ Error: " + result.message);
+              return;
+            }
+            // Adapt to your response structure if needed (e.g. result.data.orderId)
+          }
+
+          // Extract data based on your Interceptor structure
+          // Usually it's inside result.data if you use the TransformInterceptor
+          const data = result.data || result;
+
+          log("✅ Order Created! Order ID: " + data.orderId);
+
+          // 2. Open Razorpay Options
+          var options = {
+            key: data.key_id, // Key ID from Backend
+            amount: data.amount,
+            currency: data.currency,
+            name: "Cricket Auction SaaS",
+            description: "Upgrade to " + planTier,
+            order_id: data.orderId,
+            handler: function (response) {
+              log(
+                "💳 Payment Successful on Razorpay! Verifying with Backend..."
+              );
+              verifyPayment(token, response, auctionId, planTier);
+            },
+            prefill: {
+              name: "Test User",
+              email: "test@example.com",
+              contact: "9999999999",
+            },
+            theme: {
+              color: "#3399cc",
+            },
+          };
+
+          var rzp1 = new Razorpay(options);
+
+          rzp1.on("payment.failed", function (response) {
+            log("❌ Payment Failed: " + response.error.description);
+          });
+
+          rzp1.open();
+        } catch (err) {
+          log("❌ Error creating order: " + err.message);
+        }
+      }
+
+      async function verifyPayment(token, paymentData, auctionId, planTier) {
+        try {
+          const response = await fetch("http://localhost:3000/payment/verify", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + token,
+            },
+            body: JSON.stringify({
+              razorpayOrderId: paymentData.razorpay_order_id,
+              razorpayPaymentId: paymentData.razorpay_payment_id,
+              razorpaySignature: paymentData.razorpay_signature,
+              auctionId: auctionId,
+              planTier: planTier,
+            }),
+          });
+
+          const result = await response.json();
+          log("🎉 Backend Verification: " + JSON.stringify(result));
+
+          if (result.success || result.data?.success) {
+            alert("Payment Verified! Auction Upgraded.");
+          } else {
+            alert("Verification Failed.");
+          }
+        } catch (err) {
+          log("❌ Verification Error: " + err.message);
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Get My Token</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+</head>
+
+<body style="font-family: sans-serif; padding: 50px">
+  <h2>1. Login to generate Token</h2>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="register()">Register (New User)</button>
+  <button onclick="login()">Login (Existing)</button>
+  <button onclick="googleLogin()">Login with Google</button>
+
+  <h3>2. Copy this Token for Postman:</h3>
+  <textarea id="tokenArea" rows="10" cols="80" placeholder="Token will appear here..."></textarea>
+
+  <script>
+    // REPLACE THIS WITH YOUR FIREBASE CONFIG
+    const firebaseConfig = {
+
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    function showToken(user) {
+      user.getIdToken().then(function (token) {
+        document.getElementById("tokenArea").value = token;
+        console.log("Token:", token);
+      });
+    }
+
+    function register() {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      firebase
+        .auth()
+        .createUserWithEmailAndPassword(email, pass)
+        .then((userCred) => showToken(userCred.user))
+        .catch((error) => alert(error.message));
+    }
+
+    function login() {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      firebase
+        .auth()
+        .signInWithEmailAndPassword(email, pass)
+        .then((userCred) => showToken(userCred.user))
+        .catch((error) => alert(error.message));
+    }
+
+    function googleLogin() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebase
+        .auth()
+        .signInWithPopup(provider)
+        .then((result) => showToken(result.user))
+        .catch((error) => alert(error.message));
+    }
+  </script>
+</body>
+
+</html>
