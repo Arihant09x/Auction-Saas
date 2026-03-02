@@ -3,7 +3,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // --- DASHBOARD ---
   async getStats() {
@@ -117,5 +117,82 @@ export class AdminService {
 
   async deletePlayer(id: string) {
     return this.prisma.prisma.player.delete({ where: { id } });
+  }
+
+  // --- LIVE AUCTIONS ---
+  async getLiveAuctions() {
+    return this.prisma.prisma.auction.findMany({
+      where: { status: 'LIVE' },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        organizer: { select: { name: true, email: true } },
+        _count: { select: { teams: true, players: true } },
+      },
+    });
+  }
+
+  // --- GLOBAL ANALYTICS ---
+  async getAnalytics() {
+    const [
+      totalUsers,
+      totalAuctions,
+      totalRevenue,
+      auctionsByStatus,
+      planDistribution,
+      recentPayments,
+    ] = await Promise.all([
+      // 1. User count
+      this.prisma.prisma.user.count(),
+
+      // 2. Total auctions
+      this.prisma.prisma.auction.count(),
+
+      // 3. Paid auction count (proxy for revenue pipeline)
+      this.prisma.prisma.auction.count({ where: { isPaid: true } }),
+
+      // 4. Auctions grouped by status
+      this.prisma.prisma.auction.groupBy({
+        by: ['status'],
+        _count: { status: true },
+      }),
+
+      // 5. Plan tier distribution
+      this.prisma.prisma.auction.groupBy({
+        by: ['planTier'],
+        _count: { planTier: true },
+      }),
+
+      // 6. Last 10 paid auctions (revenue stream)
+      this.prisma.prisma.auction.findMany({
+        where: { isPaid: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          name: true,
+          planTier: true,
+          razorpayPaymentId: true,
+          createdAt: true,
+          organizer: { select: { name: true, email: true } },
+        },
+      }),
+    ]);
+
+    return {
+      summary: {
+        totalUsers,
+        totalAuctions,
+        totalPaidAuctions: totalRevenue,
+      },
+      auctionsByStatus: auctionsByStatus.map((a) => ({
+        status: a.status,
+        count: a._count.status,
+      })),
+      planDistribution: planDistribution.map((p) => ({
+        plan: p.planTier,
+        count: p._count.planTier,
+      })),
+      recentPayments,
+    };
   }
 }

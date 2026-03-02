@@ -18,11 +18,11 @@ import { AuthGuard } from "@nestjs/passport";
 @Controller("team")
 @UseGuards(AuthGuard("firebase-jwt"))
 export class TeamController {
-  constructor(private readonly teamService: TeamService) {}
+  constructor(private readonly teamService: TeamService) { }
 
   @Post()
   create(@Request() req: any, @Body() createTeamDto: CreateTeamDto) {
-    return this.teamService.create(req.user.id, createTeamDto);
+    return this.teamService.create(req.user.id, req.user.role, createTeamDto);
   }
 
   // GET /team?auctionId=id
@@ -38,7 +38,7 @@ export class TeamController {
     @Request() req: any,
     @Body() updateTeamDto: UpdateTeamDto
   ) {
-    return this.teamService.update(id, req.user.id, updateTeamDto);
+    return this.teamService.update(id, req.user.id, req.user.role, updateTeamDto);
   }
 
   @Post("import")
@@ -48,6 +48,7 @@ export class TeamController {
   ) {
     return this.teamService.importTeams(
       req.user.id,
+      req.user.role,
       body.currentAuctionId,
       body.sourceAuctionId
     );
@@ -55,6 +56,6 @@ export class TeamController {
 
   @Delete(":id")
   remove(@Param("id") id: string, @Request() req: any) {
-    return this.teamService.remove(id, req.user.id);
+    return this.teamService.remove(id, req.user.id, req.user.role);
   }
 }

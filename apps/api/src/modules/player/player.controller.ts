@@ -26,11 +26,11 @@ import { FileInterceptor } from "@nestjs/platform-express";
 @Controller("player")
 @UseGuards(AuthGuard("firebase-jwt"))
 export class PlayerController {
-  constructor(private readonly playerService: PlayerService) {}
+  constructor(private readonly playerService: PlayerService) { }
 
   @Post()
   create(@Request() req: any, @Body() createPlayerDto: CreatePlayerDto) {
-    return this.playerService.create(req.user.id, createPlayerDto);
+    return this.playerService.create(req.user.id, req.user.role, createPlayerDto);
   }
 
   @Post("upload/preview")
@@ -49,7 +49,7 @@ export class PlayerController {
     file: Express.Multer.File
   ) {
     // Calls the PREVIEW logic in service
-    return this.playerService.previewBulkUpload(req.user.id, auctionId, file);
+    return this.playerService.previewBulkUpload(req.user.id, req.user.role, auctionId, file);
   }
 
   // =========================================================
@@ -63,6 +63,7 @@ export class PlayerController {
     // Calls the CONFIRM logic in service
     return this.playerService.confirmBulkUpload(
       req.user.id,
+      req.user.role,
       body.auctionId,
       body.players
     );
@@ -87,7 +88,7 @@ export class PlayerController {
     )
     file: Express.Multer.File
   ) {
-    return this.playerService.bulkUpload(req.user.id, auctionId, file);
+    return this.playerService.bulkUpload(req.user.id, req.user.role, auctionId, file);
   }
 
   @Get()
@@ -108,12 +109,12 @@ export class PlayerController {
     @Body() updatePlayerDto: UpdatePlayerDto,
     @Request() req: any
   ) {
-    // Pass user ID to ensure they own the auction they are editing!
-    return this.playerService.update(id, req.user.id, updatePlayerDto);
+    // Pass user ID and role — ADMIN or owner can edit
+    return this.playerService.update(id, req.user.id, req.user.role, updatePlayerDto);
   }
 
   @Delete(":id")
   remove(@Param("id") id: string, @Request() req: any) {
-    return this.playerService.remove(id, req.user.id);
+    return this.playerService.remove(id, req.user.id, req.user.role);
   }
 }

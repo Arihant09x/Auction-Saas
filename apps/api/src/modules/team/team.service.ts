@@ -7,10 +7,11 @@ import {
 import { CreateTeamDto } from "./dto/create-team.dto";
 import { UpdateTeamDto } from "./dto/update-team.dto";
 import { PrismaService } from "../../prisma/prisma.service";
+import { isAdminOrOwner } from "../../common/helpers/ownership.helper";
 
 @Injectable()
 export class TeamService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // --- HELPERS to define limits ---
   private getTeamLimit(tier: string): number {
@@ -33,15 +34,15 @@ export class TeamService {
   }
 
   // 1. CREATE TEAM
-  async create(userId: string, dto: CreateTeamDto) {
+  async create(userId: string, userRole: string, dto: CreateTeamDto) {
     // A. Verify Auction Exists & Belongs to User
     const auction = await this.prisma.prisma.auction.findUnique({
       where: { id: dto.auctionId },
-      include: { teams: true }, // Load existing teams to count them
+      include: { teams: true },
     });
 
     if (!auction) throw new NotFoundException("Auction not found");
-    if (auction.organizerId !== userId) {
+    if (!isAdminOrOwner(auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You do not own this auction");
     }
 
@@ -79,7 +80,7 @@ export class TeamService {
   }
 
   // 3. UPDATE TEAM
-  async update(id: string, userId: string, dto: UpdateTeamDto) {
+  async update(id: string, userId: string, userRole: string, dto: UpdateTeamDto) {
     // Check ownership first
     const team = await this.prisma.prisma.team.findUnique({
       where: { id },
@@ -87,7 +88,7 @@ export class TeamService {
     });
 
     if (!team) throw new NotFoundException("Team not found");
-    if (team.auction.organizerId !== userId) {
+    if (!isAdminOrOwner(team.auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You do not own this team");
     }
 
@@ -104,6 +105,7 @@ export class TeamService {
 
   async importTeams(
     userId: string,
+    userRole: string,
     currentAuctionId: string,
     sourceAuctionId: string
   ) {
@@ -118,10 +120,10 @@ export class TeamService {
     if (!currentAuction || !sourceAuction)
       throw new NotFoundException("Auction not found");
 
-    // Security: Ensure User owns BOTH auctions
+    // ADMIN can import from any auction; regular user must own both
     if (
-      currentAuction.organizerId !== userId ||
-      sourceAuction.organizerId !== userId
+      !isAdminOrOwner(currentAuction.organizerId, userId, userRole) ||
+      !isAdminOrOwner(sourceAuction.organizerId, userId, userRole)
     ) {
       throw new ForbiddenException(
         "You can only import teams from your own auctions"
@@ -158,14 +160,14 @@ export class TeamService {
   }
 
   // 4. DELETE TEAM
-  async remove(id: string, userId: string) {
+  async remove(id: string, userId: string, userRole: string) {
     const team = await this.prisma.prisma.team.findUnique({
       where: { id },
       include: { auction: true },
     });
 
     if (!team) throw new NotFoundException("Team not found");
-    if (team.auction.organizerId !== userId) {
+    if (!isAdminOrOwner(team.auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You do not own this team");
     }
 

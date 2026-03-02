@@ -13,7 +13,7 @@ export class LiveAuctionService {
   constructor(
     private prisma: PrismaService,
     private redisService: LiveAuctionRedisService,
-  ) {}
+  ) { }
 
   // ============================================
   // 🔐 SECURITY: Verify Token & Get User
@@ -647,6 +647,7 @@ export class LiveAuctionService {
   async endAuction(
     auctionId: string,
     userId: string, // pass from Gateway (organizer socket)
+    userRole: string, // pass from Gateway to allow ADMIN bypass
     force: boolean = false,
   ) {
     // ==============================
@@ -665,8 +666,9 @@ export class LiveAuctionService {
       throw new NotFoundException("Auction not found");
     }
 
-    if (auction.organizerId !== userId) {
-      throw new UnauthorizedException("Only organizer can end auction");
+    // ADMIN can end any auction; organizer can only end their own
+    if (auction.organizerId !== userId && userRole !== 'ADMIN') {
+      throw new UnauthorizedException("Only organizer or ADMIN can end auction");
     }
 
     if (auction.status === "COMPLETED") {
@@ -839,10 +841,10 @@ export class LiveAuctionService {
     auctionId: string,
     patch: {
       type:
-        | "PLAYER_SOLD"
-        | "PLAYER_UNSOLD"
-        | "PLAYER_REAUCTION"
-        | "TEAM_UPDATE";
+      | "PLAYER_SOLD"
+      | "PLAYER_UNSOLD"
+      | "PLAYER_REAUCTION"
+      | "TEAM_UPDATE";
       payload: any;
     },
   ) {
@@ -927,10 +929,10 @@ export class LiveAuctionService {
         snap.teams = snap.teams.map((t: any) =>
           t.id === patch.payload.id
             ? {
-                ...t,
-                playersCount: patch.payload.playersCount ?? t.playersCount,
-                purse: patch.payload.purse ?? t.purse,
-              }
+              ...t,
+              playersCount: patch.payload.playersCount ?? t.playersCount,
+              purse: patch.payload.purse ?? t.purse,
+            }
             : t,
         );
         break;

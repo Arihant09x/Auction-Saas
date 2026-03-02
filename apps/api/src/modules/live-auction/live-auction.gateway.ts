@@ -18,8 +18,7 @@ import { LiveAuctionRedisService } from "./live-auction.redis.service";
 
 @WebSocketGateway({ cors: { origin: "*" }, namespace: "/live-auction" }) // Allow all origins for dev
 export class LiveAuctionGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -27,7 +26,7 @@ export class LiveAuctionGateway
     private readonly liveAuctionService: LiveAuctionService,
     private readonly redisService: LiveAuctionRedisService,
     private readonly prisma: PrismaService, // Inject Prisma for ownership check
-  ) {}
+  ) { }
   private async requireOrganizer(client: Socket, auctionId: string) {
     if (!client.data?.user) {
       throw new Error("Not authenticated");
@@ -35,6 +34,11 @@ export class LiveAuctionGateway
 
     if (client.data.auctionId !== auctionId) {
       throw new Error("Socket not joined to this auction");
+    }
+
+    // ADMIN is read-only: they can observe but cannot perform mutations
+    if (client.data.user.role === 'ADMIN') {
+      throw new Error("ADMIN_READ_ONLY: Admin can monitor live auctions but cannot perform organizer actions");
     }
 
     const auction = await this.prisma.prisma.auction.findUnique({
@@ -190,7 +194,12 @@ export class LiveAuctionGateway
     @ConnectedSocket() client: Socket,
   ) {
     // This DOES NOT write to Postgres. It just pauses bidding.
-    //  if(!client.data.user?.role==="ADMIN") return; // Uncomment in prod
+    try {
+      await this.requireOrganizer(client, data.auctionId);
+    } catch (e: any) {
+      client.emit("error", e.message);
+      return;
+    }
     await this.redisService.setAuctionStatus(data.auctionId, "SOLD_PENDING");
 
     this.server.to(`auction:${data.auctionId}`).emit("player_sold_pending", {
@@ -242,7 +251,12 @@ export class LiveAuctionGateway
     @ConnectedSocket() client: Socket,
   ) {
     // Revert status to BIDDING. Keep the last bid intact.
-    // if(!client.data.user?.role==="ADMIN") return; // Uncomment in prod
+    try {
+      await this.requireOrganizer(client, data.auctionId);
+    } catch (e: any) {
+      client.emit("error", e.message);
+      return;
+    }
     await this.redisService.setAuctionStatus(data.auctionId, "BIDDING");
 
     this.server.to(`auction:${data.auctionId}`).emit("bidding_resumed", {
@@ -378,7 +392,8 @@ export class LiveAuctionGateway
       if (state.status === "COMPLETED") {
         const result = await this.liveAuctionService.endAuction(
           auctionId,
-          client.data.user.id,
+          client.data.user?.id || 'system',
+          client.data.user?.role || 'USER',
           true,
         );
         this.server.to(`auction:${auctionId}`).emit("auction_ended", result);
@@ -606,6 +621,7 @@ export class LiveAuctionGateway
     const result = await this.liveAuctionService.endAuction(
       payload.auctionId,
       user.id,
+      user.role,
       payload.force || false,
     );
 

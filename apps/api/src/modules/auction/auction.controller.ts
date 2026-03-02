@@ -17,7 +17,7 @@ import { UpdateAuctionDto } from "./dto/update-auction.dto";
 @Controller("auction")
 @UseGuards(AuthGuard("firebase-jwt")) // 🔒 Secure all routes
 export class AuctionController {
-  constructor(private readonly auctionService: AuctionService) {}
+  constructor(private readonly auctionService: AuctionService) { }
 
   @Post()
   create(@Request() req: any, @Body() createAuctionDto: CreateAuctionDto) {
@@ -27,7 +27,7 @@ export class AuctionController {
 
   @Get()
   findAll(@Request() req: any) {
-    return this.auctionService.findAllByUser(req.user.id);
+    return this.auctionService.findAllByUser(req.user.id, req.user.role);
   }
 
   @Get(":id")
@@ -36,8 +36,9 @@ export class AuctionController {
   }
 
   @Delete(":id")
-  remove(@Param("id") id: string) {
-    return this.auctionService.remove(id);
+  remove(@Param("id") id: string, @Request() req: any) {
+    // Owner or ADMIN can delete
+    return this.auctionService.remove(id, req.user.id, req.user.role);
   }
 
   @Patch(":id")
@@ -46,7 +47,7 @@ export class AuctionController {
     @Body() updateAuctionDto: UpdateAuctionDto,
     @Request() req: any
   ) {
-    // Pass user ID to ensure they own the auction they are editing!
-    return this.auctionService.update(id, req.user.id, updateAuctionDto);
+    // Pass user ID and role — ADMIN or owner can edit
+    return this.auctionService.update(id, req.user.id, req.user.role, updateAuctionDto);
   }
 }

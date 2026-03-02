@@ -9,6 +9,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { UpdatePlayerDto } from "./dto/update-player.dto";
 import * as XLSX from "xlsx";
 import { Multer } from "multer";
+import { isAdminOrOwner } from "../../common/helpers/ownership.helper";
 
 import {
   PLAN_LIMITS,
@@ -21,16 +22,16 @@ import {
 } from "../../../../../packages/database/dist/generated/index";
 @Injectable()
 export class PlayerService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
-  async create(userId: string, dto: CreatePlayerDto) {
+  async create(userId: string, userRole: string, dto: CreatePlayerDto) {
     // 1. Verify Auction Ownership
     const auction = await this.prisma.prisma.auction.findUnique({
       where: { id: dto.auctionId },
     });
 
     if (!auction) throw new NotFoundException("Auction not found");
-    if (auction.organizerId !== userId) {
+    if (!isAdminOrOwner(auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You do not own this auction");
     }
 
@@ -89,6 +90,7 @@ export class PlayerService {
   }
   async previewBulkUpload(
     userId: string,
+    userRole: string,
     auctionId: string,
     file: Express.Multer.File
   ) {
@@ -96,7 +98,7 @@ export class PlayerService {
     const auction = await this.prisma.prisma.auction.findUnique({
       where: { id: auctionId },
     });
-    if (!auction || auction.organizerId !== userId)
+    if (!auction || !isAdminOrOwner(auction.organizerId, userId, userRole))
       throw new ForbiddenException("Invalid Auction");
 
     // B. Parse File (Supports CSV & Excel)
@@ -163,7 +165,7 @@ export class PlayerService {
     if (existingPlayers.length + rawData.length > planLimit) {
       throw new BadRequestException(
         `Plan Limit Exceeded! Your ${auction.planTier} plan allows only ${planLimit} players. ` +
-          `You already have ${existingPlayers.length} players. Cannot add ${rawData.length} more players.`
+        `You already have ${existingPlayers.length} players. Cannot add ${rawData.length} more players.`
       );
     }
 
@@ -277,6 +279,7 @@ export class PlayerService {
   // ==========================================================
   async confirmBulkUpload(
     userId: string,
+    userRole: string,
     auctionId: string,
     playersData: any[]
   ) {
@@ -284,7 +287,7 @@ export class PlayerService {
     const auction = await this.prisma.prisma.auction.findUnique({
       where: { id: auctionId },
     });
-    if (!auction || auction.organizerId !== userId)
+    if (!auction || !isAdminOrOwner(auction.organizerId, userId, userRole))
       throw new ForbiddenException("Invalid Auction");
 
     // Transactional Insert (Rollback if any fail)
@@ -360,6 +363,7 @@ export class PlayerService {
   }
   async bulkUpload(
     userId: string,
+    userRole: string,
     auctionId: string,
     file: Express.Multer.File
   ) {
@@ -367,7 +371,7 @@ export class PlayerService {
     const auction = await this.prisma.prisma.auction.findUnique({
       where: { id: auctionId },
     });
-    if (!auction || auction.organizerId !== userId)
+    if (!auction || !isAdminOrOwner(auction.organizerId, userId, userRole))
       throw new ForbiddenException("Invalid Auction");
 
     // 2. GET EXISTING CATEGORIES (The "Smart" Step)
@@ -502,7 +506,7 @@ export class PlayerService {
       },
     };
   }
-  async update(id: string, userId: string, dto: UpdatePlayerDto) {
+  async update(id: string, userId: string, userRole: string, dto: UpdatePlayerDto) {
     // 1. Fetch player with auction
     const player = await this.prisma.prisma.player.findUnique({
       where: { id },
@@ -510,7 +514,7 @@ export class PlayerService {
     });
 
     if (!player) throw new NotFoundException("Player not found");
-    if (player.auction.organizerId !== userId) {
+    if (!isAdminOrOwner(player.auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You do not own this auction");
     }
 
@@ -542,12 +546,12 @@ export class PlayerService {
     });
   }
 
-  async remove(id: string, userId: string) {
+  async remove(id: string, userId: string, userRole: string) {
     const player = await this.prisma.prisma.player.findUnique({
       where: { id },
       include: { auction: true },
     });
-    if (!player || player.auction.organizerId !== userId) {
+    if (!player || !isAdminOrOwner(player.auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("Cannot delete this player");
     }
     return this.prisma.prisma.player.delete({ where: { id } });

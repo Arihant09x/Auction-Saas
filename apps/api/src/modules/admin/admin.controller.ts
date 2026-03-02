@@ -16,12 +16,24 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 @Controller("admin")
 @UseGuards(AuthGuard("firebase-jwt"), RolesGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(private readonly adminService: AdminService) { }
 
   // --- DASHBOARD ---
   @Get("stats")
   getStats() {
     return this.adminService.getStats();
+  }
+
+  // --- GLOBAL ANALYTICS ---
+  @Get("analytics")
+  getAnalytics() {
+    return this.adminService.getAnalytics();
+  }
+
+  // --- LIVE AUCTION MONITOR ---
+  @Get("live-auctions")
+  getLiveAuctions() {
+    return this.adminService.getLiveAuctions();
   }
 
   // --- 1. USERS MANAGEMENT ---

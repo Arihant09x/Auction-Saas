@@ -4,6 +4,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { UpdateAuctionDto } from "./dto/update-auction.dto";
 import { ForbiddenException } from "@nestjs/common";
 import { ACTIVE_AUCTION_LIMITS } from "../../common/constants/plan-limits";
+import { isAdminOrOwner } from "../../common/helpers/ownership.helper";
 import {
   AuctionStatus,
   PlanTier,
@@ -11,7 +12,7 @@ import {
 
 @Injectable()
 export class AuctionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // 1. Create Auction
   async create(userId: string, dto: CreateAuctionDto) {
@@ -103,14 +104,16 @@ export class AuctionService {
     });
   }
 
-  async update(id: string, userId: string, updateAuctionDto: UpdateAuctionDto) {
-    // 1. Check if auction exists AND belongs to this user
+  async update(id: string, userId: string, userRole: string, updateAuctionDto: UpdateAuctionDto) {
+    // 1. Check if auction exists
     const auction = await this.prisma.prisma.auction.findUnique({
       where: { id },
     });
 
     if (!auction) throw new NotFoundException("Auction not found");
-    if (auction.organizerId !== userId) {
+
+    // 2. ADMIN or owner can update
+    if (!isAdminOrOwner(auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You can only edit your own auctions");
     }
 
@@ -131,12 +134,12 @@ export class AuctionService {
     });
   }
 
-  // 2. Get All Auctions for User
-  async findAllByUser(userId: string) {
-    // 1. Fetch all auctions
+  // 2. Get All Auctions for User (Admin gets ALL, organizer gets own)
+  async findAllByUser(userId: string, userRole: string) {
+    // ADMIN sees all auctions in the entire system
+    const where = userRole === 'ADMIN' ? {} : { organizerId: userId };
     const auctions = await this.prisma.prisma.auction.findMany({
-      where: { organizerId: userId },
-      orderBy: { createdAt: "desc" },
+      where,
       include: {
         _count: { select: { teams: true, players: true } },
       },
@@ -177,10 +180,12 @@ export class AuctionService {
     return auction;
   }
 
-  // 4. Delete Auction
-  async remove(id: string) {
-    // Check if exists first
-    await this.findOne(id);
+  // 4. Delete Auction — ADMIN or owner only
+  async remove(id: string, userId: string, userRole: string) {
+    const auction = await this.findOne(id);
+    if (!isAdminOrOwner(auction.organizerId, userId, userRole)) {
+      throw new ForbiddenException("You can only delete your own auctions");
+    }
     return this.prisma.prisma.auction.delete({ where: { id } });
   }
 }
