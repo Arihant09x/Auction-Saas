@@ -51,8 +51,14 @@ jobs:
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
           build-args: |
-            NEXT_PUBLIC_API_URL=https://api.dummy-domain.com
-            NEXT_PUBLIC_WS_URL=https://api.dummy-domain.com
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_WS_URL=${{ secrets.NEXT_PUBLIC_WS_URL }}
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
 
       # ─── NestJS API Image Build ──────────────────────────────────────────
       - name: Extract metadata for API image
@@ -72,3 +78,50 @@ jobs:
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
+          build-args: |
+            PORT=${{ secrets.PORT }}
+            NODE_ENV=${{ secrets.NODE_ENV }}
+            ADMIN_SECRET=${{ secrets.ADMIN_SECRET }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            REDIS_DB=${{ secrets.REDIS_DB }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+            FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}
+            FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}
+            RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}
+            RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}
+            GNEWS_API_KEY=${{ secrets.GNEWS_API_KEY }}
+            NEWS_API_KEY=${{ secrets.NEWS_API_KEY }}
+            SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            NEW_RELIC_LICENSE_KEY=${{ secrets.NEW_RELIC_LICENSE_KEY }}
+            NEW_RELIC_APP_NAME=${{ secrets.NEW_RELIC_APP_NAME }}
+            APP_VERSION=${{ secrets.APP_VERSION }}
+
+      # ─── Dashboard Image Build ──────────────────────────────────────────
+      - name: Extract metadata for Dashboard image
+        id: meta-dashboard
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_DASHBOARD }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and push Dashboard Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/dashboard/Dockerfile
+          push: true
+          tags: ${{ steps.meta-dashboard.outputs.tags }}
+          labels: ${{ steps.meta-dashboard.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_WS_URL=${{ secrets.NEXT_PUBLIC_WS_URL }}
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
