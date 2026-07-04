@@ -12,6 +12,7 @@ const PLAN_PRIORITY = {
   PREMIUM: 3,
   ELITE: 4,
   ULTIMATE: 5,
+  MEGA: 6,
 } as const;
 
 @Injectable()

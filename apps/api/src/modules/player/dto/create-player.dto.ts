@@ -59,4 +59,8 @@ export class CreatePlayerDto {
   @IsNumber()
   @IsOptional()
   basePrice?: number; // If not set, takes Auction default
+
+  @IsString()
+  @IsOptional()
+  profilePic?: string;
 }

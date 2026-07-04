@@ -8,11 +8,21 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post("register")
+  @UseGuards(AuthGuard("firebase-jwt")) // Verifies Token first
+  async register(
+    @Request() req: any,
+    @Body() body: any
+  ) {
+    return this.authService.validateUser(req.user, body);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post("login")
-  @UseGuards(AuthGuard("firebase-jwt")) // 1. Verifies Token first
+  @UseGuards(AuthGuard("firebase-jwt")) // Verifies Token first
   async login(
     @Request() req: any,
-    @Body() body: { name?: string; city?: string; mobile?: string }
+    @Body() body: any
   ) {
     // 2. If valid, find/create in DB
     return this.authService.validateUser(req.user, body);

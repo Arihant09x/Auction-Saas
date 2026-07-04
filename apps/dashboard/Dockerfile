@@ -1,0 +1,54 @@
+# Stage 1: Prune workspace to only include dashboard app and its dependencies
+FROM node:20-alpine AS pruner
+RUN apk add --no-cache libc6-compat
+RUN npm install -g turbo
+WORKDIR /app
+COPY . .
+RUN turbo prune dashboard --docker
+
+# Stage 2: Installer
+FROM node:20-alpine AS installer
+RUN apk add --no-cache libc6-compat
+RUN npm install -g pnpm@9.0.0
+WORKDIR /app
+
+# First copy lockfile and package.json to cache pnpm install
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile
+
+# Copy remaining source code and configurations
+COPY --from=pruner /app/out/full/ .
+COPY turbo.json turbo.json
+
+# Inject public client build-time environment arguments (Pitfall A Prevention)
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+
+# Run NextJS production build compilation
+RUN pnpm run build --filter=dashboard
+
+# Stage 3: Runner
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN npm install -g pnpm@9.0.0
+
+COPY --from=installer /app .
+
+EXPOSE 3002
+CMD ["pnpm", "--filter", "dashboard", "start"]
