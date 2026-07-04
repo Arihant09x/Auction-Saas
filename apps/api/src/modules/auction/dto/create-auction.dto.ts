@@ -26,18 +26,6 @@ export class CreateAuctionDto {
 
   @IsString()
   @IsOptional()
-  location?: string;
-
-  @IsString()
-  @IsOptional()
-  logo?: string;
-
-  @IsString()
-  @IsOptional()
-  season?: string;
-
-  @IsString()
-  @IsOptional()
   sportsType?: string;
 
   @IsDateString()
@@ -84,20 +72,4 @@ export class CreateAuctionDto {
   @ValidateNested({ each: true })
   @Type(() => BidRuleDto)
   bidRules?: BidRuleDto[];
-
-  @IsString()
-  @IsOptional()
-  liveTheme?: string;
-
-  @IsString()
-  @IsOptional()
-  soldEffect?: string;
-
-  @IsString()
-  @IsOptional()
-  overlayTheme?: string;
-
-  @IsString()
-  @IsOptional()
-  overlayLayout?: string;
 }

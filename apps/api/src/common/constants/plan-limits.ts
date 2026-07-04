@@ -1,7 +1,6 @@
 import {
   AuctionStatus,
   PlanTier,
-
 } from "../../../../../packages/database/dist/generated";
 
 export const PLAN_LIMITS: Record<
@@ -14,27 +13,23 @@ export const PLAN_LIMITS: Record<
   },
   BASIC: {
     totalPlayers: 200,
-    price: 1049 * 100, // in Paise
+    price: 3000 * 100, // in Paise
   },
   STANDARD: {
     totalPlayers: 400,
-    price: 1749 * 100,
+    price: 4500 * 100,
   },
   PREMIUM: {
     totalPlayers: 1200,
-    price: 2449 * 100,
+    price: 7000 * 100,
   },
   ELITE: {
     totalPlayers: 2500,
-    price: 2799 * 100,
+    price: 10000 * 100,
   },
   ULTIMATE: {
     totalPlayers: 5000,
-    price: 3849 * 100,
-  },
-  MEGA: {
-    totalPlayers: 10000,
-    price: 4899 * 100,
+    price: 15000 * 100,
   },
 };
 
@@ -53,7 +48,6 @@ export const ACTIVE_AUCTION_LIMITS = {
   PREMIUM: 10,
   ELITE: 25,
   ULTIMATE: 42,
-  MEGA: 60,
 };
 
 export interface Auction {

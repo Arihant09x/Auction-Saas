@@ -5,7 +5,7 @@ import { REDIS_CLIENT } from "../../redis/redis.provider";
 const AUCTION_TTL_SECONDS = 60 * 60 * 6; // 6 hours
 @Injectable()
 export class LiveAuctionRedisService {
-  constructor(@Inject(REDIS_CLIENT) public readonly redis: Redis) { }
+  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
   // private auctionKey(id: string) {
   //   return `auction:${id}`;
   // }
@@ -60,35 +60,30 @@ export class LiveAuctionRedisService {
         const reserved = reservableSlots * baseBid;
         const maxAllowedBid = purse - reserved;
 
-        const teamJson = {
-          id: team.id,
-          name: team.name,
-          shortName: team.shortName,
-          logo: team.logo,
-
-          // LIVE VALUES
-          purse,
-          playersBought,
-
-          // AUCTION RULES (CACHED)
-          minPlayers,
-          baseBid,
-
-          // CALCULATED
-          reserved,
-          maxAllowedBid,
-
-          boostersUsed: 0,
-        };
-
         pipeline.hset(
           `${baseKey}:teams`,
           team.id,
-          JSON.stringify(teamJson),
-        );
+          JSON.stringify({
+            id: team.id,
+            name: team.name,
+            shortName: team.shortName,
+            logo: team.logo,
 
-        teamBudgets[team.id] = purse;
-        teamMeta[team.id] = JSON.stringify(teamJson);
+            // LIVE VALUES
+            purse,
+            playersBought,
+
+            // AUCTION RULES (CACHED)
+            minPlayers,
+            baseBid,
+
+            // CALCULATED
+            reserved,
+            maxAllowedBid,
+
+            boostersUsed: 0,
+          }),
+        );
 
         console.log(
           "📥 Team Loaded:",
@@ -106,14 +101,11 @@ export class LiveAuctionRedisService {
         );
       }
 
-      if (Object.keys(teamBudgets).length > 0) {
-        pipeline.hmset(`${baseKey}:teams:budget`, teamBudgets);
-        pipeline.expire(`${baseKey}:teams:budget`, AUCTION_TTL_SECONDS);
-      }
-      if (Object.keys(teamMeta).length > 0) {
-        pipeline.hmset(`${baseKey}:teams:meta`, teamMeta);
-        pipeline.expire(`${baseKey}:teams:meta`, AUCTION_TTL_SECONDS);
-      }
+      pipeline.hmset(`${baseKey}:teams:budget`, teamBudgets);
+      pipeline.hmset(`${baseKey}:teams:meta`, teamMeta);
+
+      pipeline.expire(`${baseKey}:teams:budget`, AUCTION_TTL_SECONDS);
+      pipeline.expire(`${baseKey}:teams:meta`, AUCTION_TTL_SECONDS);
 
       console.log("💰 Loaded teams into Redis:", teamBudgets);
     }
@@ -146,20 +138,19 @@ export class LiveAuctionRedisService {
           name: p.name,
           profilePic: p.profilePic,
           role: p.role,
-          age: p.age,
           battingStyle: p.battingStyle,
           bowlingStyle: p.bowlingStyle,
           basePrice: Number(p.basePrice || 0),
           status: p.status || "NULL",
           category: p.category
             ? {
-              name: p.category.name,
-              color: p.category.color,
-            }
+                name: p.category.name,
+                color: p.category.color,
+              }
             : {
-              name: "UNCATEGORIZED",
-              color: "#999",
-            },
+                name: "UNCATEGORIZED",
+                color: "#999",
+              },
         }),
       );
 
@@ -501,8 +492,6 @@ export class LiveAuctionRedisService {
       return {
         id: t.id,
         name: t.name,
-        logo: t.logo,
-        shortName: t.shortName,
         purse: Number(t.purse),
         playersCount: Number(t.playersBought || 0),
         reserved: Number(t.reserved || 0),
@@ -716,101 +705,5 @@ return {
       String(amount),
       String(Date.now()),
     );
-  }
-
-  // ==========================================
-  // AUCTION META (name, date — for countdown)
-  // ==========================================
-  /**
-   * Cache auction meta (name, auctionDate, auctionStartTime) in Redis
-   * so the WS gateway can serve viewer countdowns without DB calls.
-   */
-  async setAuctionMeta(
-    auctionId: string,
-    meta: { name: string; auctionDate: string; auctionStartTime: string | null; logo: string | null },
-  ): Promise<void> {
-    await this.redis.set(
-      `auction:${auctionId}:meta`,
-      JSON.stringify(meta),
-      'EX',
-      AUCTION_TTL_SECONDS,
-    );
-  }
-
-  async getAuctionMeta(auctionId: string): Promise<{
-    name: string;
-    auctionDate: string;
-    auctionStartTime: string | null;
-    logo: string | null;
-  } | null> {
-    const raw = await this.redis.get(`auction:${auctionId}:meta`);
-    return raw ? JSON.parse(raw) : null;
-  }
-
-  // ==========================================
-  // STATS CACHING (total, sold, unsold, upcoming)
-  // ==========================================
-  async setStats(
-    auctionId: string,
-    stats: { total: number; sold: number; unsold: number; upcoming: number },
-  ): Promise<void> {
-    await this.redis.set(
-      `auction:${auctionId}:stats`,
-      JSON.stringify(stats),
-      "EX",
-      AUCTION_TTL_SECONDS,
-    );
-  }
-
-  async getStats(
-    auctionId: string,
-  ): Promise<{ total: number; sold: number; unsold: number; upcoming: number } | null> {
-    const raw = await this.redis.get(`auction:${auctionId}:stats`);
-    return raw ? JSON.parse(raw) : null;
-  }
-
-  async adjustStats(
-    auctionId: string,
-    diffs: { total?: number; sold?: number; unsold?: number; upcoming?: number },
-  ): Promise<void> {
-    const key = `auction:${auctionId}:stats`;
-    const raw = await this.redis.get(key);
-    if (!raw) return;
-    try {
-      const stats = JSON.parse(raw);
-      if (diffs.total !== undefined) stats.total = Math.max(0, stats.total + diffs.total);
-      if (diffs.sold !== undefined) stats.sold = Math.max(0, stats.sold + diffs.sold);
-      if (diffs.unsold !== undefined) stats.unsold = Math.max(0, stats.unsold + diffs.unsold);
-      if (diffs.upcoming !== undefined) stats.upcoming = Math.max(0, stats.upcoming + diffs.upcoming);
-      await this.redis.set(key, JSON.stringify(stats), "EX", AUCTION_TTL_SECONDS);
-    } catch (e) {
-      console.error("Failed to adjust stats in Redis:", e);
-    }
-  }
-
-  // ==========================================
-  // MONITORING: ACTIVE CONNECTION COUNT
-  // ==========================================
-  async incrementConnectionCount(auctionId: string): Promise<number> {
-    const key = `auction:${auctionId}:connections`;
-    const count = await this.redis.incr(key);
-    await this.redis.expire(key, AUCTION_TTL_SECONDS);
-    return count;
-  }
-
-  async decrementConnectionCount(auctionId: string): Promise<number> {
-    const key = `auction:${auctionId}:connections`;
-    const count = await this.redis.decr(key);
-    if (count < 0) {
-      await this.redis.set(key, 0);
-      return 0;
-    }
-    return count;
-  }
-
-  async getConnectionCount(auctionId: string): Promise<number> {
-    const key = `auction:${auctionId}:connections`;
-    const raw = await this.redis.get(key);
-    return raw ? Number(raw) : 0;
   }
 }

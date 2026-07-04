@@ -1,6 +1,0 @@
-# robots.txt - SEO optimization for Dashboard Application
-# Deployed at app subdomain (e.g., https://app.bidarena.io)
-# Prevents indexers from crawling private management dashboard routes
-
-User-agent: *
-Disallow: /

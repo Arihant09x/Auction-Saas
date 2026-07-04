@@ -1,12 +1,10 @@
-import { Injectable, NotFoundException, Inject } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { CreateAuctionDto } from "./dto/create-auction.dto";
 import { PrismaService } from "../../prisma/prisma.service";
 import { UpdateAuctionDto } from "./dto/update-auction.dto";
 import { ForbiddenException } from "@nestjs/common";
 import { ACTIVE_AUCTION_LIMITS } from "../../common/constants/plan-limits";
 import { isAdminOrOwner } from "../../common/helpers/ownership.helper";
-import { REDIS_CLIENT } from "../../redis/redis.provider";
-import Redis from "ioredis";
 import {
   AuctionStatus,
   PlanTier,
@@ -14,31 +12,7 @@ import {
 
 @Injectable()
 export class AuctionService {
-  constructor(
-    private prisma: PrismaService,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) { }
-
-  private async generateShortCode(): Promise<string> {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed ambiguous chars like 0, O, 1, I
-    let isUnique = false;
-    let code = "";
-
-    while (!isUnique) {
-      code = "";
-      for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-
-      const existing = await this.prisma.prisma.auction.findUnique({
-        where: { auctionCode: code },
-      });
-
-      if (!existing) isUnique = true;
-    }
-
-    return code;
-  }
+  constructor(private prisma: PrismaService) { }
 
   // 1. Create Auction
   async create(userId: string, dto: CreateAuctionDto) {
@@ -72,16 +46,10 @@ export class AuctionService {
 
     return this.prisma.prisma.$transaction(async (tx: any) => {
       // Step A: Create the Auction
-      const auctionCode = await this.generateShortCode();
-
       const auction = await tx.auction.create({
         data: {
           organizerId: userId,
-          auctionCode,
           name: dto.name,
-          location: dto.location,
-          logo: dto.logo,
-          season: dto.season,
           sportsType: dto.sportsType || "Cricket", // Keep original casing for display
           auctionDate: new Date(dto.auctionDate),
           auctionStartTime: dto.auctionStartTime,
@@ -160,99 +128,10 @@ export class AuctionService {
     if (updateAuctionDto.budgetPerTeam !== undefined)
       updateData.budgetPerTeam = updateAuctionDto.budgetPerTeam;
 
-    // Newly added fields for mapping
-    if (updateAuctionDto.location !== undefined)
-      updateData.location = updateAuctionDto.location;
-    if (updateAuctionDto.season !== undefined)
-      updateData.season = updateAuctionDto.season;
-    if (updateAuctionDto.minBid !== undefined)
-      updateData.minBid = updateAuctionDto.minBid;
-    if (updateAuctionDto.bidIncrease !== undefined)
-      updateData.bidIncrease = updateAuctionDto.bidIncrease;
-    if (updateAuctionDto.minPlayersPerTeam !== undefined)
-      updateData.minPlayersPerTeam = updateAuctionDto.minPlayersPerTeam;
-    if (updateAuctionDto.maxPlayersPerTeam !== undefined)
-      updateData.maxPlayersPerTeam = updateAuctionDto.maxPlayersPerTeam;
-    if (updateAuctionDto.sportsType !== undefined)
-      updateData.sportsType = updateAuctionDto.sportsType;
-    if (updateAuctionDto.logo !== undefined)
-      updateData.logo = updateAuctionDto.logo;
-    if (updateAuctionDto.isBoosterEnabled !== undefined)
-      updateData.isBoosterEnabled = updateAuctionDto.isBoosterEnabled;
-    if (updateAuctionDto.boosterAmount !== undefined)
-      updateData.boosterAmount = updateAuctionDto.boosterAmount;
-    if (updateAuctionDto.boosterTriggerPlayerCount !== undefined)
-      updateData.boosterTriggerPlayerCount = updateAuctionDto.boosterTriggerPlayerCount;
-    if (updateAuctionDto.bidRules !== undefined)
-      updateData.bidRules = updateAuctionDto.bidRules;
-    if (updateAuctionDto.liveTheme !== undefined)
-      updateData.liveTheme = updateAuctionDto.liveTheme;
-    if (updateAuctionDto.soldEffect !== undefined)
-      updateData.soldEffect = updateAuctionDto.soldEffect;
-    if (updateAuctionDto.overlayTheme !== undefined)
-      updateData.overlayTheme = updateAuctionDto.overlayTheme;
-    if (updateAuctionDto.overlayLayout !== undefined)
-      updateData.overlayLayout = updateAuctionDto.overlayLayout;
-
-    const updated = await this.prisma.prisma.auction.update({
+    return this.prisma.prisma.auction.update({
       where: { id },
       data: updateData,
     });
-
-    // Invalidate cached Redis meta, settings, and snapshot so the WebSocket gateway / controllers fetch fresh properties
-    await this.redis.del(
-      `auction:${id}:meta`,
-      `auction:${id}:settings`,
-      `auction:${id}:snapshot`
-    );
-
-    return updated;
-  }
-
-  async joinAuction(userId: string, code: string) {
-    const auction = await this.prisma.prisma.auction.findUnique({
-      where: { auctionCode: code },
-    });
-    if (!auction) throw new NotFoundException("Invalid Auction Code");
-
-    if (auction.organizerId === userId) {
-      throw new ForbiddenException("You cannot join your own auction as a participant.");
-    }
-
-    const existing = await this.prisma.prisma.joinedAuction.findUnique({
-      where: {
-        userId_auctionId: { userId, auctionId: auction.id },
-      },
-    });
-
-    if (existing) {
-      return { success: true, auctionId: auction.id, message: "Already joined" };
-    }
-
-    await this.prisma.prisma.joinedAuction.create({
-      data: {
-        userId,
-        auctionId: auction.id,
-      },
-    });
-
-    return { success: true, auctionId: auction.id };
-  }
-
-  async findJoined(userId: string) {
-    const joined = await this.prisma.prisma.joinedAuction.findMany({
-      where: { userId },
-      include: {
-        auction: {
-          include: {
-            organizer: { select: { name: true } },
-            _count: { select: { teams: true, players: true } },
-          }
-        }
-      },
-      orderBy: { joinedAt: 'desc' }
-    });
-    return joined.map((j: any) => j.auction);
   }
 
   // 2. Get All Auctions for User (Admin gets ALL, organizer gets own)
@@ -308,171 +187,5 @@ export class AuctionService {
       throw new ForbiddenException("You can only delete your own auctions");
     }
     return this.prisma.prisma.auction.delete({ where: { id } });
-  }
-
-  // 5. Today & Upcoming Schedule — Public (no auth required)
-  async getSchedule() {
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(now);
-    todayEnd.setHours(23, 59, 59, 999);
-
-    const [todayAuctions, upcomingAuctions] = await Promise.all([
-      // Today's auctions (any status)
-      this.prisma.prisma.auction.findMany({
-        where: {
-          auctionDate: { gte: todayStart, lte: todayEnd },
-        },
-        orderBy: { auctionDate: 'asc' },
-        select: {
-          id: true,
-          name: true,
-          location: true,
-          logo: true,
-          sportsType: true,
-          season: true,
-          auctionDate: true,
-          auctionStartTime: true,
-          status: true,
-          planTier: true,
-          organizer: { select: { name: true } },
-        },
-      }),
-      // Upcoming auctions (strictly after today)
-      this.prisma.prisma.auction.findMany({
-        where: {
-          auctionDate: { gt: todayEnd },
-          status: { not: 'COMPLETED' },
-        },
-        orderBy: { auctionDate: 'asc' },
-        take: 20, // Cap at 20 upcoming
-        select: {
-          id: true,
-          name: true,
-          location: true,
-          logo: true,
-          sportsType: true,
-          season: true,
-          auctionDate: true,
-          auctionStartTime: true,
-          status: true,
-          planTier: true,
-          organizer: { select: { name: true } },
-        },
-      }),
-    ]);
-
-    return {
-      today: todayAuctions,
-      upcoming: upcomingAuctions,
-      generatedAt: now.toISOString(),
-    };
-  }
-
-  // 6. Paginated Today's Auctions
-  async getTodayAuctions(page: number, limit: number) {
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(now);
-    todayEnd.setHours(23, 59, 59, 999);
-
-    const skip = (page - 1) * limit;
-
-    const [auctions, total] = await Promise.all([
-      this.prisma.prisma.auction.findMany({
-        where: {
-          auctionDate: { gte: todayStart, lte: todayEnd },
-        },
-        orderBy: { auctionDate: 'asc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          name: true,
-          location: true,
-          logo: true,
-          sportsType: true,
-          season: true,
-          auctionDate: true,
-          auctionStartTime: true,
-          status: true,
-          planTier: true,
-          budgetPerTeam: true,
-          minPlayersPerTeam: true,
-          organizer: { select: { name: true } },
-          _count: { select: { teams: true, players: true } }
-        },
-      }),
-      this.prisma.prisma.auction.count({
-        where: {
-          auctionDate: { gte: todayStart, lte: todayEnd },
-        },
-      }),
-    ]);
-
-    return {
-      data: auctions,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  }
-
-  // 7. Paginated Upcoming Auctions
-  async getUpcomingAuctions(page: number, limit: number) {
-    const now = new Date();
-    const todayEnd = new Date(now);
-    todayEnd.setHours(23, 59, 59, 999);
-
-    const skip = (page - 1) * limit;
-
-    const [auctions, total] = await Promise.all([
-      this.prisma.prisma.auction.findMany({
-        where: {
-          auctionDate: { gt: todayEnd },
-          status: { not: 'COMPLETED' },
-        },
-        orderBy: { auctionDate: 'asc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          name: true,
-          location: true,
-          logo: true,
-          sportsType: true,
-          season: true,
-          auctionDate: true,
-          auctionStartTime: true,
-          status: true,
-          planTier: true,
-          budgetPerTeam: true,
-          minPlayersPerTeam: true,
-          organizer: { select: { name: true } },
-          _count: { select: { teams: true, players: true } }
-        },
-      }),
-      this.prisma.prisma.auction.count({
-        where: {
-          auctionDate: { gt: todayEnd },
-          status: { not: 'COMPLETED' },
-        },
-      }),
-    ]);
-
-    return {
-      data: auctions,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
   }
 }

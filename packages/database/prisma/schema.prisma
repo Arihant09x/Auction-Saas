@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  // output = "../prisma/generated/"
 }
 
 datasource db {
@@ -26,7 +27,6 @@ model User {
   createdAt      DateTime  @default(now())
   stripeCustomerId String? @unique
   auctions       Auction[]
-  joinedAuctions JoinedAuction[]
   auditLogs     AuditLog[]
   feedback Feedback?
 }
@@ -44,7 +44,6 @@ enum PlanTier {
   PREMIUM     // 5000/- Up to 12 Teams
   ELITE       // 6000/- Up to 16 Teams
   ULTIMATE    // 7000/- Up to 22 Teams
-  MEGA        // Up to 30 Teams
 }
 enum AuctionStatus {
   DRAFT
@@ -57,7 +56,6 @@ enum AuctionStatus {
 // 3. The Auction Event (The Core)
 model Auction {
   id              String      @id @default(uuid())
-  auctionCode     String      @unique @default(dbgenerated("gen_random_uuid()"))
   organizerId     String
   organizer       User        @relation(fields: [organizerId], references: [id])
   
@@ -104,13 +102,7 @@ model Auction {
   categories      Category[]
   bidhistories    BidHistory[]
   AuctionInsight  AuctionInsight?
-  joinedAuctions  JoinedAuction[]
   
-  liveTheme       String      @default("logo-1")
-  soldEffect      String      @default("confetti-center")
-  overlayTheme    String      @default("default")
-  overlayLayout   String      @default("player-card")
-
   createdAt       DateTime    @default(now())
   ArchivedAt      DateTime?
   // Speed up: "Find all auctions by this organizer"
@@ -120,23 +112,12 @@ model Auction {
   @@index([status])
 }
 
-model JoinedAuction {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  auctionId String
-  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  joinedAt  DateTime @default(now())
-  
-  @@unique([userId, auctionId])
-}
-
 
 // 4. Categories / Sets (Screenshot 4 & 10)
 model Category {
   id              String    @id @default(uuid())
   auctionId       String
-  auction         Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auction         Auction   @relation(fields: [auctionId], references: [id])
   
   name            String    // e.g., "Batsman", "Grade A"
   color           String?   // For UI display
@@ -154,7 +135,7 @@ model Category {
 model Team {
   id              String    @id @default(uuid())
   auctionId       String
-  auction         Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auction         Auction   @relation(fields: [auctionId], references: [id])
   
   name            String
   shortName       String    // e.g. "CSK"
@@ -202,7 +183,7 @@ enum PlayerStatus {
 model Player {
   id              String    @id @default(uuid())
   auctionId       String
-  auction         Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auction         Auction   @relation(fields: [auctionId], references: [id])
   
   categoryId      String?
   category        Category? @relation(fields: [categoryId], references: [id])
@@ -252,7 +233,7 @@ model BidHistory {
   player          Player    @relation(fields: [playerId], references: [id])
   // Relations
   auctionId String
-  auction   Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auction   Auction @relation(fields: [auctionId], references: [id])
   
   teamId          String
   team      Team    @relation(fields: [teamId], references: [id])
@@ -286,19 +267,9 @@ model Feedback {
 model AuctionInsight{
   id              String    @id @default(uuid())
   auctionId       String    @unique
-  auction         Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auction         Auction   @relation(fields: [auctionId], references: [id])
   
   data            Json      // Store all insights as JSON (e.g., top teams, player demand, etc)
   
   createdAt       DateTime  @default(now())
-}
-
-model ContactMessage {
-  id        String   @id @default(uuid())
-  name      String
-  email     String
-  mobile    String?
-  message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
 }

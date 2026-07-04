@@ -3,12 +3,9 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
-  Inject,
 } from "@nestjs/common";
 import { CreatePlayerDto } from "./dto/create-player.dto";
 import { PrismaService } from "../../prisma/prisma.service";
-import Redis from "ioredis";
-import { REDIS_CLIENT } from "../../redis/redis.provider";
 import { UpdatePlayerDto } from "./dto/update-player.dto";
 import * as XLSX from "xlsx";
 import { Multer } from "multer";
@@ -25,10 +22,7 @@ import {
 } from "../../../../../packages/database/dist/generated/index";
 @Injectable()
 export class PlayerService {
-  constructor(
-    private prisma: PrismaService,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) { }
+  constructor(private prisma: PrismaService) { }
 
   async create(userId: string, userRole: string, dto: CreatePlayerDto) {
     // 1. Verify Auction Ownership
@@ -71,7 +65,7 @@ export class PlayerService {
     }
 
     // 3. Create Player
-    const player = await this.prisma.prisma.player.create({
+    return this.prisma.prisma.player.create({
       data: {
         auctionId: dto.auctionId,
         categoryId: dto.categoryId || null, // Allow NULL
@@ -89,15 +83,10 @@ export class PlayerService {
         battingStyle: dto.battingStyle ?? null,
         bowlingStyle: dto.bowlingStyle ?? null,
 
-        profilePic: dto.profilePic ?? null,
-
         basePrice: finalBasePrice ?? null,
         status: "UPCOMING",
       },
     });
-
-    await this.redis.del(`auction:${dto.auctionId}:settings`, `auction:${dto.auctionId}:snapshot`);
-    return player;
   }
   async previewBulkUpload(
     userId: string,
@@ -129,44 +118,29 @@ export class PlayerService {
     // We look at the first row's keys to find what the user actually typed
     const actualHeaders = Object.keys(rawData[0]);
     // C. Header Validation
-    // Helper to find the actual header key (Case Insensitive + Trimmed + Synonym support)
-    const findHeaderFlex = (synonyms: string[]) => {
-      for (const name of synonyms) {
-        const found = actualHeaders.find(
-          (h) => h.trim().toLowerCase() === name.toLowerCase()
-        );
-        if (found) return found;
-      }
-      return undefined;
+    // Helper to find the actual header key (Case Insensitive + Trimmed)
+    // e.g., if we want "Mobile", this finds "mobile ", "MOBILE", "Mobile"
+    const findHeader = (required: string) => {
+      return actualHeaders.find(
+        (h) => h.trim().toLowerCase() === required.toLowerCase()
+      );
     };
 
-    const headerMappingConfigs = [
-      { key: "Name", required: true, synonyms: ["Name"] },
-      { key: "Age", required: true, synonyms: ["Age"] },
-      { key: "Mobile", required: true, synonyms: ["Mobile", "MobileNo", "Phone"] },
-      { key: "Specification 1", required: true, synonyms: ["Specification 1", "specification1", "spec1", "role"] },
-      { key: "Profile_url", required: true, synonyms: ["Profile_url", "Profile Pic", "ProfileUrl", "Photo"] },
-      { key: "Specification 2", required: false, synonyms: ["Specification 2", "specification2", "spec2", "battingstyle", "batting style", "batting"] },
-      { key: "Specification 3", required: false, synonyms: ["Specification 3", "specification3", "spec3", "bowlingstyle", "bowling style", "bowling"] },
-      { key: "Base Value (if different)", required: false, synonyms: ["Base Value (if different)", "BasePrice", "Base Value", "Base Price", "BaseValue"] },
-      { key: "Jersay No.", required: false, synonyms: ["Jersay No.", "Jersey No.", "Jersey Number", "JerseyNum", "JersayNo"] },
-      { key: "Jersay Name", required: false, synonyms: ["Jersay Name", "Jersey Name", "JerseyName", "JersayName"] },
-      { key: "T-Shirt", required: false, synonyms: ["T-Shirt", "TshirtSize", "T-Shirt Size", "Tshirt Size", "T Shirt"] },
-      { key: "Trouser", required: false, synonyms: ["Trouser", "TrouserSize", "Trouser Size"] },
-    ];
+    // Map your REQUIRED_EXCEL_HEADERS to the actual headers in the file
+    // You define this list in your constants file
+    // const requiredList = ["Name", "Age", "Mobile", "Specification 1"];
 
     const missingHeaders: any[] = [];
-    const headerMap: Record<string, string> = {}; // Maps logical key -> actual Excel column name
+    const headerMap: Record<string, string> = {}; // Stores { "Age": "age", "Mobile": "MOBILE" }
 
-    headerMappingConfigs.forEach((cfg) => {
-      const found = findHeaderFlex(cfg.synonyms);
-      if (found) {
-        headerMap[cfg.key] = found;
-      } else if (cfg.required) {
-        missingHeaders.push(cfg.key);
+    REQUIRED_EXCEL_HEADERS.forEach((req) => {
+      const found = findHeader(req);
+      if (!found) {
+        missingHeaders.push(req);
+      } else {
+        headerMap[req] = found; // Save the mapping
       }
     });
-
     if (missingHeaders.length > 0) {
       throw new BadRequestException(
         `Missing required columns: ${missingHeaders.join(", ")}`
@@ -213,23 +187,14 @@ export class PlayerService {
       // 1. Data Cleaning
       const name = row[headerMap["Name"]!]?.toString().trim();
       const mobile = row[headerMap["Mobile"]!]?.toString().trim();
-      const ageRaw = row[headerMap["Age"]!]?.toString().trim();
-      const profilePicRaw = row[headerMap["Profile_url"]!]?.toString().trim();
       const roleRaw = row[headerMap["Specification 1"]!]
         ?.toString()
         .trim()
-        .toUpperCase() || "";
+        .toUpperCase();
 
       // 2. Validation Checks
       if (!name) errors.push("Name is required");
       if (!mobile) errors.push("Mobile is required");
-      if (!ageRaw) {
-        errors.push("Age is required");
-      } else if (isNaN(Number(ageRaw))) {
-        errors.push("Age must be a valid number");
-      }
-      if (!profilePicRaw) errors.push("Profile URL is required");
-      if (!roleRaw) errors.push("Specification 1 (Role) is required");
 
       // 3. Duplicate Check (In DB)
       if (existingSet.has(`${name?.toLowerCase()}|${mobile}`)) {
@@ -267,25 +232,21 @@ export class PlayerService {
         role: this.mapRoleToEnum(roleRaw, auction.sportsType),
         categoryId,
 
-        basePrice: (headerMap["Base Value (if different)"] && row[headerMap["Base Value (if different)"]])
-          ? Number(row[headerMap["Base Value (if different)"]])
+        basePrice: row[headerMap["Base Value (if different)"]!]
+          ? Number(row[headerMap["Base Value (if different)"]!])
           : Number(auction.minBid),
 
         // Playing styles
-        battingStyle: headerMap["Specification 2"]
-          ? this.normalizeBattingStyle(row[headerMap["Specification 2"]])
-          : null,
-        bowlingStyle: headerMap["Specification 3"]
-          ? this.normalizeBowlingStyle(row[headerMap["Specification 3"]])
-          : null,
+        battingStyle: row[headerMap["Specification 2"]!] || null,
+        bowlingStyle: row[headerMap["Specification 3"]!] || null,
 
         // Jersey & clothing (OPTIONAL SAFE MAPPING)
-        jerseyNumber: (headerMap["Jersay No."] && row[headerMap["Jersay No."]])
-          ? Number(row[headerMap["Jersay No."]])
+        jerseyNumber: row[headerMap["Jersay No."]!]
+          ? Number(row[headerMap["Jersay No."]!])
           : null,
-        jerseyName: headerMap["Jersay Name"] ? (row[headerMap["Jersay Name"]] || null) : null,
-        tshirtSize: headerMap["T-Shirt"] ? (row[headerMap["T-Shirt"]] || null) : null,
-        trouserSize: headerMap["Trouser"] ? (row[headerMap["Trouser"]] || null) : null,
+        jerseyName: row[headerMap["Jersay Name"]!] || null,
+        tshirtSize: row[headerMap["T-Shirt"]!] || null,
+        trouserSize: row[headerMap["Trouser"]!] || null,
 
         // Personal
         profilePic: row[headerMap["Profile_url"]!] || null,
@@ -330,7 +291,7 @@ export class PlayerService {
       throw new ForbiddenException("Invalid Auction");
 
     // Transactional Insert (Rollback if any fail)
-    const uploadResult = await this.prisma.prisma.$transaction(async (tx: any) => {
+    return this.prisma.prisma.$transaction(async (tx: any) => {
       // We use createMany for performance
       // Note: Prisma createMany doesn't support nested relations (like JSON details) well in some DBs,
       // but for Postgres it is fine if structure matches.
@@ -367,37 +328,34 @@ export class PlayerService {
 
       return { success: true, count: result.count, result: result };
     });
-
-    await this.redis.del(`auction:${auctionId}:settings`, `auction:${auctionId}:snapshot`);
-    return uploadResult;
   }
   // Helper
   private mapRoleToEnum(roleRaw: string, sportType: string): PlayerRole {
     if (!roleRaw) return PlayerRole.OTHER;
 
-    const role = roleRaw.toUpperCase().trim();
-    const sport = (sportType || "").trim().toLowerCase();
+    const role = roleRaw.toUpperCase();
 
     // 🏏 CRICKET
-    if (sport === "cricket") {
-      if (role.includes("BATSMAN") || role === "BATSMAN" || role === "BATTER" || role.includes("BAT")) return PlayerRole.BATSMAN;
-      if (role.includes("BOWLER") || role === "BOWLER" || role.includes("BOWL")) return PlayerRole.BOWLER;
-      if (role.includes("KEEPER") || role === "WICKET KEEPER" || role === "WICKET-KEEPER" || role.includes("WK") || role.includes("WICKET")) return PlayerRole.WICKET_KEEPER;
-      if (role.includes("ALL") || role === "ALL ROUNDER" || role === "ALL-ROUNDER" || role.includes("ROUNDER") || role.includes("AR")) return PlayerRole.ALL_ROUNDER;
+    if (sportType === "Cricket") {
+      if (role.includes("BATSMAN")) return PlayerRole.BATSMAN;
+      if (role.includes("BOWLER")) return PlayerRole.BOWLER;
+      if (role.includes("KEEPER")) return PlayerRole.WICKET_KEEPER;
+      if (role.includes("ALL")) return PlayerRole.ALL_ROUNDER;
       return PlayerRole.OTHER;
     }
 
     // ⚽ FOOTBALL
-    if (sport === "football") {
-      if (role.includes("GOAL") || role === "GK") return PlayerRole.GOALKEEPER;
-      if (role.includes("DEFENDER") || role === "DF") return PlayerRole.DEFENDER;
-      if (role.includes("MID") || role === "MF") return PlayerRole.MIDFIELDER;
-      if (role.includes("FORWARD") || role.includes("STRIKER") || role === "FW") return PlayerRole.FORWARD;
+    if (sportType === "Football") {
+      if (role.includes("GOAL")) return PlayerRole.GOALKEEPER;
+      if (role.includes("DEFENDER")) return PlayerRole.DEFENDER;
+      if (role.includes("MID")) return PlayerRole.MIDFIELDER;
+      if (role.includes("FORWARD") || role.includes("STRIKER"))
+        return PlayerRole.FORWARD;
       return PlayerRole.OTHER;
     }
 
     // 🏐 VOLLEYBALL (Generic roles)
-    if (sport === "volleyball") {
+    if (sportType === "Volleyball") {
       return PlayerRole.OTHER; // positions vary widely → keep generic
     }
 
@@ -417,12 +375,16 @@ export class PlayerService {
       throw new ForbiddenException("Invalid Auction");
 
     // 2. GET EXISTING CATEGORIES (The "Smart" Step)
+    // We fetch the categories you auto-created earlier (Batsman, Bowler, etc.)
     const categories = await this.prisma.prisma.category.findMany({
       where: { auctionId },
     });
 
+    // Create a Lookup Dictionary for speed
+    // Example: { "BATSMAN": "uuid-123", "BOWLER": "uuid-456" }
     const categoryMap = new Map();
     categories.forEach((cat: any) => {
+      // Normalize to UPPERCASE to avoid case-sensitive errors
       categoryMap.set(cat.name.toUpperCase().trim(), cat.id);
     });
 
@@ -437,59 +399,14 @@ export class PlayerService {
     if (!worksheet) {
       throw new BadRequestException("Invalid worksheet");
     }
-    const rawData = XLSX.utils.sheet_to_json<any>(worksheet, { defval: "" });
-    if (rawData.length === 0) throw new BadRequestException("File is empty");
-
-    // Helper to find the actual header key (Case Insensitive + Trimmed + Synonym support)
-    const actualHeaders = Object.keys(rawData[0]);
-    const findHeaderFlex = (synonyms: string[]) => {
-      for (const name of synonyms) {
-        const found = actualHeaders.find(
-          (h) => h.trim().toLowerCase() === name.toLowerCase()
-        );
-        if (found) return found;
-      }
-      return undefined;
-    };
-
-    const headerMappingConfigs = [
-      { key: "Name", required: true, synonyms: ["Name"] },
-      { key: "Age", required: true, synonyms: ["Age"] },
-      { key: "Mobile", required: true, synonyms: ["Mobile", "MobileNo", "Phone"] },
-      { key: "Specification 1", required: true, synonyms: ["Specification 1", "specification1", "spec1", "role"] },
-      { key: "Profile_url", required: true, synonyms: ["Profile_url", "Profile Pic", "ProfileUrl", "Photo"] },
-      { key: "Specification 2", required: false, synonyms: ["Specification 2", "specification2", "spec2", "battingstyle", "batting style", "batting"] },
-      { key: "Specification 3", required: false, synonyms: ["Specification 3", "specification3", "spec3", "bowlingstyle", "bowling style", "bowling"] },
-      { key: "Base Value (if different)", required: false, synonyms: ["Base Value (if different)", "BasePrice", "Base Value", "Base Price", "BaseValue"] },
-      { key: "Jersay No.", required: false, synonyms: ["Jersay No.", "Jersey No.", "Jersey Number", "JerseyNum", "JersayNo"] },
-      { key: "Jersay Name", required: false, synonyms: ["Jersay Name", "Jersey Name", "JerseyName", "JersayName"] },
-      { key: "T-Shirt", required: false, synonyms: ["T-Shirt", "TshirtSize", "T-Shirt Size", "Tshirt Size", "T Shirt"] },
-      { key: "Trouser", required: false, synonyms: ["Trouser", "TrouserSize", "Trouser Size"] },
-    ];
-
-    const missingHeaders: any[] = [];
-    const headerMap: Record<string, string> = {};
-
-    headerMappingConfigs.forEach((cfg) => {
-      const found = findHeaderFlex(cfg.synonyms);
-      if (found) {
-        headerMap[cfg.key] = found;
-      } else if (cfg.required) {
-        missingHeaders.push(cfg.key);
-      }
-    });
-
-    if (missingHeaders.length > 0) {
-      throw new BadRequestException(
-        `Missing required columns: ${missingHeaders.join(", ")}`
-      );
-    }
+    const rawData = XLSX.utils.sheet_to_json<any>(worksheet);
 
     // 4. Process Every Row
     const playersToCreate = rawData.map((row: any) => {
       // A. EXTRACT ROLE (Specification 1)
-      const excelRole = row[headerMap["Specification 1"]!]
-        ? String(row[headerMap["Specification 1"]!]).trim()
+      // Excel might have "Batsman", "Right Hand Batsman", "All Rounder"
+      const excelRole = row["Specification 1"]
+        ? String(row["Specification 1"]).trim()
         : "";
       const excelRoleUpper = excelRole.toUpperCase();
 
@@ -501,6 +418,7 @@ export class PlayerService {
         matchedCategoryId = categoryMap.get(excelRoleUpper);
       }
       // Fallback: If no exact match, try to find a partial match
+      // e.g. Excel: "Opening Batsman" -> DB: "Batsman"
       else {
         for (const [catName, catId] of categoryMap.entries()) {
           if (excelRoleUpper.includes(catName)) {
@@ -511,37 +429,41 @@ export class PlayerService {
       }
 
       // C. MAP ENUM ROLE
-      const dbRole = this.mapRoleToEnum(excelRoleUpper, auction.sportsType);
+      // Your DB needs a strict Enum (BATSMAN, BOWLER). We map the string to the Enum.
+      let dbRole: PlayerRole = PlayerRole.ALL_ROUNDER; // Default
+      if (excelRoleUpper.includes("BATSMAN")) dbRole = PlayerRole.BATSMAN;
+      else if (excelRoleUpper.includes("BOWLER")) dbRole = PlayerRole.BOWLER;
+      else if (excelRoleUpper.includes("KEEPER"))
+        dbRole = PlayerRole.WICKET_KEEPER;
 
       // D. RETURN THE PLAYER OBJECT
       return {
         auctionId,
-        categoryId: matchedCategoryId,
+        categoryId: matchedCategoryId, // <--- HERE is the auto-assignment
 
-        name: row[headerMap["Name"]!]?.toString().trim(),
-        mobile: row[headerMap["Mobile"]!] ? String(row[headerMap["Mobile"]!]).trim() : null,
-        age: row[headerMap["Age"]!] ? Number(row[headerMap["Age"]!]) : 18,
+        name: row["Name"],
+        mobile: row["Mobile"] ? String(row["Mobile"]) : null,
+        age: row["Age"] ? Number(row["Age"]) : 18,
 
+        // Map the Specifications (from your screenshot)
         role: dbRole,
 
-        battingStyle: headerMap["Specification 2"]
-          ? this.normalizeBattingStyle(row[headerMap["Specification 2"]])
-          : null,
-        bowlingStyle: headerMap["Specification 3"]
-          ? this.normalizeBowlingStyle(row[headerMap["Specification 3"]])
-          : null,
+        // Storing styles in a JSON field (or specific columns if you have them)
+        // Specification 2 -> Batting Style (e.g., Right Hand Batsman)
+        // Specification 3 -> Bowling Style (e.g., Right Arm Bowler)
+        sportSpecificDetails: {
+          battingStyle: row["Specification 2"],
+          bowlingStyle: row["Specification 3"],
+          jerseyNo: row["Jersay No."],
+          jerseyName: row["Jersay Name"],
+        },
 
-        jerseyNumber: (headerMap["Jersay No."] && row[headerMap["Jersay No."]])
-          ? Number(row[headerMap["Jersay No."]])
-          : null,
-        jerseyName: headerMap["Jersay Name"] ? (row[headerMap["Jersay Name"]] || null) : null,
-        tshirtSize: headerMap["T-Shirt"] ? (row[headerMap["T-Shirt"]] || null) : null,
-        trouserSize: headerMap["Trouser"] ? (row[headerMap["Trouser"]] || null) : null,
+        tshirtSize: row["T-Shirt"],
+        trouserSize: row["Trouser"],
 
-        profilePic: row[headerMap["Profile_url"]!] || null,
-
-        basePrice: (headerMap["Base Value (if different)"] && row[headerMap["Base Value (if different)"]])
-          ? Number(row[headerMap["Base Value (if different)"]])
+        // Base Price logic (Use column, or default to Auction Min Bid)
+        basePrice: row["Base Value (if different)"]
+          ? Number(row["Base Value (if different)"])
           : Number(auction.minBid),
 
         status: PlayerStatus.UPCOMING,
@@ -549,13 +471,12 @@ export class PlayerService {
     });
 
     // 5. Bulk Insert into Database
-    const result = await this.prisma.prisma.player.createMany({
+    // Note: We use createMany. If you have "sportSpecificDetails" as a JSON column, this works perfect.
+    // If it's separate columns, just map them directly above.
+    return this.prisma.prisma.player.createMany({
       data: playersToCreate,
-      skipDuplicates: true,
+      skipDuplicates: true, // Avoid inserting duplicates based on unique constraints
     });
-
-    await this.redis.del(`auction:${auctionId}:settings`, `auction:${auctionId}:snapshot`);
-    return result;
   }
 
   // Get Players (Filter by Category is optional)
@@ -617,16 +538,12 @@ export class PlayerService {
     if (dto.categoryId !== undefined) updateData.categoryId = dto.categoryId;
 
     if (dto.basePrice !== undefined) updateData.basePrice = dto.basePrice;
-    if (dto.profilePic !== undefined) updateData.profilePic = dto.profilePic;
 
     // 3. Update player
-    const updated = await this.prisma.prisma.player.update({
+    return this.prisma.prisma.player.update({
       where: { id },
       data: updateData,
     });
-
-    await this.redis.del(`auction:${player.auctionId}:settings`, `auction:${player.auctionId}:snapshot`);
-    return updated;
   }
 
   async remove(id: string, userId: string, userRole: string) {
@@ -637,29 +554,6 @@ export class PlayerService {
     if (!player || !isAdminOrOwner(player.auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("Cannot delete this player");
     }
-    const deleted = await this.prisma.prisma.player.delete({ where: { id } });
-    await this.redis.del(`auction:${player.auctionId}:settings`, `auction:${player.auctionId}:snapshot`);
-    return deleted;
-  }
-
-  private normalizeBattingStyle(style: string | null): string | null {
-    if (!style) return null;
-    const s = style.trim().toUpperCase();
-    if (s.includes("RIGHT HAND") || s.includes("RIGHT-HAND") || s === "RHB" || s === "RIGHT") return "RHB";
-    if (s.includes("LEFT HAND") || s.includes("LEFT-HAND") || s === "LHB" || s === "LEFT") return "LHB";
-    return style.trim();
-  }
-
-  private normalizeBowlingStyle(style: string | null): string | null {
-    if (!style) return null;
-    const s = style.trim().toUpperCase();
-    if (s.includes("RIGHT ARM FAST") || s === "RAF") return "RAF";
-    if (s.includes("LEFT ARM FAST") || s === "LAF") return "LAF";
-    if (s.includes("RIGHT ARM MEDIUM") || s === "RAM" || s === "RMF") return "RAM";
-    if (s.includes("LEFT ARM MEDIUM") || s === "LAM" || s === "LMF") return "LAM";
-    if (s.includes("RIGHT ARM OFF") || s.includes("OFFBREAK") || s === "RAO" || s === "OB") return "RAO";
-    if (s.includes("RIGHT ARM LEG") || s.includes("LEGBREAK") || s === "RALB" || s === "LB") return "RALB";
-    if (s.includes("LEFT ARM ORTHODOX") || s.includes("SLOW LEFT") || s === "SLA" || s === "LAO") return "SLA";
-    return style.trim();
+    return this.prisma.prisma.player.delete({ where: { id } });
   }
 }

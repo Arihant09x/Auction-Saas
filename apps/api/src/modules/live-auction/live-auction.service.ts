@@ -65,7 +65,23 @@ export class LiveAuctionService {
         status: "UPCOMING",
       },
       orderBy: { name: "asc" },
-      include: { category: true },
+
+      select: {
+        id: true,
+        name: true,
+        profilePic: true,
+        role: true,
+        battingStyle: true,
+        bowlingStyle: true,
+        basePrice: true,
+
+        category: {
+          select: {
+            name: true,
+            color: true,
+          },
+        },
+      },
     });
 
     // 2. Prepare Settings
@@ -79,10 +95,6 @@ export class LiveAuctionService {
       isBoosterEnabled: auction.isBoosterEnabled,
       boosterAmount: Number(auction.boosterAmount),
       boosterTrigger: Number(auction.boosterTriggerPlayerCount),
-      liveTheme: auction.liveTheme || "logo-1",
-      soldEffect: auction.soldEffect || "confetti-center",
-      overlayTheme: auction.overlayTheme || "default",
-      overlayLayout: auction.overlayLayout || "player-card",
     };
     // ===========================
     // BUILD DASHBOARD SNAPSHOT
@@ -100,8 +112,6 @@ export class LiveAuctionService {
     const mapPlayer = (p: any) => ({
       id: p.id,
       auctionId: p.auctionId,
-      categoryId: p.categoryId,
-      category: p.category,
       name: p.name,
       age: p.age,
       profilePic: p.profilePic,
@@ -124,8 +134,6 @@ export class LiveAuctionService {
     });
 
     const snapshot = {
-      auctionId,
-      logo: auction.logo,
       players: {
         sold: soldPlayers.map(mapPlayer),
         unsold: unsoldPlayers.map(mapPlayer),
@@ -150,35 +158,7 @@ export class LiveAuctionService {
     );
     console.log("📦 Players loaded into Redis:", players.length);
 
-    // Initialize stats cache in Redis
-    const soldCount = soldPlayers.length;
-    const unsoldCount = unsoldPlayers.length;
-    const upcomingCount = players.length;
-    const totalCount = soldCount + unsoldCount + upcomingCount;
-    await this.redisService.setStats(auctionId, {
-      total: totalCount,
-      sold: soldCount,
-      unsold: unsoldCount,
-      upcoming: upcomingCount,
-    });
-
-    // 4. Cache auction meta in Redis (name, date, startTime)
-    // Stored so handleConnection countdown never needs a DB call.
-    await this.redisService.setAuctionMeta(auctionId, {
-      name: auction.name,
-      auctionDate: auction.auctionDate.toISOString(),
-      auctionStartTime: auction.auctionStartTime ?? null,
-      logo: auction.logo ?? null,
-    });
-
-    // 5. Update DB auction status → LIVE
-    await this.prisma.prisma.auction.update({
-      where: { id: auctionId },
-      data: { status: 'LIVE' },
-    });
-    console.log(`✅ Auction ${auctionId} marked LIVE in DB`);
-
-    // 6. Return State
+    // 4. Return State
     return this.getCurrentState(auctionId);
   }
   async selectPlayer(
@@ -225,11 +205,9 @@ export class LiveAuctionService {
     const status = await this.redisService.getAuctionStatus(auctionId);
     const bidHistory = await this.redisService.getBidHistory(auctionId);
 
-    const prevStatus = player?.status === "UNSOLD" ? "UNSOLD" : "UPCOMING";
-
-    if (status !== "SOLD_PENDING" && status !== "BIDDING") {
+    if (status !== "SOLD_PENDING") {
       return {
-        error: "Auction must be in BIDDING or SOLD_PENDING state to confirm sale",
+        error: "You must Hit HAMMER (Mark Sold) before confirming",
       };
     }
 
@@ -317,10 +295,10 @@ export class LiveAuctionService {
 
     if (
       settings?.isBoosterEnabled &&
-      Number(settings.boosterTrigger) > 0 &&
+      Number(settings.boosterTriggerPlayerCount) > 0 &&
       Number(settings.boosterAmount) > 0
     ) {
-      const trigger = Number(settings.boosterTrigger);
+      const trigger = Number(settings.boosterTriggerPlayerCount);
 
       if (playersBought % trigger === 0) {
         purse += Number(settings.boosterAmount);
@@ -362,22 +340,10 @@ export class LiveAuctionService {
 
     // 3. Cleanup Redis
 
-    player.status = "SOLD";
-    player.soldPrice = soldPrice;
-    player.teamId = winningTeamId;
-    player.teamName = result.team.name;
-    await this.redisService.setCurrentPlayer(auctionId, player);
     await this.redisService.removePlayerFromUnsold(auctionId, player.id);
     await this.redisService.deductBudget(auctionId, winningTeamId, soldPrice);
     await this.redisService.incrementPlayersBought(auctionId, winningTeamId);
     await this.redisService.setAuctionStatus(auctionId, "WAITING");
-
-    // Update stats cache in Redis
-    if (prevStatus === "UNSOLD") {
-      await this.redisService.adjustStats(auctionId, { sold: 1, unsold: -1 });
-    } else {
-      await this.redisService.adjustStats(auctionId, { sold: 1, upcoming: -1 });
-    }
 
     return {
       teamName: result.team.name,
@@ -397,7 +363,7 @@ export class LiveAuctionService {
 
   async reauctionUnsold(auctionId: string) {
     // 1. Fetch UNSOLD players from DB
-    const unsoldPlayers = await this.prisma.prisma.player.findMany({
+    const unsoldPlayers = await this.prisma.player.findMany({
       where: { auctionId, status: "UNSOLD" },
       include: { category: true },
     });
@@ -407,15 +373,9 @@ export class LiveAuctionService {
     }
 
     // 2. Reset Status in DB
-    await this.prisma.prisma.player.updateMany({
+    await this.prisma.player.updateMany({
       where: { auctionId, status: "UNSOLD" },
       data: { status: "UPCOMING" },
-    });
-
-    // Update stats cache in Redis
-    await this.redisService.adjustStats(auctionId, {
-      upcoming: unsoldPlayers.length,
-      unsold: -unsoldPlayers.length,
     });
 
     // 3. Push to Redis Queue
@@ -425,14 +385,11 @@ export class LiveAuctionService {
       name: p.name,
       profilePic: p.profilePic,
       role: p.role,
-      age: p.age,
-      battingStyle: p.battingStyle,
-      bowlingStyle: p.bowlingStyle,
       basePrice: Number(p.basePrice || 0),
-      status: "UPCOMING",
+      // ... map other fields same as Init ...
       category: p.category
         ? { name: p.category.name, color: p.category.color }
-        : { name: "UNCATEGORIZED", color: "#999" },
+        : null,
     }));
 
     // We use a helper in Redis Service to push them
@@ -448,13 +405,15 @@ export class LiveAuctionService {
   // ============================================
   // 📡 GET CURRENT STATE (For new connections)
   // ============================================
-  async getCurrentState(auctionId: string, full = false) {
+  async getCurrentState(auctionId: string) {
     // =========================
     // LIVE STATE FROM REDIS
     // =========================
     const status = await this.redisService.getAuctionStatus(auctionId);
     const currentPlayer = await this.redisService.getCurrentPlayer(auctionId);
     const lastBid = await this.redisService.getLastBid(auctionId);
+    const bidHistory = await this.redisService.getBidHistory(auctionId);
+    const categories = await this.redisService.getCategories(auctionId);
 
     // ---------------------------------------
     // LOAD TEAMS FROM REDIS (NOT DATABASE)
@@ -462,300 +421,70 @@ export class LiveAuctionService {
     const teams = await this.redisService.getAllTeams(auctionId);
 
     // =========================
-    // GLOBAL PLAYER STATS (CACHE FIRST)
+    // PLAYER COUNTS PER TEAM
     // =========================
-    let stats = await this.redisService.getStats(auctionId);
-    if (!stats) {
-      const [totalPlayers, sold, unsold, upcoming] = await Promise.all([
-        this.prisma.prisma.player.count({ where: { auctionId } }),
-        this.prisma.prisma.player.count({ where: { auctionId, status: "SOLD" } }),
-        this.prisma.prisma.player.count({
-          where: { auctionId, status: "UNSOLD" },
-        }),
-        this.prisma.prisma.player.count({
-          where: { auctionId, status: "UPCOMING" },
-        }),
-      ]);
-      stats = {
-        total: totalPlayers,
-        sold,
-        unsold,
-        upcoming,
-      };
-      await this.redisService.setStats(auctionId, stats);
-    }
-
-    // =========================
-    // LAZY LOAD AUCTION META
-    // =========================
-    let meta = await this.redisService.getAuctionMeta(auctionId);
-    if (!meta) {
-      const record = await this.prisma.prisma.auction.findUnique({
-        where: { id: auctionId },
-        select: { name: true, auctionDate: true, auctionStartTime: true, logo: true },
-      });
-      if (record) {
-        meta = {
-          name: record.name,
-          auctionDate: record.auctionDate?.toISOString() || "",
-          auctionStartTime: record.auctionStartTime ?? null,
-          logo: record.logo ?? null,
-        };
-        await this.redisService.setAuctionMeta(auctionId, meta);
-      }
-    }
-    const auctionName = meta?.name || null;
-    const logo = meta?.logo || null;
-
-    // Return different structure depending on whether we need full details or delta updates
-    if (full) {
-      const categories = await this.redisService.getCategories(auctionId);
-      const bidHistory = await this.redisService.getBidHistory(auctionId);
-      
-      let settings = await this.redisService.getSettings(auctionId);
-      if (!settings) {
-        const auction = await this.prisma.prisma.auction.findUnique({
-          where: { id: auctionId },
-        });
-        if (auction) {
-          settings = {
-            minBid: Number(auction.minBid),
-            bidIncrease: Number(auction.bidIncrease),
-            bidRules: auction.bidRules,
-            minPlayerPerTeam: auction.minPlayersPerTeam,
-            maxPlayersPerTeam: auction.maxPlayersPerTeam,
-            budgetPerTeam: Number(auction.budgetPerTeam),
-            isBoosterEnabled: auction.isBoosterEnabled,
-            boosterAmount: Number(auction.boosterAmount),
-            boosterTrigger: Number(auction.boosterTriggerPlayerCount),
-            liveTheme: auction.liveTheme || "logo-1",
-            soldEffect: auction.soldEffect || "confetti-center",
-            overlayTheme: auction.overlayTheme || "default",
-            overlayLayout: auction.overlayLayout || "player-card",
-          };
-          await this.redisService.setSettings(auctionId, settings);
-        }
-      }
-
-      return {
-        status,
-        currentPlayer,
-        lastBid,
-        auctionName,
-        logo,
-        categories,
-        bidHistory,
-        settings,
-        teams: teams.map((t) => ({
-          id: t.id,
-          name: t.name,
-          logo: t.logo,
-          shortName: t.shortName,
-          purse: Number(t.purse),
-          playersCount: Number(t.playersCount || 0),
-          reserved: Number(t.reserved || 0),
-          maxAllowedBid: Number(t.maxAllowedBid || 0),
-          boostersUsed: Number(t.boostersUsed || 0),
-        })),
-        stats: {
-          totalPlayers: stats.total,
-          sold: stats.sold,
-          unsold: stats.unsold,
-          upcoming: stats.upcoming,
-        },
-      };
-    } else {
-      // Delta/partial updates during active bidding
-      return {
-        status,
-        currentPlayer,
-        lastBid,
-        auctionName,
-        logo,
-        // Include names and logos as well to prevent client-side timing bugs
-        teams: teams.map((t) => ({
-          id: t.id,
-          name: t.name,
-          logo: t.logo,
-          shortName: t.shortName,
-          purse: Number(t.purse),
-          playersCount: Number(t.playersCount || 0),
-          reserved: Number(t.reserved || 0),
-          maxAllowedBid: Number(t.maxAllowedBid || 0),
-          boostersUsed: Number(t.boostersUsed || 0),
-        })),
-        stats: {
-          totalPlayers: stats.total,
-          sold: stats.sold,
-          unsold: stats.unsold,
-          upcoming: stats.upcoming,
-        },
-      };
-    }
-  }
-
-  async applyBooster(auctionId: string, teamId: string) {
-    const settings = await this.redisService.getSettings(auctionId);
-    if (!settings) throw new Error("Settings not found");
-    const boosterAmount = Number(settings.boosterAmount) || 0;
-
-    const updatedTeam = await this.prisma.prisma.team.update({
-      where: { id: teamId },
-      data: {
-        purseSpent: {
-          decrement: boosterAmount,
-        },
+    const teamPlayerCounts = await this.prisma.prisma.player.groupBy({
+      by: ["teamId"],
+      where: {
+        auctionId,
+        status: "SOLD",
+        teamId: { not: null },
+      },
+      _count: {
+        teamId: true,
       },
     });
 
-    const teamMeta = await this.redisService.getTeam(auctionId, teamId);
-    if (!teamMeta) throw new Error("Team not found in cache");
+    const teamCountMap = new Map<string, number>();
+    for (const row of teamPlayerCounts) {
+      teamCountMap.set(row.teamId!, row._count.teamId);
+    }
 
-    const purse = Number(teamMeta.purse) + boosterAmount;
-    const boostersUsed = Number(teamMeta.boostersUsed || 0) + 1;
+    // =========================
+    // GLOBAL PLAYER STATS
+    // =========================
+    const [totalPlayers, sold, unsold, upcoming] = await Promise.all([
+      this.prisma.prisma.player.count({ where: { auctionId } }),
+      this.prisma.prisma.player.count({ where: { auctionId, status: "SOLD" } }),
+      this.prisma.prisma.player.count({
+        where: { auctionId, status: "UNSOLD" },
+      }),
+      this.prisma.prisma.player.count({
+        where: { auctionId, status: "UPCOMING" },
+      }),
+    ]);
 
-    const minPlayers = Number(teamMeta.minPlayers);
-    const minBid = Number(teamMeta.baseBid);
-    const playersBought = Number(teamMeta.playersBought || 0);
-
-    const reservableSlots = Math.max(minPlayers - playersBought - 1, 0);
-    const reserved = reservableSlots * minBid;
-    const maxAllowedBid = purse - reserved;
-
-    const updatedTeamMeta = {
-      ...teamMeta,
-      purse,
-      boostersUsed,
-      reserved,
-      maxAllowedBid,
-    };
-
-    await this.redisService.setTeam(auctionId, teamId, updatedTeamMeta);
-
+    // =========================
+    // RETURN STATE
+    // =========================
     return {
-      teamName: updatedTeam.name,
-      boosterAmount,
-    };
-  }
+      status,
+      currentPlayer,
+      lastBid,
+      categories,
+      bidHistory,
 
-  async assignUnsoldToTeam(auctionId: string, playerId: string, teamId: string) {
-    const player = await this.prisma.prisma.player.findUnique({
-      where: { id: playerId },
-      include: { category: true },
-    });
+      teams: teams.map((t) => ({
+        id: t.id,
+        name: t.name,
+        purse: t.purse,
+        playersCount: teamCountMap.get(t.id) || t.playersCount || 0,
+        reservedAmount: t.reserved,
+        maxAllowedPlayers: t.maxAllowedBid,
+        boostersUsed: t.boostersUsed,
+      })),
 
-    if (!player) throw new Error("Player not found");
-
-    const basePrice = Number(player.basePrice) || 0;
-
-    // DB Transaction
-    const result = await this.prisma.prisma.$transaction(async (tx) => {
-      const team = await tx.team.findUnique({
-        where: { id: teamId },
-        include: { auction: true },
-      });
-
-      if (!team) throw new Error("Team not found");
-
-      if (team.playersCount >= team.auction.maxPlayersPerTeam) {
-        throw new Error(`Team ${team.name} already has max players (${team.auction.maxPlayersPerTeam})`);
-      }
-
-      // Deduct money
-      const updatedTeam = await tx.team.update({
-        where: { id: teamId },
-        data: {
-          purseSpent: { increment: basePrice },
-          playersCount: { increment: 1 },
-        },
-      });
-
-      // Mark player SOLD
-      await tx.player.update({
-        where: { id: playerId },
-        data: {
-          status: "SOLD",
-          soldPrice: basePrice,
-          teamId,
-        },
-      });
-
-      // Create bid history
-      await tx.bidHistory.create({
-        data: {
-          amount: basePrice,
-          timestamp: new Date(),
-          auctionId,
-          playerId,
-          teamId,
-        },
-      });
-
-      return {
-        team: updatedTeam,
-      };
-    });
-
-    // Update Redis Team Meta
-    const teamMeta = await this.redisService.getTeam(auctionId, teamId);
-    if (!teamMeta) throw new Error("Team not found in cache");
-
-    const minPlayers = Number(teamMeta.minPlayers);
-    const minBid = Number(teamMeta.baseBid);
-    const playersBought = Number(teamMeta.playersBought || 0) + 1;
-    const purse = Number(teamMeta.purse) - basePrice;
-
-    const reservableSlots = Math.max(minPlayers - playersBought - 1, 0);
-    const reserved = reservableSlots * minBid;
-    const maxAllowedBid = purse - reserved;
-
-    const updatedTeamMeta = {
-      ...teamMeta,
-      purse,
-      playersBought,
-      reserved,
-      maxAllowedBid,
-    };
-
-    await this.redisService.setTeam(auctionId, teamId, updatedTeamMeta);
-
-    await this.redisService.removePlayerFromUnsold(auctionId, playerId);
-    await this.redisService.deductBudget(auctionId, teamId, basePrice);
-    await this.redisService.incrementPlayersBought(auctionId, teamId);
-
-    // Update stats cache in Redis
-    await this.redisService.adjustStats(auctionId, { sold: 1, unsold: -1 });
-
-    const soldPlayer = {
-      id: player.id,
-      name: player.name,
-      age: player.age,
-      profilePic: player.profilePic,
-      role: player.role,
-      battingStyle: player.battingStyle,
-      bowlingStyle: player.bowlingStyle,
-      soldPrice: basePrice,
-      teamName: result.team.name,
-      status: "SOLD",
-    };
-
-    // Set as current player in Redis so it's persisted as SOLD
-    await this.redisService.setCurrentPlayer(auctionId, soldPlayer);
-    await this.redisService.setAuctionStatus(auctionId, "WAITING");
-
-    return {
-      teamName: result.team.name,
-      playerName: player.name,
-      category: player.category?.name,
-      amount: basePrice,
-      remainingPurse: purse,
-      playersBought,
-      soldPlayer,
+      stats: {
+        totalPlayers,
+        sold,
+        unsold,
+        upcoming,
+      },
     };
   }
 
   async buildDashboardSnapshot(auctionId: string) {
-    const [players, teams, categories, auction] = await Promise.all([
+    const [players, teams, categories] = await Promise.all([
       this.prisma.prisma.player.findMany({
         where: { auctionId },
         select: {
@@ -792,16 +521,10 @@ export class LiveAuctionService {
       this.prisma.prisma.category.findMany({
         where: { auctionId },
       }),
-
-      this.prisma.prisma.auction.findUnique({
-        where: { id: auctionId },
-        select: { logo: true },
-      }),
     ]);
 
     const snapshot = {
       auctionId,
-      logo: auction?.logo || null,
       players: {
         sold: players.filter((p) => p.status === "SOLD"),
         unsold: players.filter((p) => p.status === "UNSOLD"),
@@ -1121,8 +844,7 @@ export class LiveAuctionService {
       | "PLAYER_SOLD"
       | "PLAYER_UNSOLD"
       | "PLAYER_REAUCTION"
-      | "TEAM_UPDATE"
-      | "PLAYER_UNDO";
+      | "TEAM_UPDATE";
       payload: any;
     },
   ) {
@@ -1196,31 +918,6 @@ export class LiveAuctionService {
         );
 
         snap.players.upcoming.push(...moving);
-
-        break;
-      }
-
-      // ===============================
-      // PLAYER UNDO
-      // ===============================
-      case "PLAYER_UNDO": {
-        const p = patch.payload;
-        removeFromAllLists(p.id);
-
-        snap.players.upcoming.push({
-          id: p.id,
-          auctionId: auctionId,
-          name: p.name,
-          age: p.age,
-          profilePic: p.profilePic,
-          role: p.role,
-          battingStyle: p.battingStyle,
-          bowlingStyle: p.bowlingStyle,
-          basePrice: Number(p.basePrice || 0),
-          soldPrice: null,
-          status: "UPCOMING",
-          teamName: null,
-        });
 
         break;
       }

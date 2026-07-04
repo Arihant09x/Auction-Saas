@@ -1,0 +1,76 @@
+## 1 for landing web page 
+docker build -f apps/web/Dockerfile -t my-web-app `
+  --build-arg NEXT_PUBLIC_API_URL="http://localhost:3000" `
+  --build-arg NEXT_PUBLIC_WS_URL="http://localhost:3001" `
+  --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSyCCr5bcloLqxUPfMF-NkMgbtHuArkPq_Z0" `
+  --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="vaulted-botany-445315-d7.firebaseapp.com" `
+  --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="vaulted-botany-445315-d7" `
+  --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="vaulted-botany-445315-d7.firebasestorage.app" `
+  --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="464872134584" `
+  --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="1:464872134584:web:ba5ee810b3a7409f86214d" `
+  .
+  docker run -d -p 3001:3001 --name my-web-container my-web-app
+  docker ps
+  View logs (if needed):
+  bash  
+  docker logs my-web-container
+  docker stop my-web-container
+  docker rm my-web-container
+
+## 2 for Dashboard Page
+docker build -f apps/dashboard/Dockerfile -t my-dasboard-app `
+  --build-arg NEXT_PUBLIC_API_URL="http://localhost:3000" `
+  --build-arg NEXT_PUBLIC_WS_URL="http://localhost:3001" `
+  --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSyCCr5bcloLqxUPfMF-NkMgbtHuArkPq_Z0" `
+  --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="vaulted-botany-445315-d7.firebaseapp.com" `
+  --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="vaulted-botany-445315-d7" `
+  --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="vaulted-botany-445315-d7.firebasestorage.app" `
+  --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="464872134584" `
+  --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="1:464872134584:web:ba5ee810b3a7409f86214d" `
+  .    
+docker run -d -p 3002:3002 --name my-dashboard-container my-dashboard-app
+docker ps
+View logs (if needed):
+bash  
+docker logs my-dashboard-container
+docker stop my-dashboard-container
+docker rm my-dashboard-container
+
+## 3 for API Page
+docker build -f apps/api/Dockerfile -t my-api-app `
+  --build-arg PORT=3000 `
+  --build-arg NODE_ENV=production `
+  --build-arg ADMIN_SECRET="Arihant@917090599251" `
+  --build-arg DATABASE_URL="postgresql://neondb_owner:npg_LB32OGWqDdFy@ep-rapid-haze-ahjafp6t.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=30&pool_timeout=30" `
+  --build-arg REDIS_DB=0 `
+  --build-arg REDIS_HOST="127.0.0.1" `
+  --build-arg REDIS_PORT=6379 `
+  --build-arg FIREBASE_PROJECT_ID="vaulted-botany-445315-d7" `
+  --build-arg FIREBASE_CLIENT_EMAIL="firebase-adminsdk-1ls4c@vaulted-botany-445315-d7.iam.gserviceaccount.com" `
+  --build-arg FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC6jMwwUmMpyH8E\nlCRO24qXIMEqMyFKVaS7pNnqOtEDGX9rBGP90WKDuZtjFf5TFLbDWUPH92i0XM7/\nsq4eg4fIEuiz5hbo6CAzYXbUDkuZW6knrFBBCMRgiIAVT/cHfFc8ZQJJinB0zYrh\nKfY4G+1X4a5ikDpE/9bJPx4B/hxNUpLyiEzKzYSQHxE/7dY33oPCcWmEryBsvCgm\nq/maS3PxqsriL0QCN3qB9Po44VzwRRrwW9kR0kl3nyseORlKGyaiTsrmH+7n2Jcr\nMWS/0ps4IkvcdA3O3tN2o9XbEIjFE8KhtIgIw7fvFCOrMPQUmUMoZ45cj6mQYXhY\nlQdGUCtpAgMBAAECggEAEYmE9JH6MoZfsn1+wE8RQ03X+vCdk5BjkSRZPBTVa1Yt\nTVE3WTgi68E6I2GA7CyJVeoBXj4bAMGs0ArrJYE19ZAZgjgCNVkFFe92rU6+uqcM\nSud/D+4UEAMlD1vaHEELLmlMgr9Z/REJmktIk1PExzs3Gpr2b2Ahv/+IAaXy4S3V\n+m5gVU/PcU57LYxCpcQ4FcWTvaz5d9tjG/ZY92UNuvgc4HWy9ngc8SCNJ5/eD74h\nCJGiHV4/bbC8qsYPD4kRcGcn7o+cnJPr+wlxIhhMWKyM0vcWPij6u8S+V43cw7OV\nAzYAGKxj1CoDNy0wt8OpFsVFPrvTS7NNRuV62kDWAQKBgQDgVOfFdGrw+OCTAlNR\nhFx2bd3Od8eB+IkcvjlGUGa+r4MpUCus0rGHtu1hjucOdd3JXOiDP4Bb7XYva3PG\ncuP1dpDLoCjugmbl1cxZpFwH/8vS/wScS8pekuggI2W55Kl80Ix7IdNmiEHClUJb\npJaSbE4O+NGaasdl57bYzrKrwQKBgQDU4oFKpLQ8XnI0cZEJVUY5St4WKFc4iNtJ\n7cS58peqft5MfYFO9jhlV1RJ/9KYn2BuLRS8NHM4IKdJFoGZ6TO+jT1Bj102KAIv\nsanYjuA5AzKM/wNGlDCiERZ+5f0mfFggYzXKjr7vBpg7jn+IO/jZRXRe2r5ZS3jf\niCWeixMJqQKBgENeHBA3Ctp80uwy+ZR0XFQQYFjdraNBYOOp2IdeI8zF5mykr8kB\nqOCptZXjlU3JZaZP6V9o1YJFyIUrDqSc4gpX5dnQqhoePQpubyTIb/7S+YHOpbLO\nK+LE2UK1fpoZqjBabKWZneOfrafirP/aaIFmVva2EDQANwtKT6XCRPPBAoGAKtri\nHi2j3tdAdFA8Wz2gYl4w8RLz4/yg8HP9+1TbtUXO6GUHh+bHGZeH71GhinnjBqrq\nlqyUWUMxieQO+PXaJcz2/OCoagOJ1SIVx/OTLcb4ASxA849Xbvizp54S5RF5CCQQ\nqxMrWqDgOnUINVulT8/Mil/Mm9s2nQEiWZUzoukCgYAM/UhfhXiU/Qe6E2RzBcju\nOqZK/Dbf9FYwXoMplyGTVA1GZV3WMvgVQ28HlGO5i6JWQlAbBOq3+4l0RLWgTZrN\nsyB6pY+FcnupqaS6w/Z8mcoRyK7O+5CMq3APyR+6zFN22DlhM1KUZsPjP9OixVdU\nvA62tGzIgRQ9G8W8QZv7vg==\n" `
+  --build-arg RAZORPAY_KEY_ID="rzp_test_Rucoly3LqinHM4" `
+  --build-arg RAZORPAY_KEY_SECRET="xmpgeDUW7nIB19lkFoiJ8oNW" `
+  --build-arg GNEWS_API_KEY="165667d0c5e408db90060d0fca612498" `
+  --build-arg NEWS_API_KEY="890f13640dcb46b7ab9e02b7018b8227" `
+  --build-arg SENTRY_DSN="https://9e10d0625e0f437f5a6957f69ff7d67e@o4510985237102592.ingest.de.sentry.io/4510985252634704" `
+  --build-arg NEW_RELIC_LICENSE_KEY="6e593aba4087b4ddc4522fe2f6719b64FFFFNRAL" `
+  --build-arg NEW_RELIC_APP_NAME="RealAuction" `
+  --build-arg APP_VERSION=1.0.0 `
+  .
+docker run -d -p 3000:3000 --name my-api-container my-api-app
+docker ps
+View logs (if needed):
+bash  
+docker logs my-api-container
+docker stop my-api-container
+docker rm my-api-container
+
+## 4 for redis setup
+ create an network for api to access the redis
+ docker network create app-network
+
+ and run the redis container 
+ docker run -d --name redis --network app-network redis
+
+ and also run the api with this cmd
+ docker run -d -p 3000:3000 --name my-api-app --network app-network --env-file api.env my-api-app

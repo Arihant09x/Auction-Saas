@@ -17,7 +17,6 @@ export class AuditService {
     details: any,
     ip: string
   ) {
-    if (!userId) return; // Ignore anonymous logs if schema enforces a user relation
     this.prisma.prisma.auditLog
       .create({
         data: {

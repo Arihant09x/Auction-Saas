@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AuctionService } from './auction.service';
-import { AuctionController, AuctionPublicController } from './auction.controller';
+import { AuctionController } from './auction.controller';
 
 @Module({
-  controllers: [AuctionPublicController, AuctionController],
+  controllers: [AuctionController],
   providers: [AuctionService],
 })
-export class AuctionModule { }
+export class AuctionModule {}
