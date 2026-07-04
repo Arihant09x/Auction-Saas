@@ -2,14 +2,20 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from "@nestjs/common";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { PrismaService } from "../../prisma/prisma.service";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
+import Redis from "ioredis";
+import { REDIS_CLIENT } from "../../redis/redis.provider";
 
 @Injectable()
 export class CategoryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) {}
 
   async create(userId: string, dto: CreateCategoryDto) {
     // 1. Validate Auction Ownership
@@ -23,7 +29,7 @@ export class CategoryService {
     }
 
     // 2. Create Category
-    return this.prisma.prisma.category.create({
+    const newCategory = await this.prisma.prisma.category.create({
       data: {
         auctionId: dto.auctionId!,
         name: dto.name!,
@@ -33,6 +39,9 @@ export class CategoryService {
         maxPlayersPerTeam: dto.maxPlayersPerTeam ?? null,
       },
     });
+
+    await this.redis.del(`auction:${dto.auctionId}:settings`, `auction:${dto.auctionId}:snapshot`);
+    return newCategory;
   }
 
   async findAllByAuction(auctionId: string) {
@@ -69,10 +78,13 @@ export class CategoryService {
       updateData.maxPlayersPerTeam = dto.maxPlayersPerTeam;
 
     // 3. Update category
-    return this.prisma.prisma.category.update({
+    const updated = await this.prisma.prisma.category.update({
       where: { id },
       data: updateData,
     });
+
+    await this.redis.del(`auction:${category.auctionId}:settings`, `auction:${category.auctionId}:snapshot`);
+    return updated;
   }
 
   async remove(id: string, userId: string) {
@@ -86,6 +98,8 @@ export class CategoryService {
       throw new ForbiddenException("You do not own this category");
     }
 
-    return this.prisma.prisma.category.delete({ where: { id } });
+    const deleted = await this.prisma.prisma.category.delete({ where: { id } });
+    await this.redis.del(`auction:${category.auctionId}:settings`, `auction:${category.auctionId}:snapshot`);
+    return deleted;
   }
 }

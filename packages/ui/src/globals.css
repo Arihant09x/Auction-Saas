@@ -1,0 +1,351 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Auction 11 — Exact Figma Design System CSS
+   Primary:   #012972 | #0d44b5 | #e2efff
+   Secondary: #ffba00 | #ffffff
+   Tertiary:  #fe7c0a
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@layer base {
+  :root {
+    --background: 220 14% 96%;
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 220 96% 42%;
+    /* #0d44b5 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 45 100% 50%;
+    /* #ffba00 */
+    --secondary-foreground: 220 96% 10%;
+    --muted: 220 14% 90%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 215 100% 93%;
+    /* #e2efff */
+    --accent-foreground: 220 96% 18%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 40% 88%;
+    --input: 215 40% 88%;
+    --ring: 220 96% 42%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-poppins), "Poppins", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar — brand colors */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #012972;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #ffba00;
+    border-radius: 99px;
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SECTION BACKGROUNDS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@layer utilities {
+
+  /* Dark sections — primary colors */
+  .section-dark {
+    background-color: #012972;
+    color: #ffffff;
+  }
+
+  .section-blue {
+    background-color: #0d44b5;
+    color: #ffffff;
+  }
+
+  .section-light {
+    background-color: #e2efff;
+    color: #012972;
+  }
+
+  .section-white {
+    background-color: #ffffff;
+    color: #012972;
+  }
+
+  /* ── CRITICAL: Diagonal section utilities ─────────────────── */
+  /* Hero bottom diagonal cut */
+  .clip-diagonal-bottom {
+    clip-path: polygon(0 0, 100% 0, 100% 93%, 0 100%);
+  }
+
+  /* Section with diagonal top */
+  .clip-diagonal-top {
+    clip-path: polygon(0 4%, 100% 0, 100% 100%, 0 100%);
+  }
+
+  /* Section with diagonal top AND bottom (features) */
+  .clip-diagonal-both {
+    clip-path: polygon(0 4%, 100% 0, 100% 96%, 0 100%);
+  }
+
+  /* Padding compensation so content doesn't sit inside the clip */
+  .clip-pad-top {
+    padding-top: 5rem;
+  }
+
+  .clip-pad-bottom {
+    padding-bottom: 6rem;
+  }
+
+  .clip-pad-both {
+    padding-top: 5rem;
+    padding-bottom: 6rem;
+  }
+
+  /* ── CARD SURFACES ────────────────────────────────────────── */
+  .card-dark {
+    background: linear-gradient(145deg, #0a2060 0%, #0d44b5 100%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px;
+  }
+
+  .card-light {
+    background: #ffffff;
+    border: 1px solid #e2efff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(1, 41, 114, 0.12);
+  }
+
+  .card-light:hover {
+    box-shadow: 0 8px 30px rgba(1, 41, 114, 0.20);
+  }
+
+  /* ── CTA BUTTONS ──────────────────────────────────────────── */
+  /* Primary amber/gold CTA — brand-secondary (#ffba00) */
+  .btn-brand {
+    display: inline-block;
+    background: #ffba00;
+    color: #012972;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 12px 28px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(255, 186, 0, 0.40);
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .btn-brand:hover {
+    background: #e6a800;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(255, 186, 0, 0.55);
+  }
+
+  /* Secondary outline — white border on dark bg */
+  .btn-outline {
+    display: inline-block;
+    background: transparent;
+    color: #ffffff;
+    font-weight: 600;
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+    border-radius: 8px;
+    padding: 11px 28px;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+
+  .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #ffffff;
+  }
+
+  /* Blue button (dashboard actions) */
+  .btn-blue {
+    display: inline-block;
+    background: #0d44b5;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 10px 24px;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+
+  .btn-blue:hover {
+    background: #0a38a0;
+    transform: translateY(-1px);
+  }
+
+  /* ── TYPOGRAPHY HELPERS ───────────────────────────────────── */
+  .heading-dark {
+    color: #ffffff;
+    font-weight: 800;
+  }
+
+  .heading-light {
+    color: #012972;
+    font-weight: 800;
+  }
+
+  .subtext-dark {
+    color: #8ea8d8;
+  }
+
+  .subtext-light {
+    color: #4a6090;
+  }
+
+  .text-brand {
+    color: #ffba00;
+  }
+
+  .text-brand-blue {
+    color: #0d44b5;
+  }
+
+  /* ── BADGES ───────────────────────────────────────────────── */
+  /* LIVE badge — brand-tertiary (#fe7c0a) */
+  .badge-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fe7c0a;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Waiting badge */
+  .badge-waiting {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 186, 0, 0.18);
+    color: #ffba00;
+    border: 1px solid rgba(255, 186, 0, 0.35);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── DIVIDERS & ACCENTS ───────────────────────────────────── */
+  .divider-brand {
+    display: inline-block;
+    width: 44px;
+    height: 3px;
+    background: #ffba00;
+    border-radius: 999px;
+  }
+
+  .divider-blue {
+    display: inline-block;
+    width: 44px;
+    height: 3px;
+    background: #0d44b5;
+    border-radius: 999px;
+  }
+
+  /* ── SVG ILLUSTRATION PLACEHOLDERS ───────────────────────── */
+  .svg-placeholder {
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: monospace;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .svg-placeholder-light {
+    background: rgba(13, 68, 181, 0.04);
+    border: 2px dashed rgba(13, 68, 181, 0.25);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(13, 68, 181, 0.45);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: monospace;
+    text-align: center;
+    padding: 24px;
+  }
+
+  /* ── SHIMMER SKELETON ─────────────────────────────────────── */
+  .shimmer {
+    background: linear-gradient(90deg, #0a2060 0%, #0d44b5 50%, #0a2060 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* ── FlyonUI .skeleton classes ───────────────────────────── */
+  /* Usage: <div class="skeleton skeleton-animated h-32 w-full" /> */
+  .skeleton {
+    background-color: #e5e7eb;
+    border-radius: 0.375rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton-animated::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.55) 50%,
+        transparent 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-rounded {
+    border-radius: 9999px;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}

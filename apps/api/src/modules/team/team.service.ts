@@ -3,15 +3,21 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
 } from "@nestjs/common";
 import { CreateTeamDto } from "./dto/create-team.dto";
 import { UpdateTeamDto } from "./dto/update-team.dto";
 import { PrismaService } from "../../prisma/prisma.service";
 import { isAdminOrOwner } from "../../common/helpers/ownership.helper";
+import Redis from "ioredis";
+import { REDIS_CLIENT } from "../../redis/redis.provider";
 
 @Injectable()
 export class TeamService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) { }
 
   // --- HELPERS to define limits ---
   private getTeamLimit(tier: string): number {
@@ -21,13 +27,15 @@ export class TeamService {
       case "BASIC":
         return 4;
       case "STANDARD":
-        return 7;
+        return 8;
       case "PREMIUM":
         return 12;
       case "ELITE":
         return 16;
       case "ULTIMATE":
-        return 22;
+        return 20;
+      case "MEGA":
+        return 30;
       default:
         return 2;
     }
@@ -55,7 +63,7 @@ export class TeamService {
     }
 
     // C. Create Team (Inherit Budget from Auction)
-    return this.prisma.prisma.team.create({
+    const newTeam = await this.prisma.prisma.team.create({
       data: {
         auctionId: dto.auctionId,
         name: dto.name,
@@ -69,6 +77,9 @@ export class TeamService {
         playersCount: 0,
       },
     });
+
+    await this.redis.del(`auction:${dto.auctionId}:settings`, `auction:${dto.auctionId}:snapshot`);
+    return newTeam;
   }
 
   // 2. GET ALL TEAMS (For a specific auction)
@@ -92,7 +103,7 @@ export class TeamService {
       throw new ForbiddenException("You do not own this team");
     }
 
-    return this.prisma.prisma.team.update({
+    const updated = await this.prisma.prisma.team.update({
       where: { id },
       data: {
         name: dto.name!,
@@ -101,6 +112,9 @@ export class TeamService {
         logo: dto.logo!,
       },
     });
+
+    await this.redis.del(`auction:${team.auctionId}:settings`, `auction:${team.auctionId}:snapshot`);
+    return updated;
   }
 
   async importTeams(
@@ -138,25 +152,64 @@ export class TeamService {
     if (oldTeams.length === 0)
       throw new BadRequestException("Source auction has no teams");
 
-    // 3. Prepare New Teams (Reset budget and stats)
-    const newTeamsData = oldTeams.map((team: any) => ({
-      auctionId: currentAuctionId,
-      name: team.name,
-      shortName: team.shortName,
-      logo: team.logo,
-      shortcutKey: team.shortcutKey, // Copy settings
-
-      // RESET Financials
-      originalPurse: currentAuction.budgetPerTeam, // Use NEW budget
-      purseSpent: 0,
-      playersCount: 0,
-      boostersUsed: 0,
-    }));
-
-    // 4. Bulk Insert
-    return this.prisma.prisma.team.createMany({
-      data: newTeamsData,
+    // 3. Fetch Existing Teams in Target Auction to Prevent Duplicates
+    const existingTeams = await this.prisma.prisma.team.findMany({
+      where: { auctionId: currentAuctionId },
+      select: { name: true, shortName: true }
     });
+    const existingNames = new Set(existingTeams.map(t => t.name.toLowerCase()));
+    const existingShortNames = new Set(existingTeams.map(t => t.shortName.toUpperCase()));
+
+    // Filter out teams that already exist
+    const newTeamsData = oldTeams
+      .filter((team: any) => !existingNames.has(team.name.toLowerCase()) && !existingShortNames.has(team.shortName.toUpperCase()))
+      .map((team: any) => ({
+        auctionId: currentAuctionId,
+        name: team.name,
+        shortName: team.shortName,
+        logo: team.logo,
+        shortcutKey: team.shortcutKey, // Copy settings
+
+        // RESET Financials
+        originalPurse: currentAuction.budgetPerTeam, // Use NEW budget
+        purseSpent: 0,
+        playersCount: 0,
+      }));
+
+    if (newTeamsData.length === 0) {
+      throw new BadRequestException("All teams from this auction have already been imported or names already exist in this auction.");
+    }
+
+    // 4. Check Plan Limit for Target Auction
+    const limit = this.getTeamLimit(currentAuction.planTier);
+    const currentCount = await this.prisma.prisma.team.count({ where: { auctionId: currentAuctionId } });
+    
+    const allowedToImport = limit - currentCount;
+    if (allowedToImport <= 0) {
+      throw new BadRequestException(
+        `Plan Limit Reached: Your ${currentAuction.planTier} plan allows up to ${limit} teams, and you already have ${currentCount} teams.`
+      );
+    }
+
+    // Slice new teams list to fit remaining capacity under plan tier
+    const finalTeamsToImport = newTeamsData.slice(0, allowedToImport);
+    const skippedCount = newTeamsData.length - finalTeamsToImport.length;
+
+    // 5. Bulk Insert
+    const result = await this.prisma.prisma.team.createMany({
+      data: finalTeamsToImport,
+    });
+
+    await this.redis.del(`auction:${currentAuctionId}:settings`, `auction:${currentAuctionId}:snapshot`);
+    
+    return {
+      success: true,
+      importedCount: finalTeamsToImport.length,
+      skippedCount: skippedCount,
+      limit: limit,
+      currentCount: currentCount,
+      planTier: currentAuction.planTier,
+    };
   }
 
   // 4. DELETE TEAM
@@ -171,6 +224,8 @@ export class TeamService {
       throw new ForbiddenException("You do not own this team");
     }
 
-    return this.prisma.prisma.team.delete({ where: { id } });
+    const deleted = await this.prisma.prisma.team.delete({ where: { id } });
+    await this.redis.del(`auction:${team.auctionId}:settings`, `auction:${team.auctionId}:snapshot`);
+    return deleted;
   }
 }

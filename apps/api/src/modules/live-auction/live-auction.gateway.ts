@@ -9,14 +9,23 @@ import {
 } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
 import { LiveAuctionService } from "./live-auction.service"; // We will update this next
-// import { UseGuards } from "@nestjs/common";
+import { UseFilters } from "@nestjs/common";
+import { WsExceptionFilter } from "../../common/filters/ws-exception.filter";
 import { PrismaService } from "../../prisma/prisma.service";
 import { LiveAuctionRedisService } from "./live-auction.redis.service";
+import { performance } from "perf_hooks";
 
 // Note: WebSocket Guards need a different implementation,
 // for now we'll validate Token inside handleConnection manually.
 
-@WebSocketGateway({ cors: { origin: "*" }, namespace: "/live-auction" }) // Allow all origins for dev
+@WebSocketGateway({
+  cors: { origin: "*" },
+  namespace: "/live-auction",
+  perMessageDeflate: {
+    threshold: 1024, // Compress packets larger than 1KB
+  },
+})
+@UseFilters(WsExceptionFilter)
 export class LiveAuctionGateway
   implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -37,8 +46,10 @@ export class LiveAuctionGateway
     }
 
     // ADMIN is read-only: they can observe but cannot perform mutations
-    if (client.data.user.role === 'ADMIN') {
-      throw new Error("ADMIN_READ_ONLY: Admin can monitor live auctions but cannot perform organizer actions");
+    if (client.data.user.role === "ADMIN") {
+      throw new Error(
+        "ADMIN_READ_ONLY: Admin can monitor live auctions but cannot perform organizer actions",
+      );
     }
 
     const auction = await this.prisma.prisma.auction.findUnique({
@@ -56,12 +67,53 @@ export class LiveAuctionGateway
 
     return client.data.user;
   }
+  private snapshotTimers = new Map<string, NodeJS.Timeout>();
+
   private async pushSnapshot(auctionId: string) {
-    const snap = await this.redisService.getDashboardSnapshot(auctionId);
+    if (this.snapshotTimers.has(auctionId)) {
+      return; // Snapshot push already scheduled
+    }
+    const timer = setTimeout(async () => {
+      this.snapshotTimers.delete(auctionId);
+      try {
+        const snap = await this.redisService.getDashboardSnapshot(auctionId);
+        if (snap) {
+          this.server.to(`auction:${auctionId}`).emit("dashboard_snapshot", snap);
+        }
+      } catch (err) {
+        console.error("Error debouncing pushSnapshot:", err);
+      }
+    }, 300); // 300ms debounce
+    this.snapshotTimers.set(auctionId, timer);
+  }
 
-    if (!snap) return;
-
-    this.server.to(`auction:${auctionId}`).emit("dashboard_snapshot", snap);
+  private async executeWithLogging<T>(
+    eventName: string,
+    client: Socket,
+    action: () => Promise<T>,
+  ): Promise<any> {
+    const start = performance.now();
+    try {
+      const result = await action();
+      const duration = performance.now() - start;
+      if (duration > 50) {
+        console.warn(
+          `⚠️ [WS WARN] Event "${eventName}" took ${duration.toFixed(2)}ms to process (Client: ${client.id})`,
+        );
+      } else {
+        console.log(
+          `⏱️ [WS LOG] Event "${eventName}" processed in ${duration.toFixed(2)}ms (Client: ${client.id})`,
+        );
+      }
+      return { success: true, data: result };
+    } catch (err: any) {
+      const duration = performance.now() - start;
+      console.error(
+        `❌ [WS ERROR] Event "${eventName}" failed in ${duration.toFixed(2)}ms (Client: ${client.id}). Error: ${err.message}`,
+      );
+      client.emit("error", err.message);
+      return { success: false, error: err.message };
+    }
   }
 
   //middleware to verify organizer
@@ -115,32 +167,23 @@ export class LiveAuctionGateway
     },
     @ConnectedSocket() client: Socket,
   ) {
-    // 1. Security Check (Organizer Only)
-    // if (!client.data.user.isOrganizer) return; // Uncomment in prod
-
-    try {
+    return this.executeWithLogging("select_player", client, async () => {
       await this.requireOrganizer(client, data.auctionId);
       console.log("✅ Organizer verified. Selecting next player...");
       const status = await this.redisService.getAuctionStatus(data.auctionId);
 
       if (status === "BIDDING") {
-        client.emit(
-          "error",
-          "Finish current player (Sell or Unsold) before selecting next",
-        );
-        return;
+        throw new Error("Finish current player (Sell or Unsold) before selecting next");
       }
 
       if (status === "SOLD_PENDING") {
-        client.emit("error", "Confirm or reopen previous player first");
-        return;
+        throw new Error("Confirm or reopen previous player first");
       }
       const auction = await this.prisma.prisma.auction.findUnique({
         where: { id: data.auctionId },
       });
       if (!auction) {
-        client.emit("error", "Auction not found");
-        return;
+        throw new Error("Auction not found");
       }
       // 2. Find the Player
       const player = await this.liveAuctionService.selectPlayer(
@@ -151,8 +194,7 @@ export class LiveAuctionGateway
       );
 
       if (!player) {
-        client.emit("error", "No player found matching criteria");
-        return;
+        throw new Error("No player found matching criteria");
       }
       await this.redisService.setCurrentPlayer(data.auctionId, player);
 
@@ -181,11 +223,15 @@ export class LiveAuctionGateway
         currentBid: currentAuctionBid,
         bidHistory,
       });
-    } catch (e: any) {
-      client.emit("error", e.message);
-      return;
-    }
+
+      // Emit delta state update
+      const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
+      this.server.to(`auction:${data.auctionId}`).emit("auction_state_update", state);
+
+      return { player, currentBid: currentAuctionBid };
+    });
   }
+
   // 2. ORGANIZER: HAMMER DOWN (Soft Sold)
   // ==================================================
   @SubscribeMessage("mark_sold")
@@ -193,17 +239,18 @@ export class LiveAuctionGateway
     @MessageBody() data: { auctionId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    // This DOES NOT write to Postgres. It just pauses bidding.
-    try {
+    return this.executeWithLogging("mark_sold", client, async () => {
       await this.requireOrganizer(client, data.auctionId);
-    } catch (e: any) {
-      client.emit("error", e.message);
-      return;
-    }
-    await this.redisService.setAuctionStatus(data.auctionId, "SOLD_PENDING");
+      await this.redisService.setAuctionStatus(data.auctionId, "SOLD_PENDING");
 
-    this.server.to(`auction:${data.auctionId}`).emit("player_sold_pending", {
-      message: "SOLD! (Waiting for Confirmation...)",
+      this.server.to(`auction:${data.auctionId}`).emit("player_sold_pending", {
+        message: "SOLD! (Waiting for Confirmation...)",
+      });
+
+      const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
+      this.server.to(`auction:${data.auctionId}`).emit("auction_state_update", state);
+
+      return { status: "SOLD_PENDING" };
     });
   }
 
@@ -212,35 +259,124 @@ export class LiveAuctionGateway
     @MessageBody() data: { auctionId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    await this.requireOrganizer(client, data.auctionId);
+    return this.executeWithLogging("mark_unsold", client, async () => {
+      await this.requireOrganizer(client, data.auctionId);
 
-    const player = await this.redisService.getCurrentPlayer(data.auctionId);
+      const player = await this.redisService.getCurrentPlayer(data.auctionId);
 
-    if (!player) {
-      client.emit("error", "No active player");
-      return;
-    }
+      if (!player) {
+        throw new Error("No active player");
+      }
 
-    // Return player to unsold queue
-    // ⭐ Move to UNSOLD POOL (NEW LOGIC)
-    await this.redisService.addToUnsoldPool(data.auctionId, player);
-    await this.liveAuctionService.patchSnapshot(data.auctionId, {
-      type: "PLAYER_UNSOLD",
-      payload: player,
+      // Return player to unsold queue
+      // ⭐ Move to UNSOLD POOL (NEW LOGIC)
+      await this.redisService.addToUnsoldPool(data.auctionId, player);
+      await this.liveAuctionService.patchSnapshot(data.auctionId, {
+        type: "PLAYER_UNSOLD",
+        payload: player,
+      });
+
+      player.status = "UNSOLD";
+      await this.redisService.setCurrentPlayer(data.auctionId, player);
+      await this.redisService.setAuctionStatus(data.auctionId, "WAITING");
+
+      // Update Redis stats (upcoming -> unsold)
+      await this.redisService.adjustStats(data.auctionId, { unsold: 1, upcoming: -1 });
+
+      this.server
+        .to(`auction:${data.auctionId}`)
+        .emit("player_unsold_patch", player);
+
+      this.server
+        .to(`auction:${data.auctionId}`)
+        .emit("player_unsold_confirmed", {
+          playerId: player.id,
+          playerName: player.name,
+        });
+
+      // Refresh state UI (delta update)
+      const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
+      this.server
+        .to(`auction:${data.auctionId}`)
+        .emit("auction_state_update", state);
+
+      return { player };
     });
+  }
 
-    await this.redisService.setAuctionStatus(data.auctionId, "WAITING");
-    await this.redisService.setCurrentPlayer(data.auctionId, null);
-    this.server
-      .to(`auction:${data.auctionId}`)
-      .emit("player_unsold_patch", player);
+  @SubscribeMessage("apply_booster")
+  async handleApplyBooster(
+    @MessageBody() data: { auctionId: string; teamId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    return this.executeWithLogging("apply_booster", client, async () => {
+      await this.requireOrganizer(client, data.auctionId);
+      const result = await this.liveAuctionService.applyBooster(
+        data.auctionId,
+        data.teamId,
+      );
 
-    // Refresh state UI
-    const state = await this.liveAuctionService.getCurrentState(data.auctionId);
+      const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
+      this.server.to(`auction:${data.auctionId}`).emit("auction_state_update", state);
+      this.server.to(`auction:${data.auctionId}`).emit("notification", {
+        message: `Booster applied to team ${result.teamName}!`,
+      });
 
-    this.server
-      .to(`auction:${data.auctionId}`)
-      .emit("auction_state_update", state);
+      return result;
+    });
+  }
+
+  @SubscribeMessage("assign_unsold_to_team")
+  async handleAssignUnsoldToTeam(
+    @MessageBody() data: { auctionId: string; playerId: string; teamId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    return this.executeWithLogging("assign_unsold_to_team", client, async () => {
+      await this.requireOrganizer(client, data.auctionId);
+      const result = await this.liveAuctionService.assignUnsoldToTeam(
+        data.auctionId,
+        data.playerId,
+        data.teamId,
+      );
+
+      if ((result as any).error) {
+        throw new Error((result as any).error);
+      }
+
+      this.server.to(`auction:${data.auctionId}`).emit("player_sold_confirmed", {
+        teamName: result.teamName,
+        playerName: result.playerName,
+        category: result.category,
+        soldTo: result.teamName,
+        amount: result.amount,
+        remainingPurse: result.remainingPurse,
+        boosterApplied: false,
+      });
+
+      await this.liveAuctionService.patchSnapshot(data.auctionId, {
+        type: "PLAYER_SOLD",
+        payload: result.soldPlayer,
+      });
+      await this.liveAuctionService.patchSnapshot(data.auctionId, {
+        type: "TEAM_UPDATE",
+        payload: {
+          id: data.teamId,
+          playersCount: result.playersBought,
+        },
+      });
+
+      this.server.to(`auction:${data.auctionId}`).emit("player_sold_patch", result.soldPlayer);
+      this.server.to(`auction:${data.auctionId}`).emit("team_updated_patch", {
+        id: data.teamId,
+        purse: result.remainingPurse,
+        playersCount: result.playersBought,
+      });
+
+      const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
+      this.server.to(`auction:${data.auctionId}`).emit("auction_state_update", state);
+
+      return result;
+    });
   }
 
   // 3. ORGANIZER: RE-OPEN (Oops, someone bid late!)
@@ -250,17 +386,18 @@ export class LiveAuctionGateway
     @MessageBody() data: { auctionId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    // Revert status to BIDDING. Keep the last bid intact.
-    try {
+    return this.executeWithLogging("reopen_bidding", client, async () => {
       await this.requireOrganizer(client, data.auctionId);
-    } catch (e: any) {
-      client.emit("error", e.message);
-      return;
-    }
-    await this.redisService.setAuctionStatus(data.auctionId, "BIDDING");
+      await this.redisService.setAuctionStatus(data.auctionId, "BIDDING");
 
-    this.server.to(`auction:${data.auctionId}`).emit("bidding_resumed", {
-      message: "Bidding Re-opened! Continue from last bid.",
+      this.server.to(`auction:${data.auctionId}`).emit("bidding_resumed", {
+        message: "Bidding Re-opened! Continue from last bid.",
+      });
+
+      const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
+      this.server.to(`auction:${data.auctionId}`).emit("auction_state_update", state);
+
+      return { status: "BIDDING" };
     });
   }
 
@@ -272,22 +409,16 @@ export class LiveAuctionGateway
     @MessageBody() data: { auctionId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    try {
-      // Security (Organizer only)
+    return this.executeWithLogging("confirm_sold", client, async () => {
       await this.requireOrganizer(client, data.auctionId);
-
       const result = await this.liveAuctionService.confirmSale(data.auctionId);
 
       if ((result as any)?.error) {
-        client.emit("error", (result as any).error);
-        return;
+        throw new Error((result as any).error);
       }
 
       const auctionId = data.auctionId;
 
-      // =========================
-      // 1. BROADCAST SOLD EVENT
-      // =========================
       this.server.to(`auction:${auctionId}`).emit("player_sold_confirmed", {
         teamName: result.teamName,
         playerName: result.playerName,
@@ -298,16 +429,7 @@ export class LiveAuctionGateway
         boosterApplied: result.boosterApplied,
       });
 
-      // =========================
-      // 2. PUSH FULL STATE UPDATE
-      // =========================
-      const fullState =
-        await this.liveAuctionService.getCurrentState(auctionId);
       const player = await this.redisService.getCurrentPlayer(auctionId);
-      // if(player){
-      //   fullState.currentPlayer=player;
-      // }
-      // await this.liveAuctionService.updateSnapshotAfterSale(auctionId);
       await this.liveAuctionService.patchSnapshot(auctionId, {
         type: "PLAYER_SOLD",
         payload: {
@@ -329,6 +451,7 @@ export class LiveAuctionGateway
           playersCount: result.playersBought,
         },
       });
+
       const soldPlayer = {
         id: player.id,
         name: player.name,
@@ -351,15 +474,19 @@ export class LiveAuctionGateway
         purse: result.remainingPurse,
         playersCount: result.playersBought,
       });
-    } catch (e: any) {
-      client.emit("error", e.message || "Confirm failed");
-    }
+
+      const state = await this.liveAuctionService.getCurrentState(auctionId, false);
+      this.server
+        .to(`auction:${auctionId}`)
+        .emit("auction_state_update", state);
+
+      return result;
+    });
   }
 
   // 5. CONNECTION HANDLER
   async handleConnection(client: Socket) {
     try {
-      // Extract Token from query: ws://localhost:3000?token=xyz
       const auctionId =
         (client.handshake.query.auctionId as string) ||
         (client.handshake.auth.auctionId as string);
@@ -369,12 +496,18 @@ export class LiveAuctionGateway
         throw new Error("invalid_connection");
       }
 
-      // Join the specific Auction Room
-
       client.join(`auction:${auctionId}`);
+      client.data.auctionId = auctionId;
+
+      // Increment active connection count in Redis
+      const activeConnections = await this.redisService.incrementConnectionCount(auctionId);
+      console.log(`📡 [WS MONITOR] Client connected: ${client.id} (Auction: ${auctionId}). Active connections: ${activeConnections}`);
+
+      // ── Fetch shared snapshot once ─────────────────────────────────────
+      let snap = await this.redisService.getDashboardSnapshot(auctionId);
+
       if (client.data.viewer) {
         console.log(`Viewer ${client.id} joined Auction ${auctionId}`);
-        let snap = await this.redisService.getDashboardSnapshot(auctionId);
         if (!snap) {
           snap =
             await this.liveAuctionService.buildDashboardSnapshot(auctionId);
@@ -382,22 +515,75 @@ export class LiveAuctionGateway
         }
         client.emit("snapshot_sync", snap);
       } else {
-        console.log(`User ${client.data.user.id} joined Auction ${auctionId}`);
+        console.log(`User ${client.data.user?.id || "unknown"} joined Auction ${auctionId}`);
+        if (!snap) {
+          snap =
+            await this.liveAuctionService.buildDashboardSnapshot(auctionId);
+          await this.redisService.setDashboardSnapshot(auctionId, snap);
+        }
+        client.emit("dashboard_snapshot", snap);
       }
+
       const currentPlayer = await this.redisService.getCurrentPlayer(auctionId);
       const lastBid = await this.redisService.getLastBid(auctionId);
       const bidHistory = await this.redisService.getBidHistory(auctionId);
-      const state = await this.liveAuctionService.getCurrentState(auctionId); // Fetch current state
-      const snap = await this.redisService.getDashboardSnapshot(auctionId);
+      
+      // Request FULL state on initial connection
+      const state = await this.liveAuctionService.getCurrentState(auctionId, true);
+
       if (state.status === "COMPLETED") {
         const result = await this.liveAuctionService.endAuction(
           auctionId,
-          client.data.user?.id || 'system',
-          client.data.user?.role || 'USER',
+          client.data.user?.id || "system",
+          client.data.user?.role || "USER",
           true,
         );
         this.server.to(`auction:${auctionId}`).emit("auction_ended", result);
       }
+
+      // ── Pre-Auction Viewer Countdown ────────────────────────────────────
+      // Meta is cached in Redis during initAuction.
+      // If a viewer joins BEFORE init_auction (pre-start lobby), we do a
+      // one-time DB fetch and cache it — all subsequent viewers hit Redis.
+      if (state.status === "WAITING") {
+        try {
+          let auctionMeta = await this.redisService.getAuctionMeta(auctionId);
+
+          // Lazy-cache: first viewer before init_auction triggers one DB read
+          if (!auctionMeta) {
+            const record = await this.prisma.prisma.auction.findUnique({
+              where: { id: auctionId },
+              select: { name: true, auctionDate: true, auctionStartTime: true, logo: true },
+            });
+            if (record?.auctionDate) {
+              auctionMeta = {
+                name: record.name,
+                auctionDate: record.auctionDate.toISOString(),
+                auctionStartTime: record.auctionStartTime ?? null,
+                logo: record.logo ?? null,
+              };
+              // Cache so the next viewer avoids the DB entirely
+              await this.redisService.setAuctionMeta(auctionId, auctionMeta);
+            }
+          }
+
+          if (auctionMeta?.auctionDate) {
+            console.log(
+              `⏱️  Emitting auction_countdown to ${client.id} for auction ${auctionId}`,
+            );
+            client.emit("auction_countdown", {
+              auctionName: auctionMeta.name,
+              scheduledDate: auctionMeta.auctionDate,
+              scheduledStartTime: auctionMeta.auctionStartTime ?? null,
+              logo: auctionMeta.logo ?? null,
+              status: "WAITING",
+            });
+          }
+        } catch (e) {
+          console.error("Countdown emit error:", e);
+        }
+      }
+
       if (snap) {
         client.emit("dashboard_snapshot", snap);
       }
@@ -405,7 +591,8 @@ export class LiveAuctionGateway
       if (state.status === "BIDDING" && state.currentPlayer) {
         await this.redisService.setAuctionStatus(auctionId, "BIDDING");
       }
-      client.emit("auction_state_update", state); // Send current state to the connected client
+      client.emit("auction_state_update", state);
+
       if (currentPlayer && state.status === "BIDDING") {
         const nextBid =
           await this.liveAuctionService.getNextBidAmount(auctionId);
@@ -426,25 +613,15 @@ export class LiveAuctionGateway
       client.disconnect();
     }
   }
-  //
-  //   const auction = await this.prisma.auction.findUnique({
-  //   where: { id: auctionId },
-  //   select: { status: true },
-  // });
 
-  // if (auction?.status === "COMPLETED") {
-  //   const insight = await this.prisma.auctionInsight.findUnique({
-  //     where: { auctionId },
-  //   });
-
-  //   if (insight) {
-  //     client.emit("auction_insight_ready", insight.data);
-  //     return;
-  //   }
-  // }
-
-  handleDisconnect(client: Socket) {
-    console.log(`❌ Client disconnected: ${client.id}`);
+  async handleDisconnect(client: Socket) {
+    const auctionId = client.data?.auctionId;
+    if (auctionId) {
+      const activeConnections = await this.redisService.decrementConnectionCount(auctionId);
+      console.log(`❌ Client disconnected: ${client.id} (Auction: ${auctionId}). Active connections: ${activeConnections}`);
+    } else {
+      console.log(`❌ Client disconnected: ${client.id}`);
+    }
   }
 
   // 6. ORGANIZER: INIT AUCTION
@@ -454,28 +631,19 @@ export class LiveAuctionGateway
     @MessageBody() data: { auctionId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    try {
+    return this.executeWithLogging("init_auction", client, async () => {
       // 1. Basic Validation
       if (!client.data?.user) {
-        console.log("data", client.data);
-        console.log("❌ No User Data in Socket");
-        client.emit("error", "Not authenticated");
-        return;
+        throw new Error("Not authenticated");
       }
       // 2. Ensure they are initializing the auction they connected to
       if (client.data.auctionId !== data.auctionId) {
-        client.emit("error", "Auction ID mismatch");
-        return;
+        throw new Error("Auction ID mismatch");
       }
-      // if (client.data.user.role !== "ADMIN") {
-      //   client.emit("error", "Only organizer can perform this action");
-      //   return;
-      // }
 
       const userdata = await this.requireOrganizer(client, data.auctionId);
       if (!userdata) {
-        client.emit("error", "Unauthorized");
-        return;
+        throw new Error("Unauthorized");
       }
       console.log("✅ Organizer verified. Initializing auction...");
 
@@ -485,25 +653,17 @@ export class LiveAuctionGateway
         select: { organizerId: true },
       });
       if (!auction) {
-        client.emit("error", "You are not the organizer of this auction");
-        return;
+        throw new Error("You are not the organizer of this auction");
       }
 
-      // This loads DB data into Redis
       console.log("✅ Ownership Verified. Initializing Redis...");
-      const existingStatus = await this.redisService.getAuctionStatus(
-        data.auctionId,
-      );
-
       const settings = await this.redisService.getSettings(data.auctionId);
 
       if (settings) {
-        // Redis already initialized → just sync state
-        client.emit(
-          "auction_state_update",
-          await this.liveAuctionService.getCurrentState(data.auctionId),
-        );
-        return;
+        // Redis already initialized → just sync state (full state sync)
+        const state = await this.liveAuctionService.getCurrentState(data.auctionId, true);
+        client.emit("auction_state_update", state);
+        return state;
       }
       console.log("🆕 First time init → loading from DB");
       const state = await this.liveAuctionService.initAuction(data.auctionId);
@@ -512,9 +672,8 @@ export class LiveAuctionGateway
       this.server
         .to(`auction:${data.auctionId}`)
         .emit("auction_state_update", state);
-    } catch (e: any) {
-      client.emit("error", e.message);
-    }
+      return state;
+    });
   }
 
   //7. BIDDER: PLACE BID
@@ -523,16 +682,14 @@ export class LiveAuctionGateway
     @MessageBody() data: { auctionId: string; teamId: string; amount: number },
     @ConnectedSocket() client: Socket,
   ) {
-    try {
+    return this.executeWithLogging("place_bid", client, async () => {
       const { auctionId, teamId, amount } = data;
 
       if (!client.data?.user) {
-        client.emit("error", "Not authenticated");
-        return;
+        throw new Error("Not authenticated");
       }
       if (client.data.auctionId !== auctionId) {
-        client.emit("error", "Auction ID mismatch");
-        return;
+        throw new Error("Auction ID mismatch");
       }
       if (!teamId) throw new Error("Unauthorized");
       const budget = await this.redisService.getTeamBudget(auctionId, teamId);
@@ -543,11 +700,6 @@ export class LiveAuctionGateway
       if (!teamMeta) {
         throw new Error("TEAM_NOT_FOUND");
       }
-
-      // // 2. Organizer-only bidding (recommended)
-      // if (client.data.user.role !== "ADMIN") {
-      //   throw new Error("Only organizer can place bids");
-      // }
 
       const result = await this.liveAuctionService.placeBid(
         auctionId,
@@ -564,18 +716,12 @@ export class LiveAuctionGateway
         remainingBudget,
         nextbid: result.nextBid,
       });
-    } catch (e: any) {
-      console.error("❌ Bid Failed:", e.message);
 
-      // If the service threw the raw object, print it:
-      if (e.message.includes("BELOW_BASE_PRICE")) {
-        console.error(
-          "Reason: The Gateway sent an empty or 0 Amount to the Service.",
-        );
-      }
-
-      client.emit("error", e.message);
-    }
+      return {
+        ...result,
+        remainingBudget,
+      };
+    });
   }
 
   @SubscribeMessage("reauction_unsold")
@@ -583,32 +729,34 @@ export class LiveAuctionGateway
     @MessageBody() data: { auctionId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    // Verify Organizer
-    // ... check code ...
-    await this.requireOrganizer(client, data.auctionId);
+    return this.executeWithLogging("reauction_unsold", client, async () => {
+      await this.requireOrganizer(client, data.auctionId);
 
-    const result = await this.liveAuctionService.reauctionUnsold(
-      data.auctionId,
-    );
-    const ids = result.players?.map((p) => p.id) || [];
+      const result = await this.liveAuctionService.reauctionUnsold(
+        data.auctionId,
+      );
+      const ids = result.players?.map((p) => p.id) || [];
 
-    await this.liveAuctionService.patchSnapshot(data.auctionId, {
-      type: "PLAYER_REAUCTION",
-      payload: { ids },
+      await this.liveAuctionService.patchSnapshot(data.auctionId, {
+        type: "PLAYER_REAUCTION",
+        payload: { ids },
+      });
+      await this.pushSnapshot(data.auctionId);
+
+      // Notify Organizer
+      client.emit("notification", { message: result.message });
+
+      // Refresh state for everyone (delta state)
+      const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
+      this.server
+        .to(`auction:${data.auctionId}`)
+        .emit("auction_state_update", state);
+      this.server
+        .to(`auction:${data.auctionId}`)
+        .emit("players_reauctioned_patch", { ids });
+
+      return result;
     });
-    await this.pushSnapshot(data.auctionId);
-
-    // Notify Organizer
-    client.emit("notification", { message: result.message });
-
-    // Optionally refresh state for everyone
-    const state = await this.liveAuctionService.getCurrentState(data.auctionId);
-    this.server
-      .to(`auction:${data.auctionId}`)
-      .emit("auction_state_update", state);
-    this.server
-      .to(`auction:${data.auctionId}`)
-      .emit("players_reauctioned_patch", { ids });
   }
 
   @SubscribeMessage("end_auction")
@@ -616,17 +764,23 @@ export class LiveAuctionGateway
     client: Socket,
     payload: { auctionId: string; force?: boolean },
   ) {
-    const user = client.data.user;
+    return this.executeWithLogging("end_auction", client, async () => {
+      const user = client.data.user;
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
 
-    const result = await this.liveAuctionService.endAuction(
-      payload.auctionId,
-      user.id,
-      user.role,
-      payload.force || false,
-    );
+      const result = await this.liveAuctionService.endAuction(
+        payload.auctionId,
+        user.id,
+        user.role,
+        payload.force || false,
+      );
 
-    this.server.to(payload.auctionId).emit("auction_ended", result);
-    return result;
+      // FIX: Emit to correct room prefix "auction:auctionId"
+      this.server.to(`auction:${payload.auctionId}`).emit("auction_ended", result);
+      return result;
+    });
   }
 
   @SubscribeMessage("undo_bid")
@@ -634,36 +788,208 @@ export class LiveAuctionGateway
     @MessageBody() data: { auctionId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    await this.requireOrganizer(client, data.auctionId);
+    return this.executeWithLogging("undo_bid", client, async () => {
+      await this.requireOrganizer(client, data.auctionId);
 
-    const result = await this.redisService.undoLastBid(data.auctionId);
+      // Get current player status before undoing last bid to see if they were SOLD or UNSOLD
+      const player = await this.redisService.getCurrentPlayer(data.auctionId);
+      if (!player) {
+        throw new Error("No current player to undo action for");
+      }
 
-    const auction = await this.prisma.auction.findUnique({
-      where: { id: data.auctionId },
-      select: {
-        minBid: true,
-        bidIncrease: true,
-        bidRules: true,
-      },
-    });
-    if (!auction) {
-      throw new Error("Auction not Found");
-    }
+      const prevPlayerStatus = player.status;
+      const soldPrice = Number(player.soldPrice || 0);
+      const winningTeamId = player.teamId;
 
-    let nextBid = Number(auction?.minBid || 500);
+      const isUndoingAction = prevPlayerStatus === "SOLD" || prevPlayerStatus === "UNSOLD";
+      let result: { lastBid: any } = { lastBid: null };
 
-    if (result.lastBid) {
-      const inc = this.redisService.getNextIncrement(
-        Number(result.lastBid.amount),
-        auction.bidIncrease,
-        auction.bidRules,
-      );
-      nextBid = Number(result.lastBid.amount) + inc;
-    }
+      if (isUndoingAction) {
+        // Revert DB & Redis state if they were sold
+        if (prevPlayerStatus === "SOLD" && winningTeamId) {
+          try {
+            const settings = await this.redisService.getSettings(data.auctionId);
+            const teamMeta = await this.redisService.getTeam(data.auctionId, winningTeamId);
+            
+            let purseRevert = soldPrice;
+            let boostersUsedRevert = 0;
+            
+            if (teamMeta) {
+              const trigger = Number(settings?.boosterTrigger || 0);
+              const boosterAmount = Number(settings?.boosterAmount || 0);
+              const playersBoughtBeforeUndo = Number(teamMeta.playersBought || 0);
+              
+              if (trigger > 0 && boosterAmount > 0 && playersBoughtBeforeUndo % trigger === 0) {
+                purseRevert -= boosterAmount;
+                boostersUsedRevert = 1;
+              }
+            }
 
-    this.server.to(`auction:${data.auctionId}`).emit("bid_undone", {
-      lastBid: result.lastBid,
-      nextBid,
+            let purseSpentDecrement = soldPrice;
+            if (boostersUsedRevert > 0) {
+              const boosterAmount = Number(settings?.boosterAmount || 0);
+              purseSpentDecrement -= boosterAmount;
+            }
+
+            // 1. Database Updates inside a transaction
+            await this.prisma.prisma.$transaction(async (tx) => {
+              // Revert team spent/count
+              await tx.team.update({
+                where: { id: winningTeamId },
+                data: {
+                  purseSpent: { decrement: purseSpentDecrement },
+                  playersCount: { decrement: 1 },
+                },
+              });
+
+              // Revert player status
+              await tx.player.update({
+                where: { id: player.id },
+                data: {
+                  status: "UPCOMING",
+                  soldPrice: null,
+                  teamId: null,
+                },
+              });
+
+              // Delete bid history
+              await tx.bidHistory.deleteMany({
+                where: {
+                  auctionId: data.auctionId,
+                  playerId: player.id,
+                  teamId: winningTeamId,
+                  amount: soldPrice,
+                },
+              });
+            });
+
+            // 2. Redis Team Meta Revert
+            if (teamMeta) {
+              const minPlayers = Number(teamMeta.minPlayers);
+              const minBid = Number(teamMeta.baseBid);
+              const playersBought = Math.max(Number(teamMeta.playersBought || 0) - 1, 0);
+              const purse = Number(teamMeta.purse) + purseRevert;
+              
+              const reservableSlots = Math.max(minPlayers - playersBought - 1, 0);
+              const reserved = reservableSlots * minBid;
+              const maxAllowedBid = purse - reserved;
+              
+              const updatedTeamMeta = {
+                ...teamMeta,
+                purse,
+                playersBought,
+                reserved,
+                maxAllowedBid,
+                boostersUsed: Math.max(Number(teamMeta.boostersUsed || 0) - boostersUsedRevert, 0),
+              };
+              
+              await this.redisService.setTeam(data.auctionId, winningTeamId, updatedTeamMeta);
+              
+              // Emit team update patch to clients
+              this.server.to(`auction:${data.auctionId}`).emit("team_updated_patch", {
+                id: winningTeamId,
+                purse,
+                playersCount: playersBought,
+              });
+
+              // Patch snapshot for team update (sync team budget and counts)
+              await this.liveAuctionService.patchSnapshot(data.auctionId, {
+                type: "TEAM_UPDATE",
+                payload: {
+                  id: winningTeamId,
+                  playersCount: playersBought,
+                  purse: purse,
+                },
+              });
+            }
+          } catch (err: any) {
+            console.error("Failed to revert database transaction on undo:", err);
+          }
+
+          // Revert stats in Redis: decrement sold, increment upcoming
+          await this.redisService.adjustStats(data.auctionId, { sold: -1, upcoming: 1 });
+        } else if (prevPlayerStatus === "UNSOLD") {
+          // Revert unsold pool in Redis
+          await this.redisService.removePlayerFromUnsold(data.auctionId, player.id);
+          
+          const unsoldPoolKey = `auction:${data.auctionId}:unsold_pool`;
+          const rawPool = await this.redisService.redis.lrange(unsoldPoolKey, 0, -1);
+          const updatedPool = rawPool.filter((p: string) => JSON.parse(p).id !== player.id);
+          await this.redisService.redis.del(unsoldPoolKey);
+          if (updatedPool.length > 0) {
+            await this.redisService.redis.rpush(unsoldPoolKey, ...updatedPool);
+            await this.redisService.redis.expire(unsoldPoolKey, 24 * 3600);
+          }
+
+          // Revert stats in Redis: decrement unsold, increment upcoming
+          await this.redisService.adjustStats(data.auctionId, { unsold: -1, upcoming: 1 });
+        }
+
+        // Reset current player status attributes in Redis to remove stamps
+        player.status = "NULL";
+        player.soldPrice = null;
+        player.teamId = null;
+        player.teamName = null;
+
+        // Delete bids from Redis to completely reset bids for this player
+        const baseKey = `auction:${data.auctionId}`;
+        await this.redisService.redis.del(`${baseKey}:bids`, `${baseKey}:last_bid`);
+        await this.redisService.redis.set(`${baseKey}:current_player`, JSON.stringify(player));
+
+        // Set auction status back to BIDDING
+        await this.redisService.setAuctionStatus(data.auctionId, "BIDDING");
+
+        // Patch Snapshot in Redis
+        await this.liveAuctionService.patchSnapshot(data.auctionId, {
+          type: "PLAYER_UNDO",
+          payload: player,
+        });
+
+        result = { lastBid: null };
+      } else {
+        // Just pop the last bid from the bid stack (BIDDING phase)
+        result = await this.redisService.undoLastBid(data.auctionId);
+      }
+
+      const auction = await this.prisma.prisma.auction.findUnique({
+        where: { id: data.auctionId },
+        select: {
+          minBid: true,
+          bidIncrease: true,
+          bidRules: true,
+        },
+      });
+      if (!auction) {
+        throw new Error("Auction not Found");
+      }
+
+      let nextBid = Number(player.basePrice || auction?.minBid || 500);
+
+      if (result.lastBid) {
+        const inc = this.redisService.getNextIncrement(
+          Number(result.lastBid.amount),
+          auction.bidIncrease,
+          auction.bidRules,
+        );
+        nextBid = Number(result.lastBid.amount) + inc;
+      }
+
+      this.server.to(`auction:${data.auctionId}`).emit("bid_undone", {
+        lastBid: result.lastBid,
+        nextBid,
+      });
+
+      // Broadcast snapshot update to all clients
+      await this.pushSnapshot(data.auctionId);
+
+      // Broadcast delta update
+      const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
+      this.server.to(`auction:${data.auctionId}`).emit("auction_state_update", state);
+
+      return {
+        ...result,
+        nextBid,
+      };
     });
   }
 }
