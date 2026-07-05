@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 const MAIN_WEBSITE_URL = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001";
 const Dashboard_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3002";
-const LOGIN_URL = process.env.NEXT_PUBLIC_LOGIN_URL || "http://localhost:3001/login";
+const LOGIN_URL = `${MAIN_WEBSITE_URL}/login`;
 
 const NAV_LINKS = [
     { href: `${MAIN_WEBSITE_URL}/today-auction`, label: "Today Auction" },

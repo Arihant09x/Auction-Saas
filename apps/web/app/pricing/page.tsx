@@ -10,7 +10,7 @@ import { Button } from "@repo/ui/button";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const DASHBOARD_URL = process.env["NEXT_PUBLIC_WEB_URL"] ?? "http://localhost:3001";
+const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3001";
 
 // ─── Gradient underline ──────────────────────────────────────────────────────
 function PageTitle({ title, highlight }: { title: string; highlight: string }) {
@@ -88,7 +88,7 @@ function PlanCard({ plan }: { plan: typeof PLANS[0] }) {
       </div>
       <span className="text-gray-400 font-bold text-md -mt-4 mb-3 tracking-tight whitespace-nowrap line-through">{plan.originalPrice}</span>
       <Button
-        href={`${DASHBOARD_URL}/login`}
+        href={`${WEB_URL}/login`}
         className={`mt-auto w-full py-2.5 rounded-[99px] font-bold text-[14px] border border-[#ffaf2e] hover:opacity-90 transition text-center font-epilogue ${plan.highlight ? "bg-[#FFBA00] text-[#012972]" : "bg-[#00379d] text-white"
           }`}
       >

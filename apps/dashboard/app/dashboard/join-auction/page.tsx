@@ -28,7 +28,7 @@ export default function JoinAuctionPage() {
         if (!res.ok) {
             if (res.status === 401 || res.status === 403) {
                 useAuthStore.getState().logout();
-                window.location.href = process.env.NEXT_PUBLIC_LOGIN_URL || "http://localhost:3001/login";
+                window.location.href = `${process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001"}/login`;
             }
             throw new Error("Failed to fetch joined auctions");
         }
@@ -74,7 +74,7 @@ export default function JoinAuctionPage() {
             if (!res.ok) {
                 if (res.status === 401 || res.status === 403) {
                     useAuthStore.getState().logout();
-                    window.location.href = process.env.NEXT_PUBLIC_LOGIN_URL || "http://localhost:3001/login";
+                    window.location.href = `${process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001"}/login`;
                 }
                 const errData = await res.json();
                 throw new Error(errData.message || "Invalid Auction Code");

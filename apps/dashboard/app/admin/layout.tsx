@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         if (!firebaseToken) {
-            window.location.href = process.env.NEXT_PUBLIC_LOGIN_URL || "http://localhost:3001/login";
+            window.location.href = `${process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001"}/login`;
             return;
         }
 

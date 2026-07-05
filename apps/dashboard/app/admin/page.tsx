@@ -26,7 +26,7 @@ export default function AdminDashboardPage() {
         if (typeof window !== "undefined") {
             localStorage.removeItem("bid-arena-auth");
             setTimeout(() => {
-                window.location.href = process.env.NEXT_PUBLIC_LOGIN_URL || "http://localhost:3001/login";
+                window.location.href = `${process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001"}/login`;
             }, 1000);
         }
     };

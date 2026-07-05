@@ -6,6 +6,8 @@
 **/dist
 **/out
 **/build
+**/.turbo
+.turbo
 
 # Git
 .git
@@ -26,6 +28,7 @@ Thumbs.db
 # Credentials & local configurations
 .env
 .env*
+api.env
 *.pem
 *firebase-adminsdk*.json
 

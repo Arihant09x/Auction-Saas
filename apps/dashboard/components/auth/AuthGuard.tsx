@@ -6,7 +6,8 @@ import { auth } from "../../lib/firebase";
 import { useAuthStore } from "../../store/auth.store";
 import { Loader2 } from "lucide-react";
 
-const LOGIN_URL = process.env.NEXT_PUBLIC_LOGIN_URL || "http://localhost:3001/login";
+const MAIN_WEBSITE_URL = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001";
+const LOGIN_URL = `${MAIN_WEBSITE_URL}/login`;
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const { setUser, setFirebaseToken, setInitialized, isInitialized, firebaseToken, user, isHydrated, logout } = useAuthStore();
