@@ -56,7 +56,7 @@ export function Footer() {
                     <div className="flex flex-col items-start gap-4">
                         <Link
                             href="/"
-                            className="block focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-lg mt-20"
+                            className="block focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-lg mt-2 lg:mt-20"
                         >
                             <motion.div
                                 whileHover={{ scale: 1.02 }}
@@ -145,25 +145,29 @@ export function Footer() {
                     <p className="text-[14px] text-white/70 font-medium font-['Poppins']">
                         © {new Date().getFullYear()} Auction 11. All rights reserved.
                     </p>
-                    <div className="flex gap-6">
+                    <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2">
                         <a href={`${MAIN_WEBSITE_URL}/privacy-policy`} target="_blank" rel="noopener noreferrer" className="text-[14px] text-white/70 hover:text-[#FFBA00] transition-colors font-medium font-['Poppins']">
                             Privacy Policy
                         </a>
                         <a href={`${MAIN_WEBSITE_URL}/terms-and-conditions`} target="_blank" rel="noopener noreferrer" className="text-[14px] text-white/70 hover:text-[#FFBA00] transition-colors font-medium font-['Poppins']">
                             Terms & Conditions
                         </a>
-                        <Link
-                            href="/cancellation-policy"
-                            className="text-xs sm:text-sm text-white/70 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-md px-1"
+                        <a
+                            href={`${MAIN_WEBSITE_URL}/cancellation-policy`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[14px] text-white/70 hover:text-[#FFBA00] transition-colors font-medium font-['Poppins']"
                         >
                             Cancellation & Refund Policy
-                        </Link>
-                        <Link
-                            href="/shipping-policy"
-                            className="text-xs sm:text-sm text-white/70 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-md px-1"
+                        </a>
+                        <a
+                            href={`${MAIN_WEBSITE_URL}/shipping-policy`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[14px] text-white/70 hover:text-[#FFBA00] transition-colors font-medium font-['Poppins']"
                         >
                             Shipping & Delivery Policy
-                        </Link>
+                        </a>
                     </div>
                 </div>
             </motion.div>

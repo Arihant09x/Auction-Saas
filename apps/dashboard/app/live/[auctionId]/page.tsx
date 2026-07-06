@@ -415,6 +415,11 @@ export default function OrganizerLiveDashboard() {
             toast.info("The last action has been undone.");
         });
 
+        socket.on("auction_ended", (data: any) => {
+            toast.success("Auction has been completed and archived!");
+            router.push(`/dashboard/manage/${auctionId}/details`);
+        });
+
         socket.on("error", (msg: string) => {
             toast.dismiss("select-player");
             toast.error(msg);
@@ -457,6 +462,28 @@ export default function OrganizerLiveDashboard() {
     const resumeBidding = () => socketRef.current?.emit("reopen_bidding", { auctionId });
     const reauctionUnsold = () => socketRef.current?.emit("reauction_unsold", { auctionId });
 
+    const endAuction = (force = false) => {
+        if (!socketRef.current) return;
+        socketRef.current.emit("end_auction", { auctionId, force }, (res: any) => {
+            if (res) {
+                if (res.status === "WARNING") {
+                    if (confirm(`${res.message}\nAre you sure you want to FORCE END the auction? This will mark all remaining players as UNSOLD.`)) {
+                        endAuction(true);
+                    }
+                } else if (res.status === "BLOCKED") {
+                    toast.error(res.message || "Failed to end auction.");
+                } else if (res.status === "COMPLETED") {
+                    toast.success(res.message || "Auction successfully ended!");
+                    router.push(`/dashboard/manage/${auctionId}/details`);
+                } else if (res.error) {
+                    toast.error(res.error);
+                }
+            } else {
+                toast.error("Failed to end the auction. Please try again.");
+            }
+        });
+    };
+
     const handleSoldClick = () => {
         if (!currentPlayer) return;
         if (topBidderName === "None" || topBidderName === "Unknown") {
@@ -493,7 +520,7 @@ export default function OrganizerLiveDashboard() {
                         {AuctionInfo?.logo ? (
                             <img src={AuctionInfo.logo} alt="Logo" className="w-full h-full object-cover z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                         ) : (
-                            <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Logo" className="w-full h-full object-cover z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <img src="/icon1.png" alt="Logo" className="w-full h-full object-cover z-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                         )}
                     </div>
                     <h1 className="text-md font-black text-white tracking-widest uppercase shadow-black drop-shadow-md">{AuctionInfo?.auctionName}</h1>
@@ -555,7 +582,7 @@ export default function OrganizerLiveDashboard() {
                                 {/* Left: Player Rectangular Card (glowing blue border like logo-1.png) */}
                                 <div className="relative shrink-0">
                                     <div className="w-[280px] h-[350px] lg:w-[320px] lg:h-[400px] rounded-3xl border-4 border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.3)] overflow-hidden bg-black/50 relative group">
-                                        <img src={currentPlayer.profilePic || "/default-avatar.png"} className="w-full h-full object-cover relative z-10" alt="Player" />
+                                        <img src={currentPlayer.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png"} className="w-full h-full object-cover relative z-10" alt="Player" />
                                     </div>
                                     <AnimatePresence>
                                         {isSold && (
@@ -827,6 +854,16 @@ export default function OrganizerLiveDashboard() {
                                         </div>
                                         <button onClick={reauctionUnsold} className="px-6 py-2.5 bg-white/5 text-white/80 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase transition-colors cursor-pointer">
                                             Trigger Now
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 bg-red-500/10 rounded-2xl border border-red-500/20 hover:border-red-500/30 transition-colors">
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-sm uppercase tracking-widest text-red-400">End Auction Session</span>
+                                            <span className="text-[10px] text-white/40 font-bold uppercase mt-1">Completes and archives the live auction</span>
+                                        </div>
+                                        <button onClick={() => endAuction(false)} className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase transition-colors cursor-pointer border border-red-500">
+                                            End Auction
                                         </button>
                                     </div>
                                 </div>

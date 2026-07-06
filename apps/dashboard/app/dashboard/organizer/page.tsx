@@ -14,7 +14,7 @@ export default function OrganizerDashboard() {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { user, isInitialized } = useAuthStore();
     const { data: auctions = [], isLoading: loadingAuctions } = useAuctions();
-
+    const fallbackImage = "/icon1.png"
     const { data: blogsResponse, isLoading: loadingBlogs } = useQuery({
         queryKey: ["organizer-dashboard-blogs"],
         queryFn: () => blogsApi.getBlogs(1, 6),
@@ -135,9 +135,7 @@ export default function OrganizerDashboard() {
                                         >
                                             <div className="w-[50px] h-[50px] bg-white rounded-full flex items-center justify-center mb-2 shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden">
                                                 {auction.logo ? <img src={auction.logo} alt="Logo" className="w-full h-full object-cover" /> : (
-                                                    <div className="w-[40px] h-[40px] rounded-full border-[1.5px] border-gray-800 bg-gray-800 flex items-center justify-center text-white text-[10px] font-bold">
-                                                        {auction.name.substring(0, 2).toUpperCase()}
-                                                    </div>
+                                                    <img src={fallbackImage} alt="Auction" className="w-full h-full object-cover"></img>
                                                 )}
                                             </div>
                                             <p className="text-[13px] font-extrabold text-[#012972] text-center leading-tight">{auction.name}</p>

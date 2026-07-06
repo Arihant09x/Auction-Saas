@@ -4,10 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { blogsApi, BlogArticle } from "@/lib/api-client";
 import { Calendar, ExternalLink, ArrowLeft, ArrowRight, BookOpen } from "lucide-react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
 
 // Premium Safe Image Component (unchanged)
 interface SafeImageProps {
@@ -51,38 +47,17 @@ export function BlogList({ limit = 6 }: BlogListProps) {
   const meta = data?.data?.meta ?? { total: 0, page: 1, limit };
   const totalPages = Math.ceil(meta.total / limit);
 
-  // GSAP scroll animation for blog cards
-  useEffect(() => {
-    if (!isLoading && blogs.length > 0) {
-      const ctx = gsap.context(() => {
-        gsap.fromTo(
-          ".blog-card",
-          { opacity: 0, y: 50 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            ease: "power3.out",
-            stagger: 0.1,
-            scrollTrigger: {
-              trigger: gridRef.current,
-              start: "top 85%",
-              once: true,
-            },
-          }
-        );
-      }, gridRef);
-      return () => ctx.revert();
-    }
-  }, [isLoading, blogs]);
-
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div 
+        className="flex overflow-x-auto gap-4 sm:gap-6 w-full pb-8 scroll-smooth px-4 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        data-lenis-prevent
+      >
         {Array.from({ length: limit }).map((_, index) => (
           <div
             key={index}
-            className="animate-pulse rounded-2xl overflow-hidden border border-[#e0e7f5] flex flex-col h-full bg-white shadow-sm"
+            className="animate-pulse rounded-2xl overflow-hidden border border-[#e0e7f5] flex flex-col h-full bg-white shadow-sm shrink-0 w-[290px] md:w-auto md:shrink"
           >
             <div className="h-48 w-full bg-gray-100" />
             <div className="p-5 flex-1 space-y-3">
@@ -108,9 +83,14 @@ export function BlogList({ limit = 6 }: BlogListProps) {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Grid Layout with ref for GSAP */}
-      <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="space-y-8 w-full">
+      {/* Grid Layout with horizontal flex scroll on mobile */}
+      <div 
+        ref={gridRef} 
+        className="flex overflow-x-auto gap-4 sm:gap-6 w-full pb-8 scroll-smooth px-4 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        data-lenis-prevent
+      >
         {blogs.map((article: BlogArticle) => (
           <BlogCard key={article.id} article={article} />
         ))}
@@ -149,42 +129,9 @@ export function BlogList({ limit = 6 }: BlogListProps) {
 
 // Individual blog card with GSAP hover effect (similar to plan cards)
 function BlogCard({ article }: { article: BlogArticle }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const card = cardRef.current;
-    if (!card) return;
-    const enter = () => {
-      gsap.to(card, {
-        y: -8,
-        scale: 1.02,
-        boxShadow: "0 20px 40px rgba(1,41,114,0.15)",
-        duration: 0.25,
-        ease: "power2.out",
-      });
-    };
-    const leave = () => {
-      gsap.to(card, {
-        y: 0,
-        scale: 1,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-        duration: 0.25,
-        ease: "power2.inOut",
-      });
-    };
-    card.addEventListener("mouseenter", enter);
-    card.addEventListener("mouseleave", leave);
-    return () => {
-      card.removeEventListener("mouseenter", enter);
-      card.removeEventListener("mouseleave", leave);
-    };
-  }, []);
-
   return (
     <article
-      ref={cardRef}
-      className="blog-card rounded-2xl overflow-hidden border border-[#e0e7f5] flex flex-col h-full bg-white shadow-sm cursor-pointer"
-      style={{ opacity: 0, transform: "translateY(40px)" }}
+      className="blog-card rounded-2xl overflow-hidden border border-[#e0e7f5] flex flex-col h-full bg-white shadow-sm cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(1,41,114,0.15)] shrink-0 w-[290px] md:w-auto md:shrink group"
     >
       {/* Image Container */}
       <div className="h-48 w-full relative overflow-hidden bg-gray-100">

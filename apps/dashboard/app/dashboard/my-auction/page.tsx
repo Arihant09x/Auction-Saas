@@ -139,7 +139,7 @@ export default function MyAuctionPage() {
                                             {auction.logo ? (
                                                 <img src={auction.logo} alt="Logo" width={65} height={65} className="object-cover" />
                                             ) : (
-                                                <img src="/rcb.png" alt="Logo" width={65} height={65} className="object-cover" />
+                                                <img src="/icon1.png" alt="Logo" width={65} height={65} className="object-cover" />
                                             )}
                                         </div>
                                         <div className="flex flex-col gap-1.5 justify-center">

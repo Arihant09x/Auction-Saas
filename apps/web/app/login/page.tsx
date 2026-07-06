@@ -17,6 +17,7 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  deleteUser,
 } from "firebase/auth";
 
 import { useForm } from "react-hook-form";
@@ -134,6 +135,7 @@ export default function LoginPage() {
 
   const onRegisterSubmit = async (data: RegisterFormValues) => {
     setLoading(true);
+    let createdUser: any = null;
 
     try {
       let profileUrl = null;
@@ -142,6 +144,7 @@ export default function LoginPage() {
       }
 
       const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      createdUser = cred.user;
       const idToken = await cred.user.getIdToken();
 
       const dbPayload = {
@@ -161,6 +164,17 @@ export default function LoginPage() {
       window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=/dashboard/organizer`;
     } catch (err: any) {
       console.error("Registration error:", err);
+
+      // Clean up Firebase Auth user if DB sync fails
+      if (createdUser) {
+        try {
+          await deleteUser(createdUser);
+          console.log("[Auth] Cleaned up Firebase user after database sync failure.");
+        } catch (cleanupErr) {
+          console.error("[Auth] Failed to clean up Firebase user:", cleanupErr);
+        }
+      }
+
       let message = "We couldn't create your account. Please try again.";
 
       // Handle Firebase specific errors
@@ -170,6 +184,8 @@ export default function LoginPage() {
         message = "The email address is invalid.";
       } else if (err.code === "auth/weak-password") {
         message = "The password is too weak.";
+      } else if (err.code === "auth/network-request-failed") {
+        message = "Network error. Please check your internet connection.";
       } else if (err.message) {
         // This handles our backend ConflictException messages (mobile exists, etc)
         message = err.message;
@@ -221,7 +237,20 @@ export default function LoginPage() {
         window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=/dashboard/organizer`;
       }
     } catch (err: any) {
-      toast.error(err.message || "Invalid email or password. Please check your details.");
+      console.error("Login error:", err);
+      let message = "Invalid email or password. Please check your details.";
+      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
+        message = "Incorrect email or password. Please try again.";
+      } else if (err.code === "auth/invalid-email") {
+        message = "The email address is invalid.";
+      } else if (err.code === "auth/too-many-requests") {
+        message = "Too many failed login attempts. Please try again later.";
+      } else if (err.code === "auth/network-request-failed") {
+        message = "Network error. Please check your internet connection.";
+      } else if (err.message) {
+        message = err.message;
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -249,11 +278,18 @@ export default function LoginPage() {
       toast.success("Successfully signed in with Google!");
       window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=/dashboard/organizer`;
     } catch (err: any) {
+      console.error("Google login error:", err);
+      let message = "Failed to sign in with Google. Please try again.";
       if (err.code === "auth/popup-closed-by-user" || err.message?.includes("popup-closed-by-user")) {
-        toast.error("Sign-in window was closed. Please try again.");
-      } else {
-        toast.error(err.message || "Failed to sign in with Google. Please try again.");
+        message = "Sign-in window was closed. Please try again.";
+      } else if (err.code === "auth/cancelled-popup-request") {
+        message = "Only one sign-in window can be open at a time.";
+      } else if (err.code === "auth/network-request-failed") {
+        message = "Network error. Please check your internet connection.";
+      } else if (err.message) {
+        message = err.message;
       }
+      toast.error(message);
     } finally {
       setLoading(false);
     }

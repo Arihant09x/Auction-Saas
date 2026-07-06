@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, Users, Trash2, Pencil, X, Plus } from "lucide-react";
 import { useAuthStore } from "../../../../../store/auth.store";
 import { teamSchema, formatZodErrors } from "../../../../../lib/validations";
-import { useTeams } from "../../../../../hooks/useManageAuction";
+import { useTeams, useAuctionDetails } from "../../../../../hooks/useManageAuction";
 import { uploadImage } from "../../../../../app/actions/cloudinary";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -21,6 +21,21 @@ export default function ManageTeamsPage() {
 
     const queryClient = useQueryClient();
     const { data: teams = [], isLoading: isFetching } = useTeams(auctionId);
+    const { data: auction = null } = useAuctionDetails(auctionId);
+
+    const getTeamLimit = (tier: string): number => {
+        switch (tier) {
+            case "FREE": return 2;
+            case "BASIC": return 4;
+            case "STANDARD": return 8;
+            case "PREMIUM": return 12;
+            case "ELITE": return 16;
+            case "ULTIMATE": return 20;
+            case "MEGA": return 30;
+            default: return 2;
+        }
+    };
+    const teamLimit = auction ? getTeamLimit(auction.planTier) : 2;
 
     const [isLoading, setIsLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -71,6 +86,12 @@ export default function ManageTeamsPage() {
 
     const handleManualAdd = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!editingTeamId && teams.length >= teamLimit) {
+            toast.error(`Plan Limit Reached: Your ${auction?.planTier || "FREE"} plan allows up to ${teamLimit} teams. Upgrade your plan in the Details section to add more.`);
+            return;
+        }
+
         const result = teamSchema.safeParse(teamData);
         if (!result.success) {
             setFormErrors(formatZodErrors(result.error));
@@ -179,7 +200,14 @@ export default function ManageTeamsPage() {
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-8">
-                <h1 className="text-2xl sm:text-[32px] font-bold text-gray-900 drop-shadow-sm">Manage Teams</h1>
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl sm:text-[32px] font-bold text-gray-900 drop-shadow-sm">Manage Teams</h1>
+                    {auction && (
+                        <span className="text-xs font-semibold text-gray-500">
+                            Plan Limit: <span className="text-[#0C3278]">{auction.planTier}</span> ({teams.length} / {teamLimit} teams added)
+                        </span>
+                    )}
+                </div>
                 <button
                     onClick={() => {
                         if (showForm && !editingTeamId) {

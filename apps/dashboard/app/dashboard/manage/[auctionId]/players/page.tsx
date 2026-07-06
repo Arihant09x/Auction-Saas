@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { UploadCloud, Users, Trash2, FileSpreadsheet, Pencil, X, AlertCircle, Check, Plus, Loader2, Maximize2, Minimize2 } from "lucide-react";
 import { useAuthStore } from "../../../../../store/auth.store";
 import { playerSchema, formatZodErrors } from "../../../../../lib/validations";
-import { usePlayers, useCategories, useTeams } from "../../../../../hooks/useManageAuction";
+import { usePlayers, useCategories, useTeams, useAuctionDetails } from "../../../../../hooks/useManageAuction";
 import { useQueryClient } from "@tanstack/react-query";
 import { SearchableSelect } from "../../../../../components/ui/SearchableSelect";
 import { uploadImage } from "../../../../../app/actions/cloudinary";
@@ -24,6 +24,21 @@ export default function ManagePlayersPage() {
     const { data: players = [], isLoading: isFetching } = usePlayers(auctionId);
     const { data: categories = [] } = useCategories(auctionId);
     const { data: teams = [] } = useTeams(auctionId);
+    const { data: auction = null } = useAuctionDetails(auctionId);
+
+    const getPlayerLimit = (tier: string): number => {
+        switch (tier) {
+            case "FREE": return 100;
+            case "BASIC": return 200;
+            case "STANDARD": return 400;
+            case "PREMIUM": return 1200;
+            case "ELITE": return 2500;
+            case "ULTIMATE": return 5000;
+            case "MEGA": return 10000;
+            default: return 100;
+        }
+    };
+    const playerLimit = auction ? getPlayerLimit(auction.planTier) : 100;
 
     const [isLoading, setIsLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -108,6 +123,12 @@ export default function ManagePlayersPage() {
 
     const handleManualAdd = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!editingPlayerId && players.length >= playerLimit) {
+            toast.error(`Plan Limit Reached: Your ${auction?.planTier || "FREE"} plan allows up to ${playerLimit} players. Upgrade your plan in the Details section to add more.`);
+            return;
+        }
+
         const result = playerSchema.safeParse(playerData);
         if (!result.success) {
             setFormErrors(formatZodErrors(result.error));
@@ -150,7 +171,7 @@ export default function ManagePlayersPage() {
             });
             queryClient.invalidateQueries({ queryKey: ['players', auctionId] });
         } catch (error: any) {
-            toast.error("Something went wrong while saving the player.");
+            toast.error(error.message || "Something went wrong while saving the player.");
         } finally {
             setIsLoading(false);
         }
@@ -199,6 +220,12 @@ export default function ManagePlayersPage() {
 
     const confirmBulkUpload = async () => {
         if (!bulkPreview?.previewData.length) return;
+
+        if (players.length + bulkPreview.previewData.length > playerLimit) {
+            toast.error(`Plan Limit Reached: Importing ${bulkPreview.previewData.length} players would exceed your plan limit of ${playerLimit} players (you currently have ${players.length} players). Please upgrade your plan or reduce row counts.`);
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -215,7 +242,7 @@ export default function ManagePlayersPage() {
             setCsvFile(null);
             queryClient.invalidateQueries({ queryKey: ['players', auctionId] });
         } catch (error: any) {
-            toast.error("Something went wrong during the upload. Please try again.");
+            toast.error(error.message || "Something went wrong during the upload. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -299,7 +326,14 @@ export default function ManagePlayersPage() {
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-8">
-                <h1 className="text-2xl sm:text-[32px] font-bold text-gray-900 drop-shadow-sm">Manage Players</h1>
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl sm:text-[32px] font-bold text-gray-900 drop-shadow-sm">Manage Players</h1>
+                    {auction && (
+                        <span className="text-xs font-semibold text-gray-500">
+                            Plan Limit: <span className="text-[#0C3278]">{auction.planTier}</span> ({players.length} / {playerLimit} players added)
+                        </span>
+                    )}
+                </div>
                 <button
                     onClick={() => {
                         if (showForm && !editingPlayerId) {

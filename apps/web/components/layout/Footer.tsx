@@ -61,7 +61,7 @@ export function Footer() {
                     <div className="flex flex-col items-start gap-4">
                         <Link
                             href="/"
-                            className="block focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-lg mt-20"
+                            className="block focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-lg mt-2 lg:mt-20"
                         >
                             <motion.div
                                 whileHover={{ scale: 1.02 }}
@@ -183,7 +183,7 @@ export function Footer() {
                     <p className="text-xs sm:text-sm text-white/70 font-medium font-['Poppins'] text-center sm:text-left">
                         © {currentYear} Auction 11. All rights reserved.
                     </p>
-                    <div className="flex gap-6">
+                    <div className="flex flex-wrap justify-center sm:justify-end gap-x-6 gap-y-2">
                         <Link
                             href="/privacy-policy"
                             className="text-xs sm:text-sm text-white/70 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-md px-1"

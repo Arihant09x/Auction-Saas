@@ -63,7 +63,7 @@ export default function AuctionsPanelPage() {
                                             {auction.logo ? (
                                                 <img src={auction.logo} alt="Logo" width={50} height={50} className="object-cover" />
                                             ) : (
-                                                <img src="/rcb.png" alt="Logo" width={50} height={50} className="object-cover" />
+                                                <img src="/icon1.png" alt="Logo" width={50} height={50} className="object-cover" />
                                             )}
                                         </div>
                                         <div className="flex flex-col">

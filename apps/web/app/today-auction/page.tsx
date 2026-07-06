@@ -45,7 +45,7 @@ function AuctionCard({ auction }: { auction: any }) {
     return () => { card.removeEventListener("mouseenter", enter); card.removeEventListener("mouseleave", leave); };
   }, []);
 
-  const fallbackImage = "https://tse1.mm.bing.net/th/id/OIP.gSkpI5uIEa8Qxa_qfvSSpwHaHa?pid=Api&P=0&w=300&h=300";
+  const fallbackImage = "/final-1.png";
   const statusColors: Record<string, string> = {
     DRAFT: "bg-gray-100 text-gray-700",
     LIVE: "bg-green-100 text-green-700",
@@ -76,7 +76,7 @@ function AuctionCard({ auction }: { auction: any }) {
 
 
       {/* Image with status badge */}
-      <div className="relative w-full aspect-[16/9] bg-white overflow-hidden">
+      <div className="relative w-full aspect-[16/9] bg-gray-100 overflow-hidden">
         <img
           src={auction.logo || fallbackImage}
           alt={auction.name}

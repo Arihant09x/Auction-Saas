@@ -19,6 +19,7 @@ export default function JoinAuctionPage() {
     const queryClient = useQueryClient();
     const { firebaseToken } = useAuthStore();
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const fallbackImage = "/icon1.png"
 
     const fetchJoinedAuctions = async () => {
         if (!firebaseToken) return [];
@@ -202,7 +203,7 @@ export default function JoinAuctionPage() {
                                                 <div className="flex gap-3 items-center">
                                                     <div className="w-[50px] h-[50px] bg-[#0C3278] rounded-xl flex items-center justify-center shrink-0 shadow-inner">
                                                         <div className="w-[35px] h-[35px] rounded-full border-[1.5px] border-white/50 bg-black/50 flex items-center justify-center text-white text-[6px] font-bold">
-                                                            LOGO
+                                                            <img src={auction.logo || fallbackImage} alt="Joined-Auction" width={65} height={65} className="object-cover" />
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col justify-center">

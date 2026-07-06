@@ -88,7 +88,7 @@ export default function ViewerLiveAuctionPage() {
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const queryClient = useQueryClient();
-
+    const fallbackImage = "/icon1.png";
 
     // GSAP refs
     const headerRef = useRef<HTMLElement>(null);
@@ -597,10 +597,10 @@ export default function ViewerLiveAuctionPage() {
                         className="bg-[#0b1f4d] rounded-lg shadow-xl flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 relative border border-white/5 overflow-hidden">
                         <div className="flex items-center gap-2 sm:gap-4 flex-1 overflow-hidden">
                             {auctionLogo ? (
-                                <img src={auctionLogo ?? undefined} alt="App Logo" className="w-10 h-10 sm:w-20 sm:h-20 object-contain filter drop-shadow-lg flex-shrink-0" />
+                                <img src={auctionLogo} alt="App Logo" className="w-10 h-10 sm:w-20 sm:h-20 object-contain filter drop-shadow-lg flex-shrink-0" />
                             ) : (
                                 <div className="w-10 h-10 sm:w-20 sm:h-20 bg-gradient-to-br from-[#0D347F] to-[#072460] rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <img src="/logo-1.png" alt="App Logo" className="w-10 h-10 sm:w-20 sm:h-20 object-contain filter drop-shadow-lg flex-shrink-0" />
+                                    <img src={fallbackImage} alt="App Logo" className="w-10 h-10 sm:w-20 sm:h-20 object-contain filter drop-shadow-lg flex-shrink-0" />
                                 </div>
                             )}
                             <div className="flex flex-col min-w-0">

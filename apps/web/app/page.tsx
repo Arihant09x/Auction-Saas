@@ -21,10 +21,6 @@ import Image from "next/image";
 import { AuctionCardSkeleton } from "@/components/ui/AuctionCardSkeleton";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-
-gsap.registerPlugin(useGSAP);
 
 import { Navbar } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -38,9 +34,7 @@ import { ChevronLeft, ChevronRight, Calendar, MapPinned, Users, Star, LogIn, Gav
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { BlogList } from "@/components/ui/BlogList";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-gsap.registerPlugin(ScrollTrigger);
 
 const DASHBOARD_URL = process.env["NEXT_PUBLIC_DASHBOARD_URL"] ?? "http://localhost:3002";
 
@@ -53,49 +47,29 @@ const DASHBOARD_URL = process.env["NEXT_PUBLIC_DASHBOARD_URL"] ?? "http://localh
 function HeroSection() {
   const container = useRef(null);
 
-  useGSAP(
-    () => {
-      gsap.to(".hero-illustration", {
-        y: -20,
-        duration: 2,
-        repeat: -1,
-        yoyo: true,
-        ease: "power1.inOut",
-      });
+  const [stars, setStars] = useState(0);
+  const [auctions, setAuctions] = useState(0);
+  const [speed, setSpeed] = useState(0);
 
-      gsap.utils.toArray(".counter").forEach((counter: any) => {
-        const target = Number(counter.dataset.value);
-        const decimals = Number(counter.dataset.decimals || 0);
+  useEffect(() => {
+    const duration = 1500;
+    const startTime = performance.now();
 
-        gsap.fromTo(
-          counter,
-          {
-            innerText: 0,
-          },
-          {
-            innerText: target,
-            duration: 2,
-            ease: "power3.out",
-            snap: { innerText: decimals === 0 ? 1 : 0.1 },
-            scrollTrigger: {
-              trigger: counter,
-              start: "top 90%",
-              once: true,
-            },
-            onUpdate: function () {
-              const value = Number(counter.innerText);
+    const animate = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const ease = progress * (2 - progress);
 
-              counter.innerText =
-                decimals > 0
-                  ? value.toFixed(decimals)
-                  : Math.floor(value).toString();
-            },
-          }
-        );
-      });
-    },
-    { scope: container }
-  );
+      setStars(parseFloat((ease * 4.7).toFixed(1)));
+      setAuctions(Math.floor(ease * 50));
+      setSpeed(Math.floor(ease * 100));
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, []);
   const stats = [
     {
       icon: Star,
@@ -118,14 +92,7 @@ function HeroSection() {
       suffix: "%",
       decimals: 0,
     },
-    {
-      icon: ShieldCheck,
-      value: 20000,
-      label: "Payments Processed",
-      prefix: "₹",
-      suffix: "+",
-      decimals: 0,
-    },
+
   ];
 
   return (
@@ -139,9 +106,9 @@ function HeroSection() {
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="order-2 lg:order-1 text-center lg:text-left"
+            className="order-2 lg:order-1 text-center lg:text-left "
           >
-            <div className="inline-flex items-center rounded-full px-4 lg:px-6 py-1.5 mb-6 mx-auto lg:mx-0 max-w-max bg-white/5">
+            <div className="inline-flex items-center rounded-full px-4 lg:px-6 py-1.5 mb-1 mx-auto gap-2 lg:mx-0 max-w-max bg-white/5">
               <span className="self-stretch h-5 lg:h-6 justify-start text-indigo-100 text-sm lg:text-base font-bold font-['Poppins'] uppercase leading-6 tracking-wider">
                 CRICKET. AUCTION. SIMPLIFIED.
               </span>
@@ -186,56 +153,45 @@ function HeroSection() {
               </Button>
             </div>
 
-            {/* Stats - CHANGED: 2x2 grid on mobile, horizontal on desktop */}
+            {/* Stats - Stacks vertically in a single line on mobile, horizontal on desktop */}
             <div className="bg-[#072460]/70 border border-[#0A307F] p-5 lg:p-6 rounded-[12px] shadow-[0px_4px_60px_rgba(0,0,0,0.5)] w-full max-w-[1500px] mx-auto lg:mx-0">
-              <div className="grid grid-cols-2 lg:flex lg:flex-nowrap lg:items-center lg:justify-between gap-6 lg:gap-2.5">
+              <div className="flex flex-row items-center justify-center lg:flex-row lg:items-center lg:justify-between lg:gap-2.5">
                 {stats.map((stat, index) => {
                   const Icon = stat.icon;
 
                   return (
                     <React.Fragment key={index}>
                       <div
-                        className="
-                flex
-                flex-col
-                items-center
-                lg:flex-row
-                lg:items-center
-                lg:justify-start
-                gap-3
-                lg:flex-1
-                lg:min-w-0
-                text-center
-                lg:text-left
-              "
+                        className="flex flex-col items-center justify-center text-center gap-2 lg:flex-1 lg:min-w-0"
                       >
                         <div className="flex items-center justify-center shrink-0">
                           <Icon className="w-8 h-8 text-[#FFBA00]" />
                         </div>
 
-                        <div className="flex flex-col min-w-0">
-                          <div className="flex items-center justify-center lg:justify-start text-white text-xl lg:text-xl font-bold leading-none">
-                            {stat.prefix || ""}
-
-                            <span
-                              className="counter"
-                              data-value={stat.value}
-                              data-decimals={stat.decimals}
-                            >
-                              0
+                        <div className="flex flex-col items-center justify-center min-w-0">
+                          {/* Number and suffix side by side */}
+                          <div className="flex items-center justify-center text-white text-xl lg:text-[22px] font-bold leading-none gap">
+                            <span>
+                              {index === 0 ? stars.toFixed(1) : index === 1 ? auctions : speed}
                             </span>
-
-                            {stat.suffix}
+                            {stat.suffix && (
+                              <span className="inline-flex items-center">
+                                {stat.suffix}
+                              </span>
+                            )}
                           </div>
 
-                          <span className="text-[#8AABDF] text-xs lg:text-xs mt-1 leading-tight">
+                          <span className="text-[#8AABDF] text-xs lg:text-[13px] mt-1 leading-tight font-medium text-center">
                             {stat.label}
                           </span>
                         </div>
                       </div>
 
                       {index !== stats.length - 1 && (
-                        <div className="hidden lg:block w-px h-12 bg-white/10 shrink-0 col-span-2 lg:col-span-1" />
+                        <>
+                          <div className="hidden lg:block w-px h-10 bg-white/10 shrink-0" />
+                          <div className="block lg:hidden w-16 h-px bg-white/10 shrink-0 mr-2" />
+                        </>
                       )}
                     </React.Fragment>
                   );
@@ -251,7 +207,11 @@ function HeroSection() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="order-1 lg:order-2 flex flex-col items-center lg:items-end justify-center lg:justify-end "
           >
-            <div className="relative w-full max-w-[500px] lg:max-w-[632px] hero-illustration mx-auto lg:mx-0">
+            <motion.div
+              animate={{ y: [0, -15, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="relative w-full max-w-[500px] lg:max-w-[632px] mx-auto lg:mx-0"
+            >
               <Image
                 src="/figma/hero-illustration.png"
                 alt="Auction 11 platform dashboard preview"
@@ -261,7 +221,7 @@ function HeroSection() {
                 priority
                 className="rounded-[24px] lg:rounded-none shadow-2xl lg:shadow-none border-4 lg:border-0 border-white/10 lg:border-transparent"
               />
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </div>

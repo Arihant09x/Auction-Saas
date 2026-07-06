@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { GoogleTagManager } from "@next/third-parties/google";
 import "@repo/ui/globals.css";
 import { Providers } from "./providers";
+import { CanonicalHeader } from "../components/CanonicalHeader";
 
 import { Poppins, Epilogue } from "next/font/google";
 
@@ -32,7 +33,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://auctionxi.com"),
+  metadataBase: new URL("https://auction11.live"),
   title: {
     default: "Auction11 – Live Player Auction Platform for Tournaments",
     template: "%s | Auction 11",
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
     title: "Auction11 – Live Player Auction Platform for Tournaments",
     description:
       "Auction11 helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
-    url: "https://auctionxi.com",
+    url: "https://auction11.live",
     siteName: "Auction11",
     type: "website",
     locale: "en_IN",
@@ -79,6 +80,7 @@ export default function RootLayout({
       <link rel="icon" href="/favicon.ico" sizes="128x128" type="image/x-icon " />
       <GoogleTagManager gtmId="GTM-XXXXXXX" />
       <body className="min-h-screen bg-background font-sans antialiased">
+        <CanonicalHeader />
         <ReactLenis root options={{ lerp: 0.08, duration: 1.5, smoothWheel: true }}>
           <Providers>{children}</Providers>
         </ReactLenis>

@@ -360,9 +360,7 @@ export default function OverlayPage() {
                             {currentPlayer.profilePic ? (
                                 <img src={currentPlayer.profilePic} alt={currentPlayer.name} className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center">
-                                    <span className="text-[100px]">👤</span>
-                                </div>
+                                <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Player Profile" className="w-full h-full object-cover" />
                             )}
                         </div>
 

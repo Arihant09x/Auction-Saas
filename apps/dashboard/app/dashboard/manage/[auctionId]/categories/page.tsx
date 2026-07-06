@@ -169,7 +169,12 @@ export default function ManageCategoriesPage() {
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center mb-8">
-                <h1 className="text-2xl sm:text-[32px] font-bold text-gray-900 drop-shadow-sm">Manage Categories</h1>
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl sm:text-[32px] font-bold text-gray-900 drop-shadow-sm">Manage Categories</h1>
+                    <span className="text-xs font-semibold text-gray-500">
+                        Total Categories: <span className="text-[#0C3278]">{categories.length}</span>
+                    </span>
+                </div>
                 <button
                     onClick={() => {
                         if (showForm && !editingCatId) {

@@ -341,20 +341,20 @@ export class PlayerService {
         categoryId: p.categoryId ?? null,
 
         name: p.name,
-        mobile: p.mobile ?? null,
-        age: p.age,
+        mobile: p.mobile ? String(p.mobile) : null,
+        age: p.age ? Number(p.age) : 0,
 
-        fatherName: p.fatherName ?? null,
-        profilePic: p.profilePic ?? null,
+        fatherName: p.fatherName ? String(p.fatherName) : null,
+        profilePic: p.profilePic ? String(p.profilePic) : null,
 
         role: p.role,
-        battingStyle: p.battingStyle ?? null,
-        bowlingStyle: p.bowlingStyle ?? null,
+        battingStyle: p.battingStyle ? String(p.battingStyle) : null,
+        bowlingStyle: p.bowlingStyle ? String(p.bowlingStyle) : null,
 
-        tshirtSize: p.tshirtSize ?? null,
-        trouserSize: p.trouserSize ?? null,
-        jerseyName: p.jerseyName ?? null,
-        jerseyNumber: p.jerseyNumber ?? null,
+        tshirtSize: p.tshirtSize ? String(p.tshirtSize) : null,
+        trouserSize: p.trouserSize ? String(p.trouserSize) : null,
+        jerseyName: p.jerseyName ? String(p.jerseyName) : null,
+        jerseyNumber: p.jerseyNumber ? Number(p.jerseyNumber) : null,
 
         basePrice: Number(p.basePrice),
         status: PlayerStatus.UPCOMING,
@@ -531,14 +531,22 @@ export class PlayerService {
           ? this.normalizeBowlingStyle(row[headerMap["Specification 3"]])
           : null,
 
-        jerseyNumber: (headerMap["Jersay No."] && row[headerMap["Jersay No."]])
+        jerseyNumber: (headerMap["Jersay No."] && row[headerMap["Jersay No."]] !== undefined && row[headerMap["Jersay No."]] !== null)
           ? Number(row[headerMap["Jersay No."]])
           : null,
-        jerseyName: headerMap["Jersay Name"] ? (row[headerMap["Jersay Name"]] || null) : null,
-        tshirtSize: headerMap["T-Shirt"] ? (row[headerMap["T-Shirt"]] || null) : null,
-        trouserSize: headerMap["Trouser"] ? (row[headerMap["Trouser"]] || null) : null,
+        jerseyName: (headerMap["Jersay Name"] && row[headerMap["Jersay Name"]] !== undefined && row[headerMap["Jersay Name"]] !== null)
+          ? String(row[headerMap["Jersay Name"]])
+          : null,
+        tshirtSize: (headerMap["T-Shirt"] && row[headerMap["T-Shirt"]] !== undefined && row[headerMap["T-Shirt"]] !== null)
+          ? String(row[headerMap["T-Shirt"]])
+          : null,
+        trouserSize: (headerMap["Trouser"] && row[headerMap["Trouser"]] !== undefined && row[headerMap["Trouser"]] !== null)
+          ? String(row[headerMap["Trouser"]])
+          : null,
 
-        profilePic: row[headerMap["Profile_url"]!] || null,
+        profilePic: (row[headerMap["Profile_url"]!] !== undefined && row[headerMap["Profile_url"]!] !== null)
+          ? String(row[headerMap["Profile_url"]!])
+          : null,
 
         basePrice: (headerMap["Base Value (if different)"] && row[headerMap["Base Value (if different)"]])
           ? Number(row[headerMap["Base Value (if different)"]])

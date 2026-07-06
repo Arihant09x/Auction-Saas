@@ -4,8 +4,6 @@ import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { GlobalBackground } from "../ui/GlobalBackground";
 import { motion } from "framer-motion";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
 import { 
     LayoutDashboard, 
     Palette, 
@@ -15,8 +13,6 @@ import {
     Calculator, 
     RotateCw 
 } from "lucide-react";
-
-gsap.registerPlugin(useGSAP);
 
 const FEATURES_LIST = [
     { id: 1, title: "Live Auction Dashboard", text: "Manage your entire cricket auction live with real-time bids, instant updates, and zero lag.", icon: LayoutDashboard },
@@ -41,15 +37,7 @@ export function FeaturesSectionClient() {
         }
     };
 
-    useGSAP(() => {
-        gsap.to(".features-laptop", {
-            y: -15,
-            duration: 2.2,
-            repeat: -1,
-            yoyo: true,
-            ease: "power1.inOut"
-        });
-    });
+
 
     useEffect(() => {
         // Initial calculation
@@ -85,9 +73,13 @@ export function FeaturesSectionClient() {
 
                 <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-between gap-8 lg:gap-20">
                     {/* Left Laptop Image — desktop only */}
-                    <div className="relative w-full max-w-[640px] aspect-[1180/869] hidden lg:block features-laptop">
+                    <motion.div 
+                        animate={{ y: [0, -12, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="relative w-full max-w-[640px] aspect-[1180/869] hidden lg:block"
+                    >
                         <Image src="/images/0011/Graphite.png" width={1180} height={869} alt="Features Laptop" priority />
-                    </div>
+                    </motion.div>
 
                     {/* Right Features List with custom scrollbar */}
                     <div className="relative w-full max-w-full lg:max-w-[568px] h-auto lg:h-[432px] flex items-start gap-4">

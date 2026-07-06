@@ -58,7 +58,7 @@ function AuctionCard({ auction }: { auction: any }) {
     return () => { card.removeEventListener("mouseenter", enter); card.removeEventListener("mouseleave", leave); };
   }, []);
 
-  const fallbackImage = "https://tse1.mm.bing.net/th/id/OIP.gSkpI5uIEa8Qxa_qfvSSpwHaHa?pid=Api&P=0&w=300&h=300";
+  const fallbackImage = "/final-1.png";
 
   return (
     <a

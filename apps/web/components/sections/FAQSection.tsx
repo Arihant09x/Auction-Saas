@@ -80,7 +80,7 @@ export function FAQSection() {
                                     </div>
                                     <div className="flex flex-col flex-1">
                                         <span className={`font-semibold text-[15px] leading-tight ${isOpen ? 'text-[#012972]' : 'text-[#2a303c]'}`}>
-                                            {faq.question}
+                                            <h3 className="text-[16px]  text-[#012972]">{faq.question}</h3>
                                         </span>
                                         {isOpen && (
                                             <p className="mt-2 text-[14px] text-[#4a6090] leading-relaxed">
