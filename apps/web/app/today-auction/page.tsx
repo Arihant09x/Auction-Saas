@@ -46,6 +46,8 @@ function AuctionCard({ auction }: { auction: any }) {
   }, []);
 
   const fallbackImage = "/final-1.png";
+  const hasLogo = auction.logo && auction.logo.trim() !== "";
+  const imageContainerBg = hasLogo ? "bg-gray-100" : "bg-black"; // ✅ fix: black background for fallback
   const statusColors: Record<string, string> = {
     DRAFT: "bg-gray-100 text-gray-700",
     LIVE: "bg-green-100 text-green-700",
@@ -76,7 +78,7 @@ function AuctionCard({ auction }: { auction: any }) {
 
 
       {/* Image with status badge */}
-      <div className="relative w-full aspect-[16/9] bg-gray-100 overflow-hidden">
+      <div className={`relative w-full aspect-[16/9] ${imageContainerBg} overflow-hidden`}>
         <img
           src={auction.logo || fallbackImage}
           alt={auction.name}

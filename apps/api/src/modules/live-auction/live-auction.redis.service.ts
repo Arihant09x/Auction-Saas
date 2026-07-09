@@ -151,12 +151,15 @@ export class LiveAuctionRedisService {
           bowlingStyle: p.bowlingStyle,
           basePrice: Number(p.basePrice || 0),
           status: p.status || "NULL",
+          categoryId: p.categoryId,
           category: p.category
             ? {
+              id: p.category.id || p.categoryId,
               name: p.category.name,
               color: p.category.color,
             }
             : {
+              id: "UNCATEGORIZED",
               name: "UNCATEGORIZED",
               color: "#999",
             },
@@ -236,7 +239,10 @@ export class LiveAuctionRedisService {
 
     // 2. Filter by Category (if provided)
     if (categoryId && categoryId !== "ALL") {
-      players = players.filter((p) => p.category?.name === categoryId);
+      players = players.filter((p) => {
+        const pCatId = p.categoryId || p.category?.id;
+        return pCatId === categoryId || p.category?.name === categoryId;
+      });
     }
 
     if (players.length === 0) return null;

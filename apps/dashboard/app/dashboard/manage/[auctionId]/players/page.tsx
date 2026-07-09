@@ -20,8 +20,28 @@ export default function ManagePlayersPage() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     const auctionId = params.auctionId as string;
 
+    const [page, setPage] = useState(1);
     const queryClient = useQueryClient();
-    const { data: players = [], isLoading: isFetching } = usePlayers(auctionId);
+    const { data: playersResponse, isLoading: isFetching } = usePlayers(auctionId);
+
+    // ✅ Safely extract the players array from the response
+    // Handles both { data: [...] } and direct array responses
+    const allPlayers = (() => {
+        if (Array.isArray(playersResponse)) return playersResponse;
+        if (playersResponse?.data && Array.isArray(playersResponse.data)) return playersResponse.data;
+        return [];
+    })();
+
+    const players = allPlayers.slice((page - 1) * 21, page * 21);
+    const totalPlayers = allPlayers.length;
+    const totalPages = Math.max(1, Math.ceil(totalPlayers / 21));
+
+    useEffect(() => {
+        if (page > 1 && players.length === 0 && !isFetching) {
+            setPage(p => Math.max(1, p - 1));
+        }
+    }, [players.length, page, isFetching]);
+
     const { data: categories = [] } = useCategories(auctionId);
     const { data: teams = [] } = useTeams(auctionId);
     const { data: auction = null } = useAuctionDetails(auctionId);
@@ -124,7 +144,7 @@ export default function ManagePlayersPage() {
     const handleManualAdd = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!editingPlayerId && players.length >= playerLimit) {
+        if (!editingPlayerId && totalPlayers >= playerLimit) {
             toast.error(`Plan Limit Reached: Your ${auction?.planTier || "FREE"} plan allows up to ${playerLimit} players. Upgrade your plan in the Details section to add more.`);
             return;
         }
@@ -221,8 +241,8 @@ export default function ManagePlayersPage() {
     const confirmBulkUpload = async () => {
         if (!bulkPreview?.previewData.length) return;
 
-        if (players.length + bulkPreview.previewData.length > playerLimit) {
-            toast.error(`Plan Limit Reached: Importing ${bulkPreview.previewData.length} players would exceed your plan limit of ${playerLimit} players (you currently have ${players.length} players). Please upgrade your plan or reduce row counts.`);
+        if (totalPlayers + bulkPreview.previewData.length > playerLimit) {
+            toast.error(`Plan Limit Reached: Importing ${bulkPreview.previewData.length} players would exceed your plan limit of ${playerLimit} players (you currently have ${totalPlayers} players). Please upgrade your plan or reduce row counts.`);
             return;
         }
 
@@ -330,7 +350,7 @@ export default function ManagePlayersPage() {
                     <h1 className="text-2xl sm:text-[32px] font-bold text-gray-900 drop-shadow-sm">Manage Players</h1>
                     {auction && (
                         <span className="text-xs font-semibold text-gray-500">
-                            Plan Limit: <span className="text-[#0C3278]">{auction.planTier}</span> ({players.length} / {playerLimit} players added)
+                            Plan Limit: <span className="text-[#0C3278]">{auction.planTier}</span> ({Math.min(page * 21, totalPlayers)} / {totalPlayers} players added)
                         </span>
                     )}
                 </div>
@@ -343,7 +363,7 @@ export default function ManagePlayersPage() {
                             setShowForm(true);
                         }
                     }}
-                    className="w-full sm:w-auto bg-[#0C3278] flex gap-2 justify-center items-center text-white px-6 py-2.5 text-sm rounded-full font-bold shadow-md hover:bg-[#082254] transition-colors border border-[#FFBA00]"
+                    className="w-full sm:w-auto bg-[#0C3278] flex gap-2 justify-center items-center text-white px-6 py-2.5 text-sm rounded-full font-bold shadow-md hover:bg-[#082254] transition-colors border border-[#FFBA00] cursor-pointer"
                 >
                     {showForm && !editingPlayerId ? <> <X size={20} />Close</> : <> <Plus size={20} /> Add Player</>}
                 </button>
@@ -354,10 +374,10 @@ export default function ManagePlayersPage() {
                 {/* DB PREVIEW SECTION (Left Side) */}
                 <div className="bg-gray-50 rounded-[20px] shadow-inner border border-gray-200 p-6 flex flex-col min-h-[600px] order-2 lg:order-1">
                     <h3 className="font-bold text-gray-800 text-lg mb-4 flex items-center gap-2">
-                        <Users size={20} className="text-[#012972]" /> Auction Roster <span className="text-sm font-semibold text-gray-400 bg-white px-2 py-0.5 rounded-full border font-[Poppins]">{players.length} Total</span>
+                        <Users size={20} className="text-[#012972]" /> Auction Roster <span className="text-sm font-semibold text-gray-400 bg-white px-2 py-0.5 rounded-full border font-[Poppins]">{totalPlayers} Total</span>
                     </h3>
 
-                    {players.length === 0 ? (
+                    {totalPlayers === 0 ? (
                         <div className="flex-1 border border-dashed border-gray-300 rounded-xl flex items-center justify-center text-gray-400 font-medium">No players added for this auction.</div>
                     ) : (
                         <motion.div variants={listVariants} initial="hidden" animate="show" className={`grid gap-3 overflow-y-auto pr-2 custom-scrollbar  flex-1 ${showForm ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"}`}>
@@ -404,6 +424,34 @@ export default function ManagePlayersPage() {
                                 ))}
                             </AnimatePresence>
                         </motion.div>
+                    )}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between border-t border-gray-200 pt-4 mt-6 bg-transparent">
+                            <button
+                                type="button"
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-all disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                Previous
+                            </button>
+
+                            <span className="text-xs font-semibold text-gray-500">
+                                Page <span className="text-gray-800 font-bold">{page}</span> of{" "}
+                                <span className="text-gray-800 font-bold">{totalPages}</span>
+                            </span>
+
+                            <button
+                                type="button"
+                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-all disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                Next
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -546,18 +594,18 @@ export default function ManagePlayersPage() {
 
                                 {uploadMethod === "BULK" && !isLoading && bulkPreview && (
                                     <motion.div key="bulk-preview" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4">
-                                        <div className="flex justify-between items-center bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-blue-50/50 p-4 rounded-xl border border-blue-100">
                                             <div>
                                                 <h3 className="font-bold text-[#012972] flex items-center gap-2">
                                                     <Check size={20} className="text-green-600" /> Preview Summary
                                                 </h3>
-                                                <p className="text-xs text-gray-600 mt-1">
+                                                <p className="text-xs text-gray-600 mt-1 leading-relaxed">
                                                     Total: {bulkPreview.totalRows} rows | Valid: {bulkPreview.validCount} | Invalid: {bulkPreview.invalidCount}
                                                     <br />
                                                     Plan: {bulkPreview.plan} (Limit: {bulkPreview.planLimit}) | Existing: {bulkPreview.existingPlayers}
                                                 </p>
                                             </div>
-                                            <div className="flex flex-col items-end gap-2">
+                                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto gap-3 border-t sm:border-t-0 pt-3 sm:pt-0">
                                                 <button onClick={() => setBulkPreview(null)} className="text-xs font-bold text-red-500 hover:text-red-700 underline cursor-pointer">Cancel / New File</button>
                                                 <button
                                                     type="button"
@@ -693,7 +741,7 @@ export default function ManagePlayersPage() {
                             className="bg-white rounded-[24px] shadow-2xl border border-gray-150 p-6 w-full max-w-[95vw] lg:max-w-[85vw] max-h-[90vh] flex flex-col gap-4 overflow-hidden"
                         >
                             {/* Modal Header */}
-                            <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+                            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center pb-3 border-b border-gray-100">
                                 <div>
                                     <h3 className="font-bold text-xl text-[#012972] flex items-center gap-2">
                                         <Check size={24} className="text-green-600" /> Bulk Import Preview
@@ -705,7 +753,7 @@ export default function ManagePlayersPage() {
                                 <button
                                     type="button"
                                     onClick={() => setIsPreviewExpanded(false)}
-                                    className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 cursor-pointer border border-gray-250 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors shadow-sm font-semibold"
+                                    className="flex items-center justify-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 cursor-pointer border border-gray-250 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors shadow-sm font-semibold w-full sm:w-auto"
                                 >
                                     <Minimize2 size={14} /> Minimize
                                 </button>

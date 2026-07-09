@@ -305,7 +305,7 @@ export default function PaymentPage() {
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-2xl font-bold text-gray-900">₹{upgradePrice.toLocaleString()}</span>
                                     <span className="text-sm text-gray-400 line-through">₹{originalUpgradePrice.toLocaleString()}</span>
-                                    <span className="text-xs text-gray-500">one-time</span>
+                                    <span className="text-xs text-gray-500">Per-Auction</span>
                                 </div>
                                 {originalUpgradePrice > upgradePrice && (
                                     <div className="inline-block text-xs font-semibold px-2.5 py-1 rounded bg-[#00379d] text-white w-fit shadow-sm">
@@ -316,18 +316,10 @@ export default function PaymentPage() {
                         )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-                        <div className="bg-gray-50 rounded-lg p-2">
-                            <div className="text-sm font-bold text-gray-800">{tier.teams}</div>
-                            <div className="text-[10px] text-gray-500">Teams</div>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-2">
-                            <div className="text-sm font-bold text-gray-800">{tier.players.toLocaleString()}</div>
-                            <div className="text-[10px] text-gray-500">Players</div>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-2">
-                            <div className="text-sm font-bold text-gray-800">{tier.auctions}</div>
-                            <div className="text-[10px] text-gray-500">Auctions</div>
+                    <div className="mb-4">
+                        <div className="bg-[#012972]/5 border border-[#012972]/10 rounded-lg py-2.5 px-4 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-600">Total Teams Allowed:</span>
+                            <span className="text-sm font-extrabold text-[#012972] bg-[#012972]/10 px-3 py-0.5 rounded-full">{tier.teams} Teams</span>
                         </div>
                     </div>
 

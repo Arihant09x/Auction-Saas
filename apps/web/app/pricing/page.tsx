@@ -33,12 +33,12 @@ function PageTitle({ title, highlight }: { title: string; highlight: string }) {
 
 // ─── Plans data ──────────────────────────────────────────────────────────────
 const PLANS = [
-  { id: "p1", label: "Basic", teams: "04", price: "₹1,049/-", originalPrice: "₹1,499/-", period: "per Auction", highlight: false },
-  { id: "p2", label: "Standard", teams: "08", price: "₹1,749/-", originalPrice: "₹2,299/-", period: "per Auction", highlight: false },
-  { id: "p3", label: "Premium", teams: "12", price: "₹2,449/-", originalPrice: "₹3,199/-", period: "per Auction", highlight: true },
-  { id: "p4", label: "Elite", teams: "16", price: "₹2,799/-", originalPrice: "₹3,799/-", period: "per Auction", highlight: false },
-  { id: "p5", label: "Ultimate", teams: "20", price: "₹3,849/-", originalPrice: "₹4,799/-", period: "per Auction", highlight: false },
-  { id: "p6", label: "Mega", teams: "30", price: "₹4,899/-", originalPrice: "₹6,299/-", period: "per Auction", highlight: false },
+  { id: "p1", label: "Basic", teams: "04", price: "₹1,049/-", originalPrice: "₹1,500/-", period: "per Auction", highlight: false },
+  { id: "p2", label: "Standard", teams: "08", price: "₹1,749/-", originalPrice: "₹2,500/-", period: "per Auction", highlight: false },
+  { id: "p3", label: "Premium", teams: "12", price: "₹2,449/-", originalPrice: "₹3,500/-", period: "per Auction", highlight: true },
+  { id: "p4", label: "Elite", teams: "16", price: "₹2,799/-", originalPrice: "₹4,000/-", period: "per Auction", highlight: false },
+  { id: "p5", label: "Ultimate", teams: "20", price: "₹3,849/-", originalPrice: "₹5,500/-", period: "per Auction", highlight: false },
+  { id: "p6", label: "Mega", teams: "30", price: "₹4,899/-", originalPrice: "₹6,999/-", period: "per Auction", highlight: false },
 ];
 
 const EXTRA_FEATURES = [
@@ -86,7 +86,12 @@ function PlanCard({ plan }: { plan: typeof PLANS[0] }) {
       <div className={`text-[28px] font-black border-t pt-3 ${plan.highlight ? "border-white/20 text-[#FFBA00]" : "border-[#e0e7f5] text-[#012972]"}`}>
         {plan.price}
       </div>
-      <span className="text-gray-400 font-bold text-md -mt-4 mb-3 tracking-tight whitespace-nowrap line-through">{plan.originalPrice}</span>
+      <span className="text-gray-400 font-bold text-md -mt-4 mb-1 tracking-tight whitespace-nowrap line-through">{plan.originalPrice}</span>
+      {plan.price !== "Free" && (
+        <div className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded w-fit shadow-sm mb-3 ${plan.highlight ? "bg-[#FFBA00] text-[#012972]" : "bg-[#00379d] text-white"}`}>
+          You Save ₹{(parseInt(plan.originalPrice.replace(/\D/g, "")) - parseInt(plan.price.replace(/\D/g, ""))).toLocaleString()} (30% off)
+        </div>
+      )}
       <Button
         href={`/login`}
         className={`mt-auto w-full py-2.5 rounded-[99px] font-bold text-[14px] border border-[#ffaf2e] hover:opacity-90 transition text-center font-epilogue ${plan.highlight ? "bg-[#FFBA00] text-[#012972]" : "bg-[#00379d] text-white"

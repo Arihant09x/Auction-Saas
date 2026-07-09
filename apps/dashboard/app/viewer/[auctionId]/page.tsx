@@ -629,7 +629,7 @@ export default function ViewerLiveAuctionPage() {
                             {auctionLogo && (
                                 <Link href={process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001"}>
                                     <div className="w-10 h-10 sm:w-20 sm:h-20 rounded-lg overflow-hidden">
-                                        <img src="/apple-icon.png" alt="Auction Logo" className="w-full h-full object-contain p-0.5 cursor-pointer" />
+                                        <img src="/icon2.png" alt="Auction Logo" className="w-full h-full object-contain p-0.5 cursor-pointer" />
                                     </div>
                                 </Link>
                             )}

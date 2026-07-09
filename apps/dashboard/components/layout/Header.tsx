@@ -17,6 +17,7 @@ const LOGIN_URL = `${MAIN_WEBSITE_URL}/login`;
 const NAV_LINKS = [
     { href: `${MAIN_WEBSITE_URL}/today-auction`, label: "Today Auction" },
     { href: `${MAIN_WEBSITE_URL}/upcoming-auction`, label: "Upcoming Auction" },
+    { href: `${MAIN_WEBSITE_URL}/pricing`, label: "Pricing" },
     { href: `${MAIN_WEBSITE_URL}/blog`, label: "Blog" },
 ];
 

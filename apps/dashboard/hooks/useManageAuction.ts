@@ -78,7 +78,7 @@ export function useTeams(auctionId: string) {
 // --- FETCH PLAYERS ---
 const fetchPlayers = async (auctionId: string, token: string) => {
     if (!token || !auctionId) return [];
-    const res = await fetch(`${API_URL}/player?auctionId=${auctionId}`, {
+    const res = await fetch(`${API_URL}/player?auctionId=${auctionId}&limit=99999`, {
         headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) {
@@ -86,9 +86,7 @@ const fetchPlayers = async (auctionId: string, token: string) => {
         throw new Error("Failed to fetch players");
     }
     const resData = await res.json();
-    const payload = resData.data || [];
-    // Player findAll returns { data: [...], meta: {...} } for pagination
-    return Array.isArray(payload) ? payload : (payload.data || []);
+    return resData.data || [];
 };
 
 export function usePlayers(auctionId: string) {

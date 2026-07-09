@@ -9,7 +9,7 @@ import { useAuthStore } from "../../../store/auth.store";
 import Stepper from "@mui/material/Stepper";
 import Step from "@mui/material/Step";
 import StepLabel from "@mui/material/StepLabel";
-import { UploadCloud, ChevronRight, Check, UsersRound, ChevronLeft, AlertCircle, Loader2, Maximize2, Minimize2 } from "lucide-react";
+import { UploadCloud, ChevronRight, Check, UsersRound, ChevronLeft, AlertCircle, Loader2, Maximize2, Minimize2, Crown } from "lucide-react";
 import { uploadImage } from "../../actions/cloudinary";
 import { createAuctionSchema } from "../../../lib/validations";
 import { formatZodErrors } from "../../../lib/validations";
@@ -127,6 +127,9 @@ export default function CreateAuctionWizard() {
     const addTeam = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!teamData.name || !teamData.shortName) return toast.error("Please provide both the Team Name and Short Name.");
+        if (addedTeams.length >= 2) {
+            return toast.error("Plan Limit: The Free plan allows only 2 teams. You can upgrade your plan after the auction is created to add more teams.");
+        }
         if (!auctionId) return toast.error("Auction ID is missing. Please restart Step 1.");
 
         setIsLoading(true);
@@ -227,6 +230,9 @@ export default function CreateAuctionWizard() {
 
     const confirmBulkUpload = async () => {
         if (!bulkPreview?.previewData.length) return;
+        if (addedPlayers.length + bulkPreview.previewData.length > 100) {
+            return toast.error(`Plan Limit Reached: Importing ${bulkPreview.previewData.length} players would exceed the Free plan limit of 100 players (you currently have ${addedPlayers.length} players). Please upgrade your plan after the auction is created.`);
+        }
         setIsLoading(true);
 
         try {
@@ -256,6 +262,9 @@ export default function CreateAuctionWizard() {
         e.preventDefault();
         if (!playerData.name || !playerData.mobile || !playerData.age || !playerData.role) {
             return toast.error("Please fill in all the required player details.");
+        }
+        if (addedPlayers.length >= 100) {
+            return toast.error("Plan Limit Reached: The Free plan allows up to 100 players. You can upgrade your plan after the auction is created to add more players.");
         }
         if (!auctionId) return toast.error("Auction ID is missing. Please restart Step 1.");
 
@@ -415,7 +424,7 @@ export default function CreateAuctionWizard() {
                             <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
                                 <InputField label="Auction Name" req name="name" value={auctionData.name} onChange={handleAuctionChange} placeholder="Enter auction name" />
                                 <div className="flex flex-col gap-1.5 z-50">
-                                    <label className="text-[14px] font-semibold text-gray-700">Sports Type</label>
+                                    <label className="text-[14px] font-semibold text-gray-700">Sports Type <span className="text-red-500">*</span></label>
                                     <SearchableSelect
                                         options={[
                                             { label: "Cricket", value: "CRICKET" },
@@ -427,10 +436,10 @@ export default function CreateAuctionWizard() {
                                         placeholder="Select Sports Type"
                                     />
                                 </div>
-                                <div className="flex flex-col gap-1.5 w-full">
+                                <div className="flex flex-col gap-1.5 w-full chrono-wrapper">
                                     <label className="text-[13px] font-semibold text-gray-700">Auction Date <span className="text-red-500">*</span></label>
                                     <ChronoSelect
-                                        className="w-full h-[42px] border-gray-300 rounded-[8px]"
+                                        className="w-full h-[42px] border-gray-300 rounded-[8px] cursor-pointer chrono-no-scale"
                                         value={auctionData.auctionDate ? new Date(auctionData.auctionDate) : undefined}
                                         onChange={(date: Date | undefined) => setAuctionData({ ...auctionData, auctionDate: date ? format(date, "yyyy-MM-dd") : "" })}
                                     />
@@ -445,6 +454,26 @@ export default function CreateAuctionWizard() {
                                 </div>
                                 <InputField label="Location" req type="text" name="location" value={auctionData.location} onChange={handleAuctionChange} />
                                 <InputField label="Session" type="number" name="session" value={auctionData.session} onChange={handleAuctionChange} />
+                                <div className="flex flex-col gap-1.5 w-full md:col-span-2">
+                                    <label className="text-[13px] font-semibold text-gray-700">Auction Plan Tier</label>
+                                    <select
+                                        disabled
+                                        className="border rounded-[8px] px-3.5 py-2.5 outline-none bg-gray-100 text-gray-500 text-[14px] border-gray-300 cursor-not-allowed w-full font-medium"
+                                        defaultValue="FREE"
+                                    >
+                                        <option value="FREE">Free Tier (Selected by Default)</option>
+                                        <option value="BASIC" disabled>Basic Plan 🔒</option>
+                                        <option value="STANDARD" disabled>Standard Plan 🔒</option>
+                                        <option value="PREMIUM" disabled>Premium Plan 🔒</option>
+                                        <option value="ELITE" disabled>Elite Plan 🔒</option>
+                                        <option value="ULTIMATE" disabled>Ultimate Plan 🔒</option>
+                                        <option value="MEGA" disabled>Mega Plan 🔒</option>
+                                    </select>
+                                    <p className="text-[11px] text-[#0C3278] font-semibold mt-1 bg-blue-50 border border-blue-100 rounded-lg p-2.5 flex items-start gap-1.5 leading-normal">
+                                        <Crown size={14} className="text-[#FFBA00] shrink-0 mt-0.5" />
+                                        <span>All new auctions start on the <strong>Free Plan</strong>. Once your auction is created, you can upgrade to Basic, Standard, or Premium tiers under the <strong>Upgrade Plan</strong> section in the My Auctions dashboard.</span>
+                                    </p>
+                                </div>
                             </motion.div>
 
                             <motion.div variants={itemVariants} className="h-[1px] w-full bg-gray-100 my-2" />
@@ -459,7 +488,7 @@ export default function CreateAuctionWizard() {
                             </motion.div>
 
                             <motion.div variants={itemVariants} className="mt-8 flex justify-end">
-                                <button type="submit" disabled={isLoading} className="btn-primary">
+                                <button type="submit" disabled={isLoading} className="btn-primary cursor-pointer">
                                     {isLoading ? "Processing..." : "Next Step"} <ChevronRight size={18} strokeWidth={3} />
                                 </button>
                             </motion.div>
@@ -473,9 +502,13 @@ export default function CreateAuctionWizard() {
                                 <div>
                                     <h2 className="text-[#012972] font-bold text-xl">Add Auction's Teams</h2>
                                     <p className="text-gray-500 text-sm mt-1">You can add teams now, or skip and add them later from your Auction Panel.</p>
+                                    <p className="text-xs text-[#0C3278] font-semibold mt-1 bg-white border border-blue-100 rounded-lg p-2 flex items-center gap-1.5 w-fit shadow-sm">
+                                        <Crown size={12} className="text-[#FFBA00]" />
+                                        <span>Free Plan Limit: <strong>2 Teams maximum</strong>. You can upgrade to add more teams post-creation.</span>
+                                    </p>
                                 </div>
                                 <div className="flex gap-3">
-                                    <button onClick={() => setActiveStep(2)} className="btn-primary">
+                                    <button onClick={() => setActiveStep(2)} className="btn-primary cursor-pointer">
                                         Skip to Players<ChevronRight size={18} strokeWidth={3} />
                                     </button>
                                 </div>
@@ -511,7 +544,7 @@ export default function CreateAuctionWizard() {
                                         <InputField label="Short Name" req value={teamData.shortName} onChange={(e: any) => setTeamData({ ...teamData, shortName: e.target.value })} placeholder="e.g. CSK" />
                                         <InputField label="Shortcut Key" value={teamData.shortcutKey} onChange={(e: any) => setTeamData({ ...teamData, shortcutKey: e.target.value })} placeholder="e.g. C" />
                                     </div>
-                                    <button type="submit" disabled={isLoading} className="btn-primary">
+                                    <button type="submit" disabled={isLoading} className="btn-primary cursor-pointer">
                                         {isLoading ? "Saving..." : <><UsersRound size={20} />Add Team to Pool</>}
                                     </button>
                                 </form>
@@ -537,11 +570,8 @@ export default function CreateAuctionWizard() {
                                     )}
                                 </div>
                             </motion.div>
-                            <div className="flex h-12 justify-between ">
-                                <button onClick={() => setActiveStep(0)} className="btn-secondary">
-                                    <ChevronLeft size={18} /> Go Back
-                                </button>
-                                <button type="submit" disabled={isLoading} className="btn-primary">
+                            <div className="flex h-12 justify-end">
+                                <button type="button" onClick={() => setActiveStep(2)} disabled={isLoading} className="btn-primary cursor-pointer">
                                     {isLoading ? "Processing..." : "Next Step"} <ChevronRight size={18} />
                                 </button>
                             </div>
@@ -555,9 +585,13 @@ export default function CreateAuctionWizard() {
                                 <div>
                                     <h2 className="text-[#012972] font-bold text-xl">Add Auction's Players</h2>
                                     <p className="text-gray-500 text-sm mt-1">Add individual players to your auction pool, or skip and bulk upload via Excel later.</p>
+                                    <p className="text-xs text-[#0C3278] font-semibold mt-1 bg-white border border-blue-100 rounded-lg p-2 flex items-center gap-1.5 w-fit shadow-sm">
+                                        <Crown size={12} className="text-[#FFBA00]" />
+                                        <span>Free Plan Limit: <strong>100 Players maximum</strong>. You can upgrade to add more players post-creation.</span>
+                                    </p>
                                 </div>
                                 <div className="flex gap-3">
-                                    <button onClick={() => router.push("/dashboard/my-auction")} className="btn-primary">
+                                    <button onClick={() => router.push("/dashboard/my-auction")} className="btn-primary cursor-pointer">
                                         Skip to Dashboard<ChevronRight size={18} strokeWidth={3} />
                                     </button>
                                 </div>
@@ -566,10 +600,10 @@ export default function CreateAuctionWizard() {
                             <motion.div variants={itemVariants} className="grid lg:grid-cols-2 gap-8">
                                 <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 flex flex-col gap-5">
                                     <div className="flex rounded-xl bg-white border border-gray-200 overflow-hidden shadow-sm">
-                                        <button type="button" onClick={() => setUploadMethod("MANUAL")} className={`flex-1 py-3 text-sm font-bold transition-colors ${uploadMethod === "MANUAL" ? "bg-[#012972] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                                        <button type="button" onClick={() => setUploadMethod("MANUAL")} className={`flex-1 py-3 text-sm font-bold transition-colors cursor-pointer ${uploadMethod === "MANUAL" ? "bg-[#012972] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
                                             Manual Upload
                                         </button>
-                                        <button type="button" onClick={() => setUploadMethod("BULK")} className={`flex-1 py-3 text-sm font-bold transition-colors ${uploadMethod === "BULK" ? "bg-[#012972] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                                        <button type="button" onClick={() => setUploadMethod("BULK")} className={`flex-1 py-3 text-sm font-bold transition-colors cursor-pointer ${uploadMethod === "BULK" ? "bg-[#012972] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
                                             Bulk Upload (Excel/CSV)
                                         </button>
                                     </div>
@@ -626,7 +660,7 @@ export default function CreateAuctionWizard() {
                                                 <InputField label="T-Shirt Size" value={playerData.tshirtSize} onChange={(e: any) => setPlayerData({ ...playerData, tshirtSize: e.target.value })} placeholder="Optional" />
                                                 <InputField label="Trouser Size" value={playerData.trouserSize} onChange={(e: any) => setPlayerData({ ...playerData, trouserSize: e.target.value })} placeholder="Optional" />
                                             </div>
-                                            <button type="submit" disabled={isLoading} className="btn-primary">
+                                            <button type="submit" disabled={isLoading} className="btn-primary cursor-pointer">
                                                 {isLoading ? "Saving..." : <><UsersRound size={20} />Add Player to Pool</>}
                                             </button>
                                         </form>
@@ -676,11 +710,11 @@ export default function CreateAuctionWizard() {
                                                             </p>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-2">
-                                                            <button onClick={() => { setBulkPreview(null); setCsvFile(null); }} className="text-xs font-bold text-red-500 hover:text-red-700 underline">Cancel / New File</button>
+                                                            <button onClick={() => { setBulkPreview(null); setCsvFile(null); }} className="text-xs font-bold text-red-500 hover:text-red-700 underline cursor-pointer">Cancel / New File</button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setIsPreviewExpanded(true)}
-                                                                className="flex items-center gap-1 text-[11px] text-[#012972] font-bold border border-[#012972]/20 px-2.5 py-1.5 rounded-lg hover:bg-[#012972]/10 transition-colors bg-white shadow-sm"
+                                                                className="flex items-center gap-1 text-[11px] text-[#012972] font-bold border border-[#012972]/20 px-2.5 py-1.5 rounded-lg hover:bg-[#012972]/10 transition-colors bg-white shadow-sm cursor-pointer"
                                                             >
                                                                 <Maximize2 size={12} /> Expand Preview
                                                             </button>
@@ -784,7 +818,7 @@ export default function CreateAuctionWizard() {
                                                         type="button"
                                                         onClick={confirmBulkUpload}
                                                         disabled={isLoading || !bulkPreview.canProceed}
-                                                        className="mt-4 w-full bg-[#0C3278] text-white font-bold py-3.5 rounded-xl hover:bg-[#082254] shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                                        className="mt-4 w-full bg-[#0C3278] text-white font-bold py-3.5 rounded-xl hover:bg-[#082254] shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                                                     >
                                                         {isLoading ? "Processing Data..." : "Confirm & Import Valid Players"}
                                                     </button>
@@ -822,10 +856,10 @@ export default function CreateAuctionWizard() {
                                 </div>
                             </motion.div>
                             <div className="flex h-12 justify-between ">
-                                <button onClick={() => setActiveStep(1)} className="btn-secondary">
+                                <button onClick={() => setActiveStep(1)} className="btn-secondary cursor-pointer">
                                     <ChevronLeft size={18} strokeWidth={3} /> Go Back
                                 </button>
-                                <button onClick={() => router.push("/dashboard/my-auction")} className="btn-primary">
+                                <button onClick={() => router.push("/dashboard/my-auction")} className="btn-primary cursor-pointer">
                                     Finish Setup <Check size={18} strokeWidth={3} />
                                 </button>
                             </div>

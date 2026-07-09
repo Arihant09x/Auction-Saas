@@ -58,6 +58,9 @@ function AuctionCard({ auction }: { auction: any }) {
     return () => { card.removeEventListener("mouseenter", enter); card.removeEventListener("mouseleave", leave); };
   }, []);
 
+  const hasLogo = auction.logo && auction.logo.trim() !== "";
+  const imageContainerBg = hasLogo ? "bg-gray-100" : "bg-black"; // ✅ fix: black background for fallback
+
   const fallbackImage = "/final-1.png";
 
   return (
@@ -70,7 +73,7 @@ function AuctionCard({ auction }: { auction: any }) {
 
 
       {/* Rest of the card unchanged */}
-      <div className="relative w-full aspect-[16/9] bg-white overflow-hidden">
+      <div className={`relative w-full aspect-[16/9] ${imageContainerBg}  overflow-hidden`}>
         <img
           src={auction.logo || fallbackImage}
           alt={auction.name}

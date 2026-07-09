@@ -396,6 +396,9 @@ export class LiveAuctionService {
   }
 
   async reauctionUnsold(auctionId: string) {
+    // Commit any Redis-unsold players to DB first so we can query them
+    await this.commitUnsoldToDB(auctionId);
+
     // 1. Fetch UNSOLD players from DB
     const unsoldPlayers = await this.prisma.prisma.player.findMany({
       where: { auctionId, status: "UNSOLD" },
@@ -430,9 +433,10 @@ export class LiveAuctionService {
       bowlingStyle: p.bowlingStyle,
       basePrice: Number(p.basePrice || 0),
       status: "UPCOMING",
+      categoryId: p.categoryId,
       category: p.category
-        ? { name: p.category.name, color: p.category.color }
-        : { name: "UNCATEGORIZED", color: "#999" },
+        ? { id: p.category.id || p.categoryId, name: p.category.name, color: p.category.color }
+        : { id: "UNCATEGORIZED", name: "UNCATEGORIZED", color: "#999" },
     }));
 
     // We use a helper in Redis Service to push them
@@ -948,6 +952,11 @@ export class LiveAuctionService {
       throw new UnauthorizedException("Only organizer or ADMIN can end auction");
     }
 
+    const totalAuctions = await this.prisma.prisma.auction.count({
+      where: { organizerId: auction.organizerId },
+    });
+    const isFirstAuction = totalAuctions <= 1;
+
     if (auction.status === "COMPLETED") {
       return {
         status: "ALREADY_COMPLETED",
@@ -1069,6 +1078,7 @@ export class LiveAuctionService {
     return {
       status: "COMPLETED",
       message: "Auction successfully ended and archived",
+      isFirstAuction,
       summary: {
         soldPlayers: soldCount,
         unsoldPlayers: upcomingCount + unsoldCount,

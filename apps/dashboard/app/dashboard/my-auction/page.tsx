@@ -256,7 +256,7 @@ export default function MyAuctionPage() {
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[12px] font-black text-[#012972] tracking-wider uppercase ml-1">Live Control Room</label>
                                     <p className="text-[12px] text-gray-500 font-semibold mb-2 ml-1">The secure organizer dashboard to control bids.</p>
-                                    <Link href={`/dashboard/manage/${livePanelAuction.id}/live`} className="w-full bg-[#00379d] hover:bg-[#012972] text-white px-5 py-3.5 rounded-xl font-bold flex items-center justify-between transition-all group shadow-md shadow-[#00379d]/20">
+                                    <Link href={`/live/${livePanelAuction.id}`} className="w-full bg-[#00379d] hover:bg-[#012972] text-white px-5 py-3.5 rounded-xl font-bold flex items-center justify-between transition-all group shadow-md shadow-[#00379d]/20">
                                         <div className="flex items-center gap-2"><PlayCircle size={18} /> <span>Enter Live Dashboard</span></div>
                                         <ExternalLink size={16} className="opacity-70 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                                     </Link>

@@ -66,6 +66,12 @@ export default function OrganizerLiveDashboard() {
     const [settings, setSettings] = useState<any>(null);
     const [confettiEnabled, setConfettiEnabled] = useState(true);
 
+    // Feedback states
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [feedbackRating, setFeedbackRating] = useState(5);
+    const [feedbackComment, setFeedbackComment] = useState("");
+    const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
     // Fortune Wheel states
     const [showWheel, setShowWheel] = useState(false);
     const [selectedTeamsForWheel, setSelectedTeamsForWheel] = useState<string[]>([]);
@@ -473,8 +479,13 @@ export default function OrganizerLiveDashboard() {
                 } else if (res.status === "BLOCKED") {
                     toast.error(res.message || "Failed to end auction.");
                 } else if (res.status === "COMPLETED") {
-                    toast.success(res.message || "Auction successfully ended!");
-                    router.push(`/dashboard/manage/${auctionId}/details`);
+                    if (res.isFirstAuction) {
+                        toast.success("Auction successfully ended!");
+                        setShowFeedbackModal(true);
+                    } else {
+                        toast.success(res.message || "Auction successfully ended!");
+                        router.push(`/dashboard/manage/${auctionId}/details`);
+                    }
                 } else if (res.error) {
                     toast.error(res.error);
                 }
@@ -482,6 +493,31 @@ export default function OrganizerLiveDashboard() {
                 toast.error("Failed to end the auction. Please try again.");
             }
         });
+    };
+
+    const handleSubmitFeedback = async () => {
+        setSubmittingFeedback(true);
+        try {
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            const res = await fetch(`${apiBase}/feedback`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${firebaseToken}`
+                },
+                body: JSON.stringify({ rating: feedbackRating, message: feedbackComment })
+            });
+            if (!res.ok) throw new Error("Failed to submit feedback");
+            toast.success("Thank you for your feedback!");
+            setShowFeedbackModal(false);
+            router.push(`/dashboard/manage/${auctionId}/details`);
+        } catch (error) {
+            toast.error("Failed to save feedback, redirecting to details...");
+            setShowFeedbackModal(false);
+            router.push(`/dashboard/manage/${auctionId}/details`);
+        } finally {
+            setSubmittingFeedback(false);
+        }
     };
 
     const handleSoldClick = () => {
@@ -738,7 +774,8 @@ export default function OrganizerLiveDashboard() {
                                         list = unsold;
                                     }
                                     return list.filter((p: any) => {
-                                        if (selectedCategoryId !== "" && p.categoryId !== selectedCategoryId) return false;
+                                        const pCategoryId = p.categoryId || p.category?.id;
+                                        if (selectedCategoryId !== "" && pCategoryId !== selectedCategoryId) return false;
                                         return true;
                                     });
                                 })().map((p: any) => (
@@ -811,12 +848,15 @@ export default function OrganizerLiveDashboard() {
                     <div className="w-full h-full overflow-y-auto custom-scrollbar bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-xl">
                         <h2 className="text-white/40 text-sm font-black tracking-widest uppercase mb-8">Auction Categories</h2>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                            {categories.map((c: any) => (
-                                <div key={c.id} onClick={() => { setSelectedCategoryId(c.id); setActiveTab("PLAYERS"); }} className="bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 text-center hover:bg-white/10 hover:border-white/30 transition-all cursor-pointer shadow-lg group">
-                                    <h3 className="font-black text-xl uppercase tracking-widest group-hover:text-yellow-400 transition-colors">{c.name}</h3>
-                                    <span className="px-4 py-1.5 bg-black/40 border border-white/10 rounded-full text-xs font-bold text-white/70">{c.playersCount || 0} Players</span>
-                                </div>
-                            ))}
+                            {categories.map((c: any) => {
+                                const count = [...upcoming, ...unsold, ...sold].filter(p => (p.categoryId || p.category?.id) === c.id).length;
+                                return (
+                                    <div key={c.id} onClick={() => { setSelectedCategoryId(c.id); setActiveTab("PLAYERS"); }} className="bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 text-center hover:bg-white/10 hover:border-white/30 transition-all cursor-pointer shadow-lg group">
+                                        <h3 className="font-black text-xl uppercase tracking-widest group-hover:text-yellow-400 transition-colors">{c.name}</h3>
+                                        <span className="px-4 py-1.5 bg-black/40 border border-white/10 rounded-full text-xs font-bold text-white/70">{count} Players</span>
+                                    </div>
+                                );
+                            })}
                             {categories.length === 0 && (
                                 <div className="col-span-full text-center text-white/30 uppercase font-black text-xl p-12">No categories found</div>
                             )}
@@ -941,9 +981,12 @@ export default function OrganizerLiveDashboard() {
                                             className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-sm font-bold text-white outline-none focus:border-white/30 transition-colors cursor-pointer"
                                         >
                                             <option value="" className="bg-black">All Categories (No Filter)</option>
-                                            {categories.map((cat: any) => (
-                                                <option key={cat.id} value={cat.id} className="bg-black">{cat.name} ({cat.playersCount || 0} players)</option>
-                                            ))}
+                                            {categories.map((cat: any) => {
+                                                const count = [...upcoming, ...unsold, ...sold].filter(p => (p.categoryId || p.category?.id) === cat.id).length;
+                                                return (
+                                                    <option key={cat.id} value={cat.id} className="bg-black">{cat.name} ({count} players)</option>
+                                                );
+                                            })}
                                         </select>
                                         <div className="flex gap-3 mt-2">
                                             <button
@@ -1370,6 +1413,76 @@ export default function OrganizerLiveDashboard() {
                                         Return to Mobile Dashboard
                                     </button>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Feedback Modal */}
+            <AnimatePresence>
+                {showFeedbackModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 text-white"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            className="bg-[#11111a] border border-white/10 rounded-3xl p-8 max-w-md w-full flex flex-col gap-6 shadow-[0_0_50px_rgba(255,213,0,0.15)] relative backdrop-blur-xl"
+                        >
+                            <div className="text-center flex flex-col items-center gap-2">
+                                <Trophy size={48} className="text-yellow-400 animate-bounce" />
+                                <h2 className="text-2xl font-black uppercase tracking-wider mt-2">🎉 Auction Completed!</h2>
+                                <p className="text-white/60 text-xs font-bold uppercase tracking-wider">Congratulations on hosting your first auction!</p>
+                            </div>
+
+                            <div className="flex flex-col gap-2 items-center">
+                                <span className="text-xs text-white/40 uppercase font-black tracking-widest">Rate Your Experience</span>
+                                <div className="flex gap-2 text-3xl mt-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setFeedbackRating(star)}
+                                            className={`transition-all duration-200 transform hover:scale-125 cursor-pointer ${star <= feedbackRating ? "text-yellow-400" : "text-white/20"}`}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] text-white/50 font-black uppercase tracking-widest pl-2">Comments / Suggestions</label>
+                                <textarea
+                                    value={feedbackComment}
+                                    onChange={(e) => setFeedbackComment(e.target.value)}
+                                    placeholder="Tell us what you liked or how we can improve..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white outline-none focus:border-[#FFD500]/50 transition-colors h-24 resize-none"
+                                />
+                            </div>
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => {
+                                        setShowFeedbackModal(false);
+                                        router.push(`/dashboard/manage/${auctionId}/details`);
+                                    }}
+                                    className="flex-1 py-3.5 rounded-xl text-xs font-black uppercase bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer text-white text-center font-poppins"
+                                >
+                                    Skip
+                                </button>
+                                <button
+                                    onClick={handleSubmitFeedback}
+                                    disabled={submittingFeedback}
+                                    className="flex-1 py-3.5 rounded-xl text-xs font-black uppercase bg-yellow-500 hover:bg-yellow-400 text-[#012972] transition-colors cursor-pointer text-center disabled:opacity-50 font-poppins"
+                                >
+                                    {submittingFeedback ? "Submitting..." : "Submit & Close"}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>

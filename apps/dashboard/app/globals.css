@@ -81,3 +81,9 @@
   display: none;
   /* Chrome/Safari */
 }
+
+.chrono-wrapper,
+.chrono-wrapper * {
+  transform: none !important;
+  transition: none !important;
+}

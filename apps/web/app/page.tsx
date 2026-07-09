@@ -244,7 +244,7 @@ function TodaySection() {
     staleTime: Infinity,
   });
   const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3002";
-  const fallbackImage = "https://tse1.mm.bing.net/th/id/OIP.gSkpI5uIEa8Qxa_qfvSSpwHaHa?pid=Api&P=0&w=300&h=300";
+  const fallbackImage = "/icon1.png";
 
   if (error) {
     console.error("Error loading today's auctions:", error);
@@ -359,7 +359,9 @@ function UpcomingSection() {
     staleTime: Infinity,
   });
   const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3002";
-  const fallbackImage = "/images/Rectangle 1278-1.png";
+  const fallbackImage = "/final-1.png";
+  const hasLogo = data?.auction?.logo && data?.auction?.logo.trim() !== "";
+  const imageContainerBg = hasLogo ? "bg-gray-100" : "bg-black";
 
   if (error) {
     console.error("Error loading upcoming auctions:", error);
@@ -405,7 +407,7 @@ function UpcomingSection() {
                   className="block w-[200px] sm:w-[240px] lg:w-[271px] shrink-0 gap-x-8"
                 >
                   <div key={auction.id} className="bg-white rounded-[16px] w-[250px] sm:w-[290px] flex flex-col overflow-hidden relative shadow-[0_4px_24px_rgba(0,0,0,0.25)] shrink-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer group">
-                    <div className="w-full h-[145px] relative rounded-t-[16px] overflow-hidden bg-gray-200 p-[2px] flex justify-center items-center" style={{ padding: '5px' }}>
+                    <div className={`w-full h-[145px] relative rounded-t-[16px] overflow-hidden p-[2px]${imageContainerBg} flex justify-center items-center`} style={{ padding: '5px' }}>
                       <Image
                         src={auction.logo || fallbackImage}
                         fill
@@ -674,11 +676,16 @@ function PricingSection() {
           data-lenis-prevent
         >
           {PLANS.map((plan) => (
-            <div key={plan.id} className="shrink-0 w-[280px] lg:w-[280px] bg-white rounded-[16px] p-5 flex flex-col items-center justify-between min-h-[280px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative border border-[#eef3ff] group">
+            <div key={plan.id} className="shrink-0 w-[280px] lg:w-[280px] bg-white rounded-[16px] p-5 flex flex-col items-center justify-between min-h-[285px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative border border-[#eef3ff] group">
               <div className="flex flex-col items-center w-full">
                 <span className="text-[#000] font-bold text-[16px] mb-1 font-['Poppins']">{plan.label}</span>
                 <div className="text-[#000] font-black text-[28px] tracking-tight whitespace-nowrap">{plan.price}</div>
                 <span className="text-gray-400 font-bold text-sm tracking-tight whitespace-nowrap line-through">{plan.originalPrice}</span>
+                {plan.price !== "Free" && (
+                  <div className="inline-block text-[11px] font-bold px-2 py-0.5 rounded bg-[#00379d] text-white w-fit shadow-sm mt-1 mb-2">
+                    You Save ₹{(parseInt(plan.originalPrice.replace(/\D/g, "")) - parseInt(plan.price.replace(/\D/g, ""))).toLocaleString()} (30% off)
+                  </div>
+                )}
                 <div className="text-[#4a6090] text-[12px] font-medium mb-4">{plan.period}</div>
 
                 <div className="w-full h-px border-t-2 border-dashed border-[#d1d5db] mb-4" />
