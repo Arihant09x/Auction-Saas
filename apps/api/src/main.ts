@@ -16,6 +16,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import admin from 'firebase-admin';
 import helmet from 'helmet';
 import 'dotenv/config';
+import { json, urlencoded } from 'express';
 
 // ── Process-Level Safety Net ─────────────────────────────────────────────────
 // Prevents any unhandled Promise rejection from silently killing the Node process.
@@ -91,6 +92,9 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
+
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ limit: '50mb', extended: true }));
 
   // 1. Security
   app.use(helmet());

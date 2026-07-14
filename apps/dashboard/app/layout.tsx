@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { GoogleTagManager } from "@next/third-parties/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -60,7 +60,7 @@ export default function RootLayout({
             <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
             <meta name="apple-mobile-web-app-title" content="Auction 11" />
             <link rel="icon" href="/favicon.ico" sizes="128x128" type="image/x-icon " />
-            <GoogleTagManager gtmId="GTM-XXXXXXX" />
+            <GoogleAnalytics gaId="G-RCB2M0CT5W" />
             <body className="min-h-screen bg-background font-sans antialiased">
                 <Providers>{children}</Providers>
             </body>

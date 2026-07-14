@@ -87,6 +87,25 @@ export default function ManageTeamsPage() {
     const handleManualAdd = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Check for duplicates (case-insensitive)
+        const isDuplicateName = teams.some((t: any) =>
+            t.id !== editingTeamId &&
+            t.name.toLowerCase() === teamData.name.trim().toLowerCase()
+        );
+        const isDuplicateShortName = teams.some((t: any) =>
+            t.id !== editingTeamId &&
+            t.shortName.toLowerCase() === teamData.shortName.trim().toLowerCase()
+        );
+
+        if (isDuplicateName) {
+            toast.error(`A team with the name "${teamData.name}" already exists in this auction.`);
+            return;
+        }
+        if (isDuplicateShortName) {
+            toast.error(`A team with the short name "${teamData.shortName.toUpperCase()}" already exists in this auction.`);
+            return;
+        }
+
         if (!editingTeamId && teams.length >= teamLimit) {
             toast.error(`Plan Limit Reached: Your ${auction?.planTier || "FREE"} plan allows up to ${teamLimit} teams. Upgrade your plan in the Details section to add more.`);
             return;
@@ -250,7 +269,8 @@ export default function ManageTeamsPage() {
                                             </div>
                                         </div>
                                         <div className="flex gap-2 text-[10px] text-gray-500 mt-1 flex-wrap">
-                                            <span className="bg-gray-100 px-2 py-0.5 rounded">Key: {t.shortcutKey || 'None'}</span>
+                                            <span className="bg-gray-100 px-2 py-0.5 rounded">ShortName: {t.shortName || ' -----'}</span>
+                                            <span className="bg-gray-100 px-2 py-0.5 rounded">Key: {t.shortcutKey || ' -----'}</span>
                                             <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded">{t.playersCount || 0} Players</span>
                                         </div>
                                         <div className="absolute top-2 right-2 flex items-center gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur rounded-lg shadow-sm border border-gray-100 p-1">

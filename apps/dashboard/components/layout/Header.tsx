@@ -85,8 +85,6 @@ export function Navbar() {
                                     <a
                                         key={link.href}
                                         href={link.href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
                                         className="px-5 py-2 text-white font-bold text-base rounded-[10px] hover:bg-white/10 transition-colors"
                                     >
                                         {link.label}
@@ -154,8 +152,6 @@ export function Navbar() {
                                 <a
                                     key={link.href}
                                     href={link.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
                                     onClick={() => setMenuOpen(false)}
                                     className="px-4 py-4 text-white font-bold text-lg rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors"
                                 >

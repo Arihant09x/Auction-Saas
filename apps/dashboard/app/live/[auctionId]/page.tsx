@@ -712,7 +712,7 @@ export default function OrganizerLiveDashboard() {
                                     {/* Current Bid Display */}
                                     <div className="bg-black/40 border border-white/10 rounded-3xl p-6 shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
                                         <span className="text-white/40 text-xs font-black uppercase tracking-widest">Current Bid</span>
-                                        <span className="text-4xl lg:text-5xl font-black text-[#34D399] mt-2 drop-shadow-md">₹{(currentBid || 0).toLocaleString()}</span>
+                                        <span className="text-4xl lg:text-5xl font-black text-white mt-2 drop-shadow-md">₹{(currentBid || 0).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </>

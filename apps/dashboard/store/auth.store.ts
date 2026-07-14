@@ -2,6 +2,37 @@ import { create } from "zustand";
 import { persist, devtools } from "zustand/middleware";
 import type { User } from "@repo/types";
 
+// ─── Cookie Sharing Helpers ──────────────────────────────────────────────────
+
+function setSharedCookie(name: string, value: string, days = 7) {
+    if (typeof window === "undefined") return;
+    const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    const hostname = window.location.hostname;
+    let domain = "";
+    if (hostname.includes("auction11.live")) {
+        domain = "; domain=.auction11.live";
+    }
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/${domain}; SameSite=Lax`;
+}
+
+function eraseSharedCookie(name: string) {
+    if (typeof window === "undefined") return;
+    const hostname = window.location.hostname;
+    let domain = "";
+    if (hostname.includes("auction11.live")) {
+        domain = "; domain=.auction11.live";
+    }
+    document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;${domain}`;
+}
+
+const syncToCookie = (user: any, token: string | null) => {
+    if (!token || !user) {
+        eraseSharedCookie("auction11_auth");
+    } else {
+        setSharedCookie("auction11_auth", JSON.stringify({ token, user }));
+    }
+};
+
 // ─── State Shape ────────────────────────────────────────────────────────────
 
 interface AuthState {
@@ -33,15 +64,21 @@ export const useAuthStore = create<AuthState>()(
                 isInitialized: false,
                 isHydrated: false,
 
-                setUser: (user) =>
+                setUser: (user) => {
                     set(
                         { user, isAuthenticated: !!user, isLoading: false, isHydrated: true },
                         false,
                         "auth/setUser",
-                    ),
+                    );
+                    const state = useAuthStore.getState();
+                    syncToCookie(user, state.firebaseToken);
+                },
 
-                setFirebaseToken: (token) =>
-                    set({ firebaseToken: token }, false, "auth/setFirebaseToken"),
+                setFirebaseToken: (token) => {
+                    set({ firebaseToken: token }, false, "auth/setFirebaseToken");
+                    const state = useAuthStore.getState();
+                    syncToCookie(state.user, token);
+                },
 
                 setLoading: (isLoading) =>
                     set({ isLoading }, false, "auth/setLoading"),
@@ -49,7 +86,7 @@ export const useAuthStore = create<AuthState>()(
                 setInitialized: (isInitialized) =>
                     set({ isInitialized }, false, "auth/setInitialized"),
 
-                logout: () =>
+                logout: () => {
                     set(
                         {
                             user: null,
@@ -59,7 +96,9 @@ export const useAuthStore = create<AuthState>()(
                         },
                         false,
                         "auth/logout",
-                    ),
+                    );
+                    syncToCookie(null, null);
+                },
 
             }),
             {
@@ -71,6 +110,7 @@ export const useAuthStore = create<AuthState>()(
                         (state as any).isHydrated = true;
                         // Use the internal set function to trigger a re-render if needed
                         useAuthStore.setState({ isHydrated: true });
+                        syncToCookie(state.user, state.firebaseToken);
                     }
                 },
             },

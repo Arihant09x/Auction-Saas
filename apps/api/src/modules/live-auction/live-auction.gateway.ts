@@ -14,6 +14,7 @@ import { WsExceptionFilter } from "../../common/filters/ws-exception.filter";
 import { PrismaService } from "../../prisma/prisma.service";
 import { LiveAuctionRedisService } from "./live-auction.redis.service";
 import { performance } from "perf_hooks";
+import { captureError } from "../../common/monitoring/sentry";
 
 // Note: WebSocket Guards need a different implementation,
 // for now we'll validate Token inside handleConnection manually.
@@ -93,26 +94,37 @@ export class LiveAuctionGateway
     action: () => Promise<T>,
   ): Promise<any> {
     const start = performance.now();
-    try {
-      const result = await action();
-      const duration = performance.now() - start;
-      if (duration > 50) {
-        console.warn(
-          `⚠️ [WS WARN] Event "${eventName}" took ${duration.toFixed(2)}ms to process (Client: ${client.id})`,
+
+    const runAction = async () => {
+      try {
+        const result = await action();
+        const duration = performance.now() - start;
+        if (duration > 50) {
+          console.warn(
+            `⚠️ [WS WARN] Event "${eventName}" took ${duration.toFixed(2)}ms to process (Client: ${client.id})`,
+          );
+        } else {
+          console.log(
+            `⏱️ [WS LOG] Event "${eventName}" processed in ${duration.toFixed(2)}ms (Client: ${client.id})`,
+          );
+        }
+        return { success: true, data: result };
+      } catch (err: any) {
+        const duration = performance.now() - start;
+        console.error(
+          `❌ [WS ERROR] Event "${eventName}" failed in ${duration.toFixed(2)}ms (Client: ${client.id}). Error: ${err.message}`,
         );
-      } else {
-        console.log(
-          `⏱️ [WS LOG] Event "${eventName}" processed in ${duration.toFixed(2)}ms (Client: ${client.id})`,
-        );
+        captureError(err, { eventName, socketId: client.id });
+        client.emit("error", err.message);
+        return { success: false, error: err.message };
       }
-      return { success: true, data: result };
-    } catch (err: any) {
-      const duration = performance.now() - start;
-      console.error(
-        `❌ [WS ERROR] Event "${eventName}" failed in ${duration.toFixed(2)}ms (Client: ${client.id}). Error: ${err.message}`,
-      );
-      client.emit("error", err.message);
-      return { success: false, error: err.message };
+    };
+
+    try {
+      const nr = require('newrelic');
+      return await nr.startWebTransaction(`websocket:${eventName}`, runAction);
+    } catch {
+      return await runAction();
     }
   }
 

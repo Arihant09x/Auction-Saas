@@ -336,27 +336,30 @@ export class PlayerService {
       // but for Postgres it is fine if structure matches.
 
       // However, since we have mapped JSON fields, we need to map the array carefully
-      const formattedData = playersData.map((p) => ({
+      // Filter out invalid rows (missing name)
+      const validPlayers = (playersData || []).filter((p) => p && p.name);
+
+      const formattedData = validPlayers.map((p) => ({
         auctionId,
         categoryId: p.categoryId ?? null,
 
-        name: p.name,
-        mobile: p.mobile ? String(p.mobile) : null,
-        age: p.age ? Number(p.age) : 0,
+        name: String(p.name).trim(),
+        mobile: p.mobile ? String(p.mobile).trim() : null,
+        age: p.age && !isNaN(Number(p.age)) ? Number(p.age) : 0,
 
-        fatherName: p.fatherName ? String(p.fatherName) : null,
-        profilePic: p.profilePic ? String(p.profilePic) : null,
+        fatherName: p.fatherName ? String(p.fatherName).trim() : null,
+        profilePic: p.profilePic ? String(p.profilePic).trim() : null,
 
-        role: p.role,
-        battingStyle: p.battingStyle ? String(p.battingStyle) : null,
-        bowlingStyle: p.bowlingStyle ? String(p.bowlingStyle) : null,
+        role: (p.role && Object.values(PlayerRole).includes(p.role)) ? (p.role as PlayerRole) : PlayerRole.ALL_ROUNDER,
+        battingStyle: p.battingStyle ? String(p.battingStyle).trim() : null,
+        bowlingStyle: p.bowlingStyle ? String(p.bowlingStyle).trim() : null,
 
-        tshirtSize: p.tshirtSize ? String(p.tshirtSize) : null,
-        trouserSize: p.trouserSize ? String(p.trouserSize) : null,
-        jerseyName: p.jerseyName ? String(p.jerseyName) : null,
-        jerseyNumber: p.jerseyNumber ? Number(p.jerseyNumber) : null,
+        tshirtSize: p.tshirtSize ? String(p.tshirtSize).trim() : null,
+        trouserSize: p.trouserSize ? String(p.trouserSize).trim() : null,
+        jerseyName: p.jerseyName ? String(p.jerseyName).trim() : null,
+        jerseyNumber: p.jerseyNumber && !isNaN(Number(p.jerseyNumber)) ? Number(p.jerseyNumber) : null,
 
-        basePrice: Number(p.basePrice),
+        basePrice: p.basePrice !== undefined && p.basePrice !== null && !isNaN(Number(p.basePrice)) ? Number(p.basePrice) : null,
         status: PlayerStatus.UPCOMING,
       }));
 

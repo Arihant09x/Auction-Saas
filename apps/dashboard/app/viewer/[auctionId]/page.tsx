@@ -747,7 +747,7 @@ export default function ViewerLiveAuctionPage() {
                                     <motion.div variants={bidPulse} key={currentBid} className="w-full lg:col-span-3 flex justify-center">
                                         <div className="bg-gradient-to-r from-black/55 to-black/35 rounded-2xl px-5 py-3.5 flex flex-col items-center justify-center border border-white/5 w-full max-w-sm shadow-md text-center">
                                             <span className="text-white/45 text-[9px] font-black uppercase tracking-widest leading-none mb-1.5">Current Bid</span>
-                                            <span ref={bidAmountRef} className="text-[#00f2c3] font-black text-2xl sm:text-3xl tabular-nums drop-shadow-[0_0_12px_rgba(0,242,195,0.4)] leading-tight">
+                                            <span ref={bidAmountRef} className="text-white font-black text-2xl sm:text-3xl tabular-nums drop-shadow-[0_0_12px_rgba(255,255,255,0.4)] leading-tight">
                                                 ₹{(currentBid || 0).toLocaleString()}/-
                                             </span>
                                         </div>

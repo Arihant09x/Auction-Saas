@@ -127,6 +127,18 @@ export default function CreateAuctionWizard() {
     const addTeam = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!teamData.name || !teamData.shortName) return toast.error("Please provide both the Team Name and Short Name.");
+
+        // Check for duplicates (case-insensitive)
+        const nameExists = addedTeams.some((t: any) => t.name.toLowerCase() === teamData.name.trim().toLowerCase());
+        const shortNameExists = addedTeams.some((t: any) => t.shortName.toLowerCase() === teamData.shortName.trim().toLowerCase());
+
+        if (nameExists) {
+            return toast.error(`A team with the name "${teamData.name}" already exists in this auction.`);
+        }
+        if (shortNameExists) {
+            return toast.error(`A team with the short name "${teamData.shortName.toUpperCase()}" already exists in this auction.`);
+        }
+
         if (addedTeams.length >= 2) {
             return toast.error("Plan Limit: The Free plan allows only 2 teams. You can upgrade your plan after the auction is created to add more teams.");
         }

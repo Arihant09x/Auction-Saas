@@ -45,10 +45,10 @@ export class LiveAuctionRedisService {
 
     // C. Save Team Budgets
     if (teams.length > 0) {
-      const teamBudgets: Record<string, number> = {};
+      const teamBudgets: Record<string, string> = {};
       const teamMeta: Record<string, string> = {};
 
-      const minPlayers = Number(settings.minPlayersPerTeam || 11);
+      const minPlayers = Number(settings.minPlayerPerTeam || settings.minPlayersPerTeam || 11);
       const baseBid = Number(settings.minBid || 1000);
 
       for (const team of teams) {
@@ -87,7 +87,7 @@ export class LiveAuctionRedisService {
           JSON.stringify(teamJson),
         );
 
-        teamBudgets[team.id] = purse;
+        teamBudgets[team.id] = String(purse);
         teamMeta[team.id] = JSON.stringify(teamJson);
 
         console.log(
@@ -107,11 +107,11 @@ export class LiveAuctionRedisService {
       }
 
       if (Object.keys(teamBudgets).length > 0) {
-        pipeline.hmset(`${baseKey}:teams:budget`, teamBudgets);
+        pipeline.hset(`${baseKey}:teams:budget`, teamBudgets);
         pipeline.expire(`${baseKey}:teams:budget`, AUCTION_TTL_SECONDS);
       }
       if (Object.keys(teamMeta).length > 0) {
-        pipeline.hmset(`${baseKey}:teams:meta`, teamMeta);
+        pipeline.hset(`${baseKey}:teams:meta`, teamMeta);
         pipeline.expire(`${baseKey}:teams:meta`, AUCTION_TTL_SECONDS);
       }
 
@@ -166,7 +166,11 @@ export class LiveAuctionRedisService {
         }),
       );
 
-      pipeline.rpush(`${baseKey}:unsold`, ...playerStrings);
+      // Push in chunks of 100 to prevent Call Stack Size Exceeded errors for huge rosters
+      for (let i = 0; i < playerStrings.length; i += 100) {
+        const chunk = playerStrings.slice(i, i + 100);
+        pipeline.rpush(`${baseKey}:unsold`, ...chunk);
+      }
       pipeline.expire(`${baseKey}:unsold`, AUCTION_TTL_SECONDS);
     }
 

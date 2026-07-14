@@ -41,14 +41,26 @@ export function captureError(
     error: unknown,
     context?: Record<string, unknown>,
 ): void {
-    if (!process.env.SENTRY_DSN) return;
+    if (process.env.SENTRY_DSN) {
+        Sentry.withScope((scope) => {
+            if (context) {
+                scope.setExtras(context);
+            }
+            Sentry.captureException(error);
+        });
+    }
 
-    Sentry.withScope((scope) => {
-        if (context) {
-            scope.setExtras(context);
-        }
-        Sentry.captureException(error);
-    });
+    // Synchronize to New Relic
+    try {
+        const nr = require('newrelic');
+        nr.noticeError(
+            error instanceof Error ? error : new Error(String(error)),
+            context || {}
+        );
+    } catch (error) {
+        // newrelic not loaded or running
+        console.log('❌ New Relic not loaded or running', error);
+    }
 }
 
 /**
