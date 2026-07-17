@@ -55,6 +55,9 @@ RUN echo "Building dashboard with NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL"
 RUN echo "Building dashboard with NEXT_PUBLIC_DASHBOARD_URL=$NEXT_PUBLIC_DASHBOARD_URL"
 RUN echo "Building dashboard with NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL"
 RUN echo "Building dashboard with NEXT_PUBLIC_WEB_URL=$NEXT_PUBLIC_WEB_URL"
+RUN echo "Building web with NEXT_PUBLIC_CLOUDINARY_API_KEY=$NEXT_PUBLIC_CLOUDINARY_API_KEY"
+RUN echo "Building web with NEXT_PUBLIC_CLOUDINARY_API_SECRET=$CLOUDINARY_API_SECRET"
+RUN echo "Building web with NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=$NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME"
 RUN pnpm run build --filter=dashboard
 
 # Stage 3: Runner
