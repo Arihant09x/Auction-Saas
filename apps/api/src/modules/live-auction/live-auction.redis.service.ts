@@ -52,7 +52,9 @@ export class LiveAuctionRedisService {
       const baseBid = Number(settings.minBid || 1000);
 
       for (const team of teams) {
-        const purse = Number(team.originalPurse) - Number(team.purseSpent || 0);
+        const originalPurse = Number(team.originalPurse) || 0;
+        const purseSpent = Number(team.purseSpent || 0);
+        const purse = originalPurse - purseSpent;
         const playersBought = Number(team.playersCount || 0);
 
         // RESERVE LOGIC (minPlayers - 1 rule)
@@ -69,6 +71,8 @@ export class LiveAuctionRedisService {
           // LIVE VALUES
           purse,
           playersBought,
+          originalPurse,
+          purseSpent,
 
           // AUCTION RULES (CACHED)
           minPlayers,

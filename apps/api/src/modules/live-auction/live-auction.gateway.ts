@@ -374,6 +374,8 @@ export class LiveAuctionGateway
         payload: {
           id: data.teamId,
           playersCount: result.playersBought,
+          purseSpent: result.team.purseSpent,
+          purse: result.remainingPurse,
         },
       });
 
@@ -382,6 +384,7 @@ export class LiveAuctionGateway
         id: data.teamId,
         purse: result.remainingPurse,
         playersCount: result.playersBought,
+        purseSpent: result.team.purseSpent,
       });
 
       const state = await this.liveAuctionService.getCurrentState(data.auctionId, false);
@@ -461,6 +464,8 @@ export class LiveAuctionGateway
         payload: {
           id: result.teamId || result.teamName,
           playersCount: result.playersBought,
+          purseSpent: result.purseSpent,
+          purse: result.remainingPurse,
         },
       });
 
@@ -485,6 +490,7 @@ export class LiveAuctionGateway
         id: result.teamId,
         purse: result.remainingPurse,
         playersCount: result.playersBought,
+        purseSpent: result.purseSpent,
       });
 
       const state = await this.liveAuctionService.getCurrentState(auctionId, false);
@@ -843,10 +849,11 @@ export class LiveAuctionGateway
               purseSpentDecrement -= boosterAmount;
             }
 
+            let updatedTeam: any = null;
             // 1. Database Updates inside a transaction
             await this.prisma.prisma.$transaction(async (tx) => {
               // Revert team spent/count
-              await tx.team.update({
+              updatedTeam = await tx.team.update({
                 where: { id: winningTeamId },
                 data: {
                   purseSpent: { decrement: purseSpentDecrement },
@@ -881,6 +888,7 @@ export class LiveAuctionGateway
               const minBid = Number(teamMeta.baseBid);
               const playersBought = Math.max(Number(teamMeta.playersBought || 0) - 1, 0);
               const purse = Number(teamMeta.purse) + purseRevert;
+              const purseSpent = Math.max(Number(teamMeta.purseSpent || 0) - purseSpentDecrement, 0);
               
               const reservableSlots = Math.max(minPlayers - playersBought - 1, 0);
               const reserved = reservableSlots * minBid;
@@ -892,6 +900,7 @@ export class LiveAuctionGateway
                 playersBought,
                 reserved,
                 maxAllowedBid,
+                purseSpent,
                 boostersUsed: Math.max(Number(teamMeta.boostersUsed || 0) - boostersUsedRevert, 0),
               };
               
@@ -902,6 +911,7 @@ export class LiveAuctionGateway
                 id: winningTeamId,
                 purse,
                 playersCount: playersBought,
+                purseSpent: updatedTeam?.purseSpent || 0,
               });
 
               // Patch snapshot for team update (sync team budget and counts)
@@ -911,6 +921,7 @@ export class LiveAuctionGateway
                   id: winningTeamId,
                   playersCount: playersBought,
                   purse: purse,
+                  purseSpent: updatedTeam?.purseSpent || 0,
                 },
               });
             }

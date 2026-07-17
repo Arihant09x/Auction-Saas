@@ -35,6 +35,16 @@ export default function CreateAuctionWizard() {
     const [auctionId, setAuctionId] = useState("");
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+    const finishSetup = () => {
+        const params = new URLSearchParams(window.location.search);
+        const upgradePlan = params.get("plan") || params.get("upgrade");
+        if (upgradePlan && auctionId) {
+            router.push(`/dashboard/manage/${auctionId}/payment?upgrade=${upgradePlan}`);
+        } else {
+            router.push("/dashboard/my-auction");
+        }
+    };
+
     // --- STEP 1: AUCTION STATE ---
     const [auctionData, setAuctionData] = useState({
         name: "", auctionDate: "", location: "", session: "",
@@ -603,7 +613,7 @@ export default function CreateAuctionWizard() {
                                     </p>
                                 </div>
                                 <div className="flex gap-3">
-                                    <button onClick={() => router.push("/dashboard/my-auction")} className="btn-primary cursor-pointer">
+                                    <button onClick={finishSetup} className="btn-primary cursor-pointer">
                                         Skip to Dashboard<ChevronRight size={18} strokeWidth={3} />
                                     </button>
                                 </div>
@@ -871,7 +881,7 @@ export default function CreateAuctionWizard() {
                                 <button onClick={() => setActiveStep(1)} className="btn-secondary cursor-pointer">
                                     <ChevronLeft size={18} strokeWidth={3} /> Go Back
                                 </button>
-                                <button onClick={() => router.push("/dashboard/my-auction")} className="btn-primary cursor-pointer">
+                                <button onClick={finishSetup} className="btn-primary cursor-pointer">
                                     Finish Setup <Check size={18} strokeWidth={3} />
                                 </button>
                             </div>

@@ -27,15 +27,8 @@ export function Footer() {
 
     ];
 
-    const pageLinksCol1 = [
-        { label: "New Auction", href: `${DASHBOARD_URL}/dashboard/create-auction` },
-        { label: "Join Auction", href: `${DASHBOARD_URL}/dashboard/join-auction` },
-        { label: "Auction Panel", href: `${DASHBOARD_URL}/dashboard/organizer` },
-        { label: "My Auction", href: `${DASHBOARD_URL}/dashboard/my-auction` },
+    const quickLinks = [
         { label: "About Us", href: "/#about" },
-    ];
-
-    const pageLinksCol2 = [
         { label: "Today's Auctions", href: "/today-auction" },
         { label: "Upcoming Auctions", href: "/upcoming-auction" },
         { label: "Pricing", href: "/pricing" },
@@ -57,11 +50,11 @@ export function Footer() {
             >
                 {/* Footer Grid - Fully Responsive */}
                 <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-                    {/* Brand & Socials */}
+                    {/* Brand */}
                     <div className="flex flex-col items-start gap-4">
                         <Link
                             href="/"
-                            className="block focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-lg mt-2 lg:mt-20"
+                            className="block focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-lg mt-2 lg:mt-6"
                         >
                             <motion.div
                                 whileHover={{ scale: 1.02 }}
@@ -73,82 +66,51 @@ export function Footer() {
                                     alt="Auction 11 Logo"
                                     width={220}
                                     height={220}
-                                    className="object-contain ml-7"
+                                    className="object-contain"
                                 />
                             </motion.div>
                         </Link>
-
-                        <div className="flex gap-4 ">
-                            {socialLinks.map((social) => (
-                                <a
-                                    key={social.label}
-                                    href={social.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label={social.label}
-                                    className="p-2 rounded-full text-white hover:text-[#FFBA00] hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#FFBA00] focus:ring-offset-2 focus:ring-offset-[#012972]"
-                                >
-                                    <social.icon size={18} />
-                                </a>
-                            ))}
-                        </div>
+                        <p className="text-white/80 text-[13px] mt-2 max-w-xs leading-relaxed">
+                            Powering smarter, faster, and more transparent player auctions for local and professional sports tournaments.
+                        </p>
                     </div>
 
-                    {/* Pages Column 1 */}
+                    {/* Quick Links */}
                     <div>
                         <h4 className="text-white font-bold text-base mb-5 font-['Poppins'] tracking-wide">
                             Quick Links
                         </h4>
                         <ul className="space-y-3">
-                            {pageLinksCol1.map((link) => (
+                            {quickLinks.map((link) => (
                                 <li key={link.label}>
-                                    {link.href.startsWith("http") ? (
-                                        <a
-                                            href={link.href}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-block py-2 text-sm text-white/90 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] focus:ring-offset-2 focus:ring-offset-[#012972] rounded-md"
-                                        >
-                                            {link.label}
-                                        </a>
-                                    ) : (
-                                        <Link
-                                            href={link.href}
-                                            className="inline-block py-2 text-sm text-white/90 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] focus:ring-offset-2 focus:ring-offset-[#012972] rounded-md"
-                                        >
-                                            {link.label}
-                                        </Link>
-                                    )}
+                                    <Link
+                                        href={link.href}
+                                        className="inline-block py-2 text-sm text-white/90 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-md"
+                                    >
+                                        {link.label}
+                                    </Link>
                                 </li>
                             ))}
                         </ul>
                     </div>
 
-                    {/* Pages Column 2 */}
+                    {/* Follow Us (Socials as List with Icon + Name) */}
                     <div>
                         <h4 className="text-white font-bold text-base mb-5 font-['Poppins'] tracking-wide">
-                            More Links
+                            Follow Us On
                         </h4>
                         <ul className="space-y-3">
-                            {pageLinksCol2.map((link) => (
-                                <li key={link.label}>
-                                    {link.href.startsWith("http") ? (
-                                        <a
-                                            href={link.href}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-block py-2 text-sm text-white/90 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] focus:ring-offset-2 focus:ring-offset-[#012972] rounded-md"
-                                        >
-                                            {link.label}
-                                        </a>
-                                    ) : (
-                                        <Link
-                                            href={link.href}
-                                            className="inline-block py-2 text-sm text-white/90 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] focus:ring-offset-2 focus:ring-offset-[#012972] rounded-md"
-                                        >
-                                            {link.label}
-                                        </Link>
-                                    )}
+                            {socialLinks.map((social) => (
+                                <li key={social.label}>
+                                    <a
+                                        href={social.href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 py-2 text-sm text-white/90 hover:text-[#FFBA00] transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-md group"
+                                    >
+                                        <social.icon size={16} className="text-white/80 group-hover:text-[#FFBA00] transition-colors" />
+                                        <span>{social.label}</span>
+                                    </a>
                                 </li>
                             ))}
                         </ul>
@@ -166,7 +128,7 @@ export function Footer() {
                             </li>
                             <li className="flex items-center gap-3">
                                 <Mail size={16} color="white" className="shrink-0" />
-                                <a href="mailto:auction11.live@gmail.com" target="_black" className="text-[13px] text-white hover:text-[#FFBA00] transition-colors font-medium">auction11.live@gmail.com</a>
+                                <a href="mailto:auction11.live@gmail.com" target="_blank" className="text-[13px] text-white hover:text-[#FFBA00] transition-colors font-medium">auction11.live@gmail.com</a>
                             </li>
                             <li className="flex items-start gap-3">
                                 <MapPin size={16} color="white" className="shrink-0 mt-0.5" />

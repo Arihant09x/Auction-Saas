@@ -2,7 +2,7 @@
 
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Users, Youtube, RotateCw, MessageSquare } from "lucide-react";
 import { Navbar } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -10,9 +10,6 @@ import Link from "next/link";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL ?? "http://localhost:3001";
-
-// ─── Gradient underline ──────────────────────────────────────────────────────
 function PageTitle({ title, highlight }: { title: string; highlight: string }) {
   return (
     <div className="flex flex-col items-center gap-3 py-12">
@@ -31,7 +28,6 @@ function PageTitle({ title, highlight }: { title: string; highlight: string }) {
   );
 }
 
-// ─── Plans data ──────────────────────────────────────────────────────────────
 const PLANS = [
   { id: "free", label: "Free", teams: "02", price: "Free", originalPrice: "Free", period: "per Auction", highlight: false },
   { id: "p1", label: "Basic", teams: "04", price: "₹1,049/-", originalPrice: "₹1,500/-", period: "per Auction", highlight: false },
@@ -49,10 +45,8 @@ const EXTRA_FEATURES = [
   { id: "f4", label: "Dedicated Support", description: "Get real-time assistance via WhatsApp and email during your live auctions.", price: "0/-", icon: <MessageSquare size={20} className="text-[#00379d]" /> },
 ];
 
-// ─── Plan card with GSAP hover ───────────────────────────────────────────────
 function PlanCard({ plan }: { plan: typeof PLANS[0] }) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const card = cardRef.current;
@@ -64,34 +58,8 @@ function PlanCard({ plan }: { plan: typeof PLANS[0] }) {
     return () => { card.removeEventListener("mouseenter", enter); card.removeEventListener("mouseleave", leave); };
   }, [plan.highlight]);
 
-  useEffect(() => {
-    const getSharedCookie = (name: string): string | null => {
-        if (typeof document === "undefined") return null;
-        const nameEQ = name + "=";
-        const ca = document.cookie.split(';');
-        for (let i = 0; i < ca.length; i++) {
-            let c = ca[i];
-            if (!c) continue;
-            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-            if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
-        }
-        return null;
-    };
-
-    const cookieVal = getSharedCookie("auction11_auth");
-    if (cookieVal) {
-        try {
-            const { user: userData } = JSON.parse(cookieVal);
-            setUser(userData);
-        } catch {}
-    }
-  }, []);
-
-  const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3002";
   const planKey = plan.label.toUpperCase();
-  const targetUrl = user 
-    ? `${DASHBOARD_URL}/dashboard/select-auction-payment?plan=${planKey}`
-    : `/login?redirect=${DASHBOARD_URL}/dashboard/select-auction-payment?plan=${planKey}`;
+  const targetUrl = `/dashboard/select-auction-payment?plan=${planKey}`;
 
   return (
     <div
@@ -169,7 +137,6 @@ function FeatureCard({ f }: { f: typeof EXTRA_FEATURES[0] }) {
   );
 }
 
-// ─── Plans grid with GSAP stagger ────────────────────────────────────────────
 function PlansGrid() {
   const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -188,7 +155,6 @@ function PlansGrid() {
   );
 }
 
-// ─── Features grid with GSAP stagger ─────────────────────────────────────────
 function FeaturesGrid() {
   const gridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -207,11 +173,9 @@ function FeaturesGrid() {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function PricingPage() {
   return (
     <main className="relative bg-white min-h-screen font-sans overflow-x-hidden">
-      {/* Fixed diagonal bands */}
       <div className="fixed inset-0 pointer-events-none z-0 hidden lg:block">
         <div className="sticky top-0 w-full h-screen overflow-hidden">
           <div className="absolute" style={{ width: "140px", height: "200vh", background: "linear-gradient(80deg, #08245E, #0A307F)", transform: "rotate(18deg)", left: "70%", top: "-20%" }} />
@@ -225,12 +189,10 @@ export default function PricingPage() {
         <div className="max-w-5xl mx-auto">
           <PageTitle title="Pricing" highlight="& Plans" />
 
-          {/* Plans */}
           <section className="pb-14">
             <PlansGrid />
           </section>
 
-          {/* Extra Features */}
           <section className="pb-20">
             <div className="flex flex-col items-center gap-3 mb-10">
               <h2 className="text-[26px] sm:text-[30px] font-bold font-['Poppins'] text-[#012972] text-center">
@@ -244,7 +206,6 @@ export default function PricingPage() {
 
             <div className="flex flex-col lg:flex-row items-start gap-10">
               <FeaturesGrid />
-              {/* Illustration placeholder */}
               <div className="hidden lg:flex flex-col items-center justify-center w-[260px] shrink-0 self-center">
                 <div className="w-[220px] h-[220px] bg-[#eef3ff] rounded-[24px] flex flex-col items-center justify-center gap-4 p-6 text-center shadow-md">
                   <div className="w-14 h-14 bg-[#FFBA00] rounded-2xl flex items-center justify-center shadow">

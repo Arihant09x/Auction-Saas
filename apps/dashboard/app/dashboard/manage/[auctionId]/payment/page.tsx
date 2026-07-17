@@ -215,6 +215,28 @@ export default function PaymentPage() {
         }
     }, [createOrder, verifyPayment, auction?.isPaid, currentPrice]);
 
+    const hasTriggeredUpgrade = useRef(false);
+
+    useEffect(() => {
+        if (auction && !hasTriggeredUpgrade.current) {
+            const params = new URLSearchParams(window.location.search);
+            const upgradePlan = params.get("upgrade");
+            if (upgradePlan) {
+                const planKey = upgradePlan.toUpperCase();
+                const matchedPlan = PLAN_TIERS.find(p => p.key === planKey);
+                if (matchedPlan && planKey !== "FREE") {
+                    const cardState = getCardState(planKey);
+                    if (cardState === "UPGRADE") {
+                        hasTriggeredUpgrade.current = true;
+                        setTimeout(() => {
+                            handleUpgrade(planKey);
+                        }, 500);
+                    }
+                }
+            }
+        }
+    }, [auction, handleUpgrade]);
+
     // --- Loading View ---
     if (isAuctionLoading || (!auction && !isAuctionError)) {
         return <PricingSkeleton />;

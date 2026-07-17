@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,6 +51,30 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
+
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const nextParam = params.get("redirect") || params.get("next");
+      if (nextParam) {
+        setRedirectUrl(nextParam);
+      }
+    }
+  }, []);
+
+  const getNextPath = (url: string) => {
+    try {
+      if (url.startsWith("http://") || url.startsWith("https://")) {
+        const parsed = new URL(url);
+        return parsed.pathname + parsed.search;
+      }
+      return url;
+    } catch (e) {
+      return url;
+    }
+  };
 
   const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3002";
 
@@ -161,7 +185,8 @@ export default function LoginPage() {
 
       // Redirect seamlessly to Dashboard
       toast.success("Welcome! Your account has been created.");
-      window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=/dashboard/organizer`;
+      const nextPath = redirectUrl ? getNextPath(redirectUrl) : "/dashboard/organizer";
+      window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=${encodeURIComponent(nextPath)}`;
     } catch (err: any) {
       console.error("Registration error:", err);
 
@@ -234,7 +259,8 @@ export default function LoginPage() {
       if (role === "ADMIN") {
         window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=/admin`;
       } else {
-        window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=/dashboard/organizer`;
+        const nextPath = redirectUrl ? getNextPath(redirectUrl) : "/dashboard/organizer";
+        window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=${encodeURIComponent(nextPath)}`;
       }
     } catch (err: any) {
       console.error("Login error:", err);
@@ -276,7 +302,8 @@ export default function LoginPage() {
       await syncUserToDatabase(cred.user.uid, dbPayload, idToken);
 
       toast.success("Successfully signed in with Google!");
-      window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=/dashboard/organizer`;
+      const nextPath = redirectUrl ? getNextPath(redirectUrl) : "/dashboard/organizer";
+      window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=${encodeURIComponent(nextPath)}`;
     } catch (err: any) {
       console.error("Google login error:", err);
       let message = "Failed to sign in with Google. Please try again.";
@@ -338,8 +365,8 @@ export default function LoginPage() {
                     type="email"
                     placeholder="example@email.com"
                     className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${loginForm.formState.errors.email
-                        ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                        : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
+                      ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                      : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
                       }`}
                   />
                   {loginForm.formState.errors.email && <p className="text-[#fe7c0a] text-xs mt-1">{loginForm.formState.errors.email.message}</p>}
@@ -352,8 +379,8 @@ export default function LoginPage() {
                     type="password"
                     placeholder="••••••••"
                     className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${loginForm.formState.errors.password
-                        ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                        : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
+                      ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                      : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
                       }`}
                   />
                   {loginForm.formState.errors.password && <p className="text-[#fe7c0a] text-xs mt-1">{loginForm.formState.errors.password.message}</p>}
@@ -378,8 +405,8 @@ export default function LoginPage() {
                       type="text"
                       placeholder="John Doe"
                       className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${registerForm.formState.errors.name
-                          ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                          : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
+                        ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                        : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
                         }`}
                     />
                     {registerForm.formState.errors.name && <p className="text-[#fe7c0a] text-[10px] mt-1">{registerForm.formState.errors.name.message}</p>}
@@ -391,8 +418,8 @@ export default function LoginPage() {
                       type="tel"
                       placeholder="9876543210"
                       className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${registerForm.formState.errors.mobile
-                          ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                          : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
+                        ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                        : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
                         }`}
                     />
                     {registerForm.formState.errors.mobile && <p className="text-[#fe7c0a] text-[10px] mt-1">{registerForm.formState.errors.mobile.message}</p>}
@@ -406,8 +433,8 @@ export default function LoginPage() {
                     type="email"
                     placeholder="example@email.com"
                     className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${registerForm.formState.errors.email
-                        ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                        : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
+                      ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                      : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
                       }`}
                   />
                   {registerForm.formState.errors.email && <p className="text-[#fe7c0a] text-[10px] mt-1">{registerForm.formState.errors.email.message}</p>}
@@ -421,8 +448,8 @@ export default function LoginPage() {
                       type="password"
                       placeholder="••••••••"
                       className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${registerForm.formState.errors.password
-                          ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                          : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
+                        ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                        : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
                         }`}
                     />
                     {registerForm.formState.errors.password && <p className="text-[#fe7c0a] text-[10px] mt-1">{registerForm.formState.errors.password.message}</p>}

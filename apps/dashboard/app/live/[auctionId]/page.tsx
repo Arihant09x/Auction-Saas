@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "../../../store/auth.store";
 import { io, Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, LayoutDashboard, Settings, User, Trophy, Play, CheckCircle, XCircle, RotateCcw, AlertTriangle, Menu, Maximize, Monitor } from "lucide-react";
+import { Users, LayoutDashboard, Settings, User, Trophy, Play, CheckCircle, XCircle, RotateCcw, AlertTriangle, Menu, Maximize, Monitor, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
 
 const auctionLogo = "/logo-1.svg";
@@ -538,6 +538,16 @@ export default function OrganizerLiveDashboard() {
     const unsold = dashboardSnapshot?.players?.unsold || [];
     const todo = [...upcoming, ...unsold];
     const sold = dashboardSnapshot?.players?.sold || [];
+
+    if (!connected || teams.length === 0) {
+        return (
+            <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-[#0A2A6E] font-['Poppins']">
+                <Loader2 className="h-12 w-12 animate-spin text-[#ffba00]" />
+                <p className="text-white font-medium text-lg font-bold">Initializing live auction dashboard...</p>
+                <p className="text-white/60 text-xs">Waiting for server sync...</p>
+            </div>
+        );
+    }
 
     const pageOrigin = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -1192,7 +1202,7 @@ export default function OrganizerLiveDashboard() {
                                     </div>
                                     <div className="flex flex-col">
                                         <h2 className="text-xl font-black uppercase tracking-widest">{selectedTeam.name} - Roster</h2>
-                                        <p className="text-xs font-bold text-[#34D399] uppercase">Remaining: ₹{selectedTeam.purse?.toLocaleString()} • Players: {selectedTeam.playersCount || 0}</p>
+                                        <p className="text-xs font-bold text-[#FFD500] uppercase">Remaining: ₹{selectedTeam.purse?.toLocaleString()} • Players: {selectedTeam.playersCount || 0}</p>
                                     </div>
                                 </div>
                                 <button onClick={() => setSelectedTeam(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors cursor-pointer"><XCircle size={24} className="text-white/50" /></button>
@@ -1214,7 +1224,7 @@ export default function OrganizerLiveDashboard() {
                                                 <div className="text-white font-bold text-xs sm:text-sm truncate uppercase">{player.name}</div>
                                                 <div className="text-white/40 text-[10px]">{player.role || "Player"}</div>
                                             </div>
-                                            <div className="text-right text-[#34D399] font-black text-xs sm:text-sm">₹{player.soldPrice?.toLocaleString() || 0}</div>
+                                            <div className="text-right text-white font-black text-xs sm:text-sm">₹{player.soldPrice?.toLocaleString() || 0}</div>
                                         </div>
                                     ));
                                 })()}

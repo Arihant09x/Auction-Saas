@@ -1,7 +1,8 @@
-import { Controller, Post, Body, UseGuards, Request } from "@nestjs/common";
+import { Controller, Post, Body, UseGuards, Request, UnauthorizedException } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
 import { Throttle } from "@nestjs/throttler";
+import * as firebase from "firebase-admin";
 
 @Controller("auth")
 export class AuthController {
@@ -26,5 +27,15 @@ export class AuthController {
   ) {
     // 2. If valid, find/create in DB
     return this.authService.validateUser(req.user, body);
+  }
+
+  @Post("logout-all-devices")
+  @UseGuards(AuthGuard("firebase-jwt"))
+  async logoutAllDevices(@Request() req: any) {
+    if (req.user && req.user.firebaseUid) {
+      await firebase.auth().revokeRefreshTokens(req.user.firebaseUid);
+      return { success: true, message: "Successfully revoked refresh tokens for all devices." };
+    }
+    throw new UnauthorizedException("Cannot revoke tokens: User session is invalid.");
   }
 }

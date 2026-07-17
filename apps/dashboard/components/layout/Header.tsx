@@ -15,17 +15,26 @@ const Dashboard_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost
 const LOGIN_URL = `${MAIN_WEBSITE_URL}/login`;
 
 const NAV_LINKS = [
-    { href: `${MAIN_WEBSITE_URL}/today-auction`, label: "Today Auction" },
-    { href: `${MAIN_WEBSITE_URL}/upcoming-auction`, label: "Upcoming Auction" },
-    { href: `${MAIN_WEBSITE_URL}/pricing`, label: "Pricing" },
-    { href: `${MAIN_WEBSITE_URL}/blog`, label: "Blog" },
+    { href: `/today-auction`, label: "Today Auction" },
+    { href: `/upcoming-auction`, label: "Upcoming Auction" },
+    { href: `/pricing`, label: "Pricing" },
+    { href: `${MAIN_WEBSITE_URL}/blogs`, label: "Blogs" },
 ];
 
 export function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
-    const { user, logout, isHydrated, setUser, isAuthenticated, isLoading } = useAuthStore();
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const { user, logout, isHydrated, setUser, isAuthenticated, isLoading, firebaseToken } = useAuthStore();
 
-
+    useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === "bid-arena-auth" && !e.newValue) {
+                window.location.reload();
+            }
+        };
+        window.addEventListener("storage", handleStorageChange);
+        return () => window.removeEventListener("storage", handleStorageChange);
+    }, []);
 
     // Show placeholder while hydrating
     if (!isHydrated) {
@@ -41,8 +50,25 @@ export function Navbar() {
         );
     }
 
-    const handleLogout = async () => {
-        toast.success("Logged out successfully! Redirecting...");
+    const handleLogout = async (allDevices = false) => {
+        setShowLogoutModal(false);
+        toast.success("Logging out... Redirecting...");
+
+        if (allDevices && firebaseToken) {
+            try {
+                const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3000";
+                await fetch(`${wsUrl}/auth/logout-all-devices`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${firebaseToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+            } catch (err) {
+                console.error("Failed to revoke tokens on all devices:", err);
+            }
+        }
+
         try {
             if (auth && typeof auth.signOut === "function") {
                 await signOut(auth);
@@ -112,7 +138,7 @@ export function Navbar() {
                                             {(user as any).name || "User"}
                                         </span>
                                         <button
-                                            onClick={handleLogout}
+                                            onClick={() => setShowLogoutModal(true)}
                                             className="text-[#ffba00] text-[10px] leading-tight hover:underline cursor-pointer text-left"
                                         >
                                             Logout
@@ -181,7 +207,7 @@ export function Navbar() {
                                             </p>
                                             <button
                                                 onClick={() => {
-                                                    handleLogout();
+                                                    setShowLogoutModal(true);
                                                     setMenuOpen(false);
                                                 }}
                                                 className="text-[#ffba00] text-sm flex items-center gap-1 mt-1"
@@ -193,6 +219,60 @@ export function Navbar() {
                                 </div>
                             ) : null}
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showLogoutModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                        onClick={() => setShowLogoutModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            transition={{ type: "spring", duration: 0.4 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white border border-gray-100 rounded-3xl p-8 max-w-md w-full mx-4 text-center shadow-2xl font-poppins relative overflow-hidden"
+                        >
+                            {/* Decorative Accent Strip */}
+                            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#012972] to-[#ffba00]" />
+
+                            <div className="w-16 h-16 bg-[#012972]/10 rounded-full flex items-center justify-center mx-auto mb-5 text-[#012972]">
+                                <LogOut size={28} />
+                            </div>
+
+                            <h3 className="text-2xl font-black text-[#012972] mb-2 uppercase tracking-wide">Logout of Auction 11</h3>
+                            <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                                You are about to log out of your session. Would you like to sign out from <strong>this browser tab only</strong>, or revoke active sessions on <strong>all devices</strong>?
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={() => handleLogout(false)}
+                                    className="w-full py-3.5 bg-[#012972] text-white rounded-2xl font-bold hover:bg-[#00205b] transition-all shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer border-none text-sm"
+                                >
+                                    Logout from This Device
+                                </button>
+                                <button
+                                    onClick={() => handleLogout(true)}
+                                    className="w-full py-3.5 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 transition-all shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer border-none text-sm"
+                                >
+                                    Logout from All Devices
+                                </button>
+                                <button
+                                    onClick={() => setShowLogoutModal(false)}
+                                    className="w-full py-3.5 bg-gray-100 text-gray-700 hover:bg-gray-255 rounded-2xl font-bold transition-all active:scale-[0.98] cursor-pointer border-none text-sm hover:bg-gray-200"
+                                >
+                                    Stay Logged In
+                                </button>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

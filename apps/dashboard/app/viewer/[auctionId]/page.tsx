@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import gsap from "gsap";
 import Link from "next/link";
 import confetti from "canvas-confetti";
+import { Loader2 } from "lucide-react";
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ interface TeamData {
     id: string; name: string; shortName?: string; logo?: string;
     originalPurse?: number | string; purseSpent?: number | string;
     playersCount?: number | string; maxPlayers?: number | string;
-    purseLeft?: number | string;
+    purseLeft?: number | string; purse?: number | string;
 }
 interface CategoryData {
     id: string; name: string; color?: string;
@@ -213,8 +214,8 @@ export default function ViewerLiveAuctionPage() {
     useEffect(() => {
         if (bidAmountRef.current && currentBid > 0) {
             gsap.fromTo(bidAmountRef.current,
-                { scale: 1.3, color: "#00ff88" },
-                { scale: 1, color: "#00f2c3", duration: 0.4, ease: "elastic.out(1, 0.5)" }
+                { scale: 1.3, color: "#ffffff" },
+                { scale: 1, color: "#ffffff", duration: 0.4, ease: "elastic.out(1, 0.5)" }
             );
         }
     }, [currentBid]);
@@ -525,7 +526,14 @@ export default function ViewerLiveAuctionPage() {
                 return {
                     ...prev,
                     teams: prev.teams.map(t =>
-                        t.id === data.id ? { ...t, purseSpent: data.purse !== undefined ? String(Number(t.originalPurse || 0) - Number(data.purse)) : t.purseSpent, playersCount: data.playersCount ?? t.playersCount } : t
+                        t.id === data.id
+                            ? {
+                                  ...t,
+                                  purseSpent: data.purseSpent !== undefined ? data.purseSpent : t.purseSpent,
+                                  purse: data.purse !== undefined ? data.purse : t.purse,
+                                  playersCount: data.playersCount !== undefined ? data.playersCount : t.playersCount
+                              }
+                            : t
                     ),
                 };
             });
@@ -582,6 +590,16 @@ export default function ViewerLiveAuctionPage() {
             return pTeam === selectedTeam.name.toLowerCase();
         });
     }, [selectedTeam, players.sold]);
+
+    if (!snapshot) {
+        return (
+            <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-[#07163D] font-['Poppins']">
+                <Loader2 className="h-12 w-12 animate-spin text-[#ffba00]" />
+                <p className="text-white font-medium text-lg font-bold">Connecting to live auction lobby...</p>
+                <p className="text-white/60 text-xs">Waiting for session snapshot...</p>
+            </div>
+        );
+    }
 
     // ─── RENDER ──────────────────────────────────────────────────────────────
     return (
@@ -735,7 +753,7 @@ export default function ViewerLiveAuctionPage() {
                                             </div>
                                             <div className="flex flex-col min-w-0">
                                                 <span className="text-white/45 text-[9px] font-black uppercase tracking-widest leading-none">Leading Team</span>
-                                                <span className="text-[#FFD500] font-black text-md md:text-lg uppercase truncate block w-full mt-1.5 drop-shadow-sm leading-tight">
+                                                <span className="text-white font-black text-xs md:text-md uppercase truncate block w-full mt-1.5 drop-shadow-sm leading-tight">
                                                     {biddingTeam && biddingTeam !== "Waiting for Bids..." ? biddingTeam : "No Bids Yet"}
                                                 </span>
                                                 <span className="text-white/45 text-[10px] gap-6 font-black uppercase tracking-widest leading-none">{leadingTeam?.shortName}</span>
@@ -863,9 +881,9 @@ export default function ViewerLiveAuctionPage() {
                                 // FIX 3: Changed grid columns so team cards are larger (max 3 across on large screens instead of 5)
                                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mt-4">
                                 {filteredTeams.map((team, i) => {
-                                    const purse = Number(team.originalPurse) || 0;
+                                    const purse = Number(team.originalPurse) || (Number(team.purse || 0) + Number(team.purseSpent || 0)) || 0;
                                     const spent = Number(team.purseSpent) || 0;
-                                    const purseLeft = purse - spent;
+                                    const purseLeft = team.purse !== undefined ? Number(team.purse) : (purse - spent);
                                     return (
                                         <motion.div key={team.id} custom={i} variants={cardVariants} initial="hidden" animate="visible" exit="exit"
                                             whileHover={{ scale: 1.02, borderColor: "rgba(255,213,0,0.4)" }} transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -975,7 +993,7 @@ export default function ViewerLiveAuctionPage() {
                                         <div>
                                             <h3 className="text-white font-black text-sm sm:text-lg uppercase">{selectedTeam.name}</h3>
                                             <span className="text-[#FFD500] text-[10px] sm:text-xs font-bold">
-                                                {teamRoster.length} Players • Spent ₹{formatCurrency(selectedTeam.purseSpent)}
+                                                {teamRoster.length} Players • Spent ₹{formatCurrency(teamRoster.reduce((sum, p) => sum + (Number(p.soldPrice) || 0), 0))}
                                             </span>
                                         </div>
                                     </div>
@@ -990,10 +1008,10 @@ export default function ViewerLiveAuctionPage() {
                                                         <img src={player.profilePic || "https://static.vecteezy.com/system/resources/previews/020/765/399/non_2x/default-profile-account-unknown-icon-black-silhouette-free-vector.jpg"} alt={player.name} className="w-full h-full object-cover" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="text-[#FFD500] font-black text-xs sm:text-sm truncate uppercase">{player.name}</div>
+                                                        <div className="text-white font-black text-xs sm:text-sm truncate uppercase">{player.name}</div>
                                                         <div className="text-white/40 text-[10px]">{player.role || "Player"}</div>
                                                     </div>
-                                                    <div className="text-right text-[#00f2c3] font-black text-xs sm:text-sm">₹{formatCurrency(player.soldPrice || 0)}</div>
+                                                    <div className="text-right text-white font-black text-xs sm:text-sm">₹{formatCurrency(player.soldPrice || 0)}</div>
                                                 </div>
                                             ))}
                                         </div>

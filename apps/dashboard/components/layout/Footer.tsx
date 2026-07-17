@@ -25,20 +25,14 @@ export function Footer() {
     ];
 
     const quickLinks = [
-        { label: "New Auction", href: "/dashboard/create-auction" },
-        { label: "Join Auction", href: "/dashboard/join-auction" },
-        { label: "Auction Panel", href: "/dashboard/organizer" },
-        { label: "My Auction", href: "/dashboard/my-auction" },
-        { label: "About Us", href: "/dashboard/about" },
-    ];
-
-    const moreLinks = [
-        { label: "Today's Auctions", href: `${MAIN_WEBSITE_URL}/today-auction` },
-        { label: "Upcoming Auctions", href: `${MAIN_WEBSITE_URL}/upcoming-auction` },
-        { label: "Pricing", href: `${MAIN_WEBSITE_URL}/pricing` },
+        { label: "About Us", href: `${MAIN_WEBSITE_URL}/#about` },
+        { label: "Today's Auctions", href: `/today-auction` },
+        { label: "Upcoming Auctions", href: `/upcoming-auction` },
+        { label: "Pricing", href: `/pricing` },
         { label: "Blogs", href: `${MAIN_WEBSITE_URL}/blogs` },
         { label: "Contact Us", href: `${MAIN_WEBSITE_URL}/#contact` },
     ];
+
     return (
         <footer className="relative pt-20 pb-10 overflow-hidden" style={{ background: "#012972" }}>
             <GlobalBackground variants="footer" />
@@ -52,11 +46,11 @@ export function Footer() {
             >
                 <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-4 lg:gap-8">
 
-                    {/* Brand & Socials */}
+                    {/* Brand */}
                     <div className="flex flex-col items-start gap-4">
                         <Link
                             href="/"
-                            className="block focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-lg mt-2 lg:mt-20"
+                            className="block focus:outline-none focus:ring-2 focus:ring-[#FFBA00] rounded-lg mt-2 lg:mt-6"
                         >
                             <motion.div
                                 whileHover={{ scale: 1.02 }}
@@ -68,34 +62,22 @@ export function Footer() {
                                     alt="Auction 11 Logo"
                                     width={220}
                                     height={220}
-                                    className="object-contain ml-7"
+                                    className="object-contain"
                                 />
                             </motion.div>
                         </Link>
-
-                        <div className="flex gap-4 ">
-                            {socialLinks.map((social) => (
-                                <a
-                                    key={social.label}
-                                    href={social.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label={social.label}
-                                    className="p-2 rounded-full text-white hover:text-[#FFBA00] hover:bg-white/10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#FFBA00] focus:ring-offset-2 focus:ring-offset-[#012972]"
-                                >
-                                    <social.icon size={18} />
-                                </a>
-                            ))}
-                        </div>
+                        <p className="text-white/80 text-[13px] mt-2 max-w-xs leading-relaxed">
+                            Powering smarter, faster, and more transparent player auctions for local and professional sports tournaments.
+                        </p>
                     </div>
 
-                    {/* Pages Column 1 */}
+                    {/* Quick Links */}
                     <div className="flex flex-col ml-0 md:ml-[10%]">
                         <h4 className="text-white font-bold text-[16px] mb-6 font-['Poppins'] tracking-wide">Quick Links</h4>
                         <ul className="space-y-4">
                             {quickLinks.map((link) => (
                                 <li key={link.label}>
-                                    <Link href={link.href} className="text-[13px] text-white hover:text-[#FFBA00] transition-colors font-medium">
+                                    <Link href={link.href} className="text-[13px] text-white/90 hover:text-[#FFBA00] transition-colors font-medium">
                                         {link.label}
                                     </Link>
                                 </li>
@@ -103,14 +85,20 @@ export function Footer() {
                         </ul>
                     </div>
 
-                    {/* Pages Column 2 */}
+                    {/* Follow Us */}
                     <div className="flex flex-col ml-0 md:ml-[5%]">
-                        <h4 className="text-white font-bold text-[16px] mb-6 font-['Poppins'] tracking-wide">More Links</h4>
+                        <h4 className="text-white font-bold text-[16px] mb-6 font-['Poppins'] tracking-wide">Follow Us On</h4>
                         <ul className="space-y-4">
-                            {moreLinks.map((link) => (
-                                <li key={link.label}>
-                                    <a href={link.href} target="_blank" rel="noopener noreferrer" className="text-[13px] text-white hover:text-[#FFBA00] transition-colors font-medium">
-                                        {link.label}
+                            {socialLinks.map((social) => (
+                                <li key={social.label}>
+                                    <a
+                                        href={social.href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 text-[13px] text-white/90 hover:text-[#FFBA00] transition-colors font-medium group"
+                                    >
+                                        <social.icon size={16} className="text-white/80 group-hover:text-[#FFBA00] transition-colors" />
+                                        <span>{social.label}</span>
                                     </a>
                                 </li>
                             ))}
@@ -127,7 +115,7 @@ export function Footer() {
                             </li>
                             <li className="flex items-center gap-3">
                                 <Mail size={16} color="white" className="shrink-0" />
-                                <a href="mailto:auction11.live@gmail.com" target="_black" className="text-[13px] text-white hover:text-[#FFBA00] transition-colors font-medium">auction11.live@gmail.com</a>
+                                <a href="mailto:auction11.live@gmail.com" target="_blank" className="text-[13px] text-white hover:text-[#FFBA00] transition-colors font-medium">auction11.live@gmail.com</a>
                             </li>
                             <li className="flex items-start gap-3">
                                 <MapPin size={16} color="white" className="shrink-0 mt-0.5" />

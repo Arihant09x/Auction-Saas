@@ -4,6 +4,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import "@repo/ui/globals.css";
 import { Providers } from "./providers";
 import { CanonicalHeader } from "../components/CanonicalHeader";
+import Script from "next/script";
 
 import { Poppins, Epilogue } from "next/font/google";
 
@@ -80,6 +81,15 @@ export default function RootLayout({
       <link rel="icon" href="/favicon.ico" sizes="128x128" type="image/x-icon " />
       <GoogleAnalytics gaId="G-RCB2M0CT5W" />
       <body className="min-h-screen bg-background font-sans antialiased">
+        <Script id="microsoft-clarity" strategy="afterInteractive">
+          {`
+            (function(c,l,a,r,i,t,y){
+                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window, document, "clarity", "script", "xkqy02196p");
+          `}
+        </Script>
         <CanonicalHeader />
         <ReactLenis root options={{ lerp: 0.08, duration: 1.5, smoothWheel: true }}>
           <Providers>{children}</Providers>

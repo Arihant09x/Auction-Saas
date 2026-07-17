@@ -15,6 +15,69 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const [isFirebaseChecked, setIsFirebaseChecked] = useState(false);
 
     useEffect(() => {
+        // Read and parse shared cookie to sync authentication session if not already in store
+        const getSharedCookie = (name: string): string | null => {
+            if (typeof document === "undefined") return null;
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                if (!c) continue;
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+            }
+            return null;
+        };
+
+        const checkCookie = () => {
+            const cookieVal = getSharedCookie("auction11_auth");
+            if (!cookieVal) {
+                const currentToken = useAuthStore.getState().firebaseToken;
+                if (currentToken) {
+                    console.log("[AuthGuard] Cookie session removed. Logging out...");
+                    useAuthStore.getState().logout();
+                    window.location.reload();
+                }
+            }
+        };
+
+        const cookieVal = getSharedCookie("auction11_auth");
+        if (cookieVal) {
+            try {
+                const session = JSON.parse(cookieVal);
+                if (session && session.token && session.user) {
+                    const currentToken = useAuthStore.getState().firebaseToken;
+                    if (!currentToken || currentToken !== session.token) {
+                        console.log("[AuthGuard] Restoring session from shared cookie.");
+                        setFirebaseToken(session.token);
+                        setUser(session.user);
+                    }
+                }
+            } catch (e) {
+                console.error("[AuthGuard] Error parsing shared cookie session:", e);
+            }
+        }
+
+        // Storage listener for logout from other tabs of the same dashboard domain
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === "bid-arena-auth" && !e.newValue) {
+                console.log("[AuthGuard] Logout from another tab detected.");
+                window.location.reload();
+            }
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+        const interval = setInterval(checkCookie, 5000);
+        window.addEventListener("focus", checkCookie);
+
+        return () => {
+            window.removeEventListener("storage", handleStorageChange);
+            clearInterval(interval);
+            window.removeEventListener("focus", checkCookie);
+        };
+    }, [setUser, setFirebaseToken]);
+
+    useEffect(() => {
         if (!isHydrated) return;
 
         // 1. Listen for Auth State changes
@@ -72,14 +135,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             // ONLY redirect if we have absolutely no session even after Firebase checked
             if (isFirebaseChecked && !auth.currentUser && !currentToken) {
                 console.error("[AuthGuard] No session found anywhere. Redirecting to login...");
-                window.location.href = LOGIN_URL;
+                const redirectParam = typeof window !== "undefined" ? `?redirect=${encodeURIComponent(window.location.href)}` : "";
+                window.location.href = `${LOGIN_URL}${redirectParam}`;
                 return;
             }
 
             // No data at all and not checking anymore
             if (!isFirebaseChecked && !currentToken && !currentUser) {
                 console.error("[AuthGuard] No local or remote session. Redirecting...");
-                window.location.href = LOGIN_URL;
+                const redirectParam = typeof window !== "undefined" ? `?redirect=${encodeURIComponent(window.location.href)}` : "";
+                window.location.href = `${LOGIN_URL}${redirectParam}`;
                 return;
             }
 

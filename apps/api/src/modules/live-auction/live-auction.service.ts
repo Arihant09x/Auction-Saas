@@ -314,6 +314,8 @@ export class LiveAuctionService {
     // 4. BOOSTER LOGIC
     // ========================
     const settings = await this.redisService.getSettings(auctionId);
+    let boosterApplied = false;
+    let boosterAmount = 0;
 
     if (
       settings?.isBoosterEnabled &&
@@ -323,10 +325,11 @@ export class LiveAuctionService {
       const trigger = Number(settings.boosterTrigger);
 
       if (playersBought % trigger === 0) {
-        purse += Number(settings.boosterAmount);
+        boosterApplied = true;
+        boosterAmount = Number(settings.boosterAmount);
 
         console.log(
-          `🚀 BOOSTER APPLIED: Team ${teamMeta.name} +${settings.boosterAmount}`,
+          `🚀 BOOSTER APPLIED: Team ${teamMeta.name} +${boosterAmount}`,
         );
 
         // Sync booster to DB
@@ -334,43 +337,31 @@ export class LiveAuctionService {
           where: { id: winningTeamId },
           data: {
             purseSpent: {
-              decrement: Number(settings.boosterAmount),
+              decrement: boosterAmount,
             },
           },
         });
 
         teamMeta.boostersUsed = Number(teamMeta.boostersUsed || 0) + 1;
+        await this.redisService.setTeam(auctionId, winningTeamId, teamMeta);
       }
     }
 
-    // ========================
-    // 5. RESERVE + MAX BID
-    // ========================
-    const reservableSlots = Math.max(minPlayers - playersBought - 1, 0);
-    const reserved = reservableSlots * minBid;
-    const maxAllowedBid = purse - reserved;
-
-    const updatedTeamMeta = {
-      ...teamMeta,
-      purse,
-      playersBought,
-      reserved,
-      maxAllowedBid,
-    };
-
-    await this.redisService.setTeam(auctionId, winningTeamId, updatedTeamMeta);
-
     // 3. Cleanup Redis
-
     player.status = "SOLD";
     player.soldPrice = soldPrice;
     player.teamId = winningTeamId;
     player.teamName = result.team.name;
     await this.redisService.setCurrentPlayer(auctionId, player);
     await this.redisService.removePlayerFromUnsold(auctionId, player.id);
-    await this.redisService.deductBudget(auctionId, winningTeamId, soldPrice);
+    
+    // Deduct budget (accounting for booster if applied) and increment players bought helper
+    await this.redisService.deductBudget(auctionId, winningTeamId, soldPrice - boosterAmount);
     await this.redisService.incrementPlayersBought(auctionId, winningTeamId);
     await this.redisService.setAuctionStatus(auctionId, "WAITING");
+
+    // Fetch the updated team meta from Redis (with updated purse, playersBought, maxAllowedBid, etc.)
+    const finalTeamMeta = await this.redisService.getTeam(auctionId, winningTeamId);
 
     // Update stats cache in Redis
     if (prevStatus === "UNSOLD") {
@@ -385,13 +376,12 @@ export class LiveAuctionService {
       playerName: player.name,
       category: player.category?.name,
       amount: soldPrice,
-      remainingPurse: purse,
-      boosterApplied:
-        Number(teamMeta.boostersUsed || 0) <
-        Number(updatedTeamMeta.boostersUsed || 0),
-      playersBought,
-      reserved,
-      maxAllowedBid,
+      remainingPurse: finalTeamMeta?.purse || 0,
+      boosterApplied,
+      playersBought: finalTeamMeta?.playersBought || 0,
+      reserved: finalTeamMeta?.reserved || 0,
+      maxAllowedBid: finalTeamMeta?.maxAllowedBid || 0,
+      purseSpent: Number(result.team.purseSpent) - boosterAmount,
     };
   }
 
@@ -704,28 +694,11 @@ export class LiveAuctionService {
     const teamMeta = await this.redisService.getTeam(auctionId, teamId);
     if (!teamMeta) throw new Error("Team not found in cache");
 
-    const minPlayers = Number(teamMeta.minPlayers);
-    const minBid = Number(teamMeta.baseBid);
-    const playersBought = Number(teamMeta.playersBought || 0) + 1;
-    const purse = Number(teamMeta.purse) - basePrice;
-
-    const reservableSlots = Math.max(minPlayers - playersBought - 1, 0);
-    const reserved = reservableSlots * minBid;
-    const maxAllowedBid = purse - reserved;
-
-    const updatedTeamMeta = {
-      ...teamMeta,
-      purse,
-      playersBought,
-      reserved,
-      maxAllowedBid,
-    };
-
-    await this.redisService.setTeam(auctionId, teamId, updatedTeamMeta);
-
     await this.redisService.removePlayerFromUnsold(auctionId, playerId);
     await this.redisService.deductBudget(auctionId, teamId, basePrice);
     await this.redisService.incrementPlayersBought(auctionId, teamId);
+
+    const finalTeamMeta = await this.redisService.getTeam(auctionId, teamId);
 
     // Update stats cache in Redis
     await this.redisService.adjustStats(auctionId, { sold: 1, unsold: -1 });
@@ -752,9 +725,10 @@ export class LiveAuctionService {
       playerName: player.name,
       category: player.category?.name,
       amount: basePrice,
-      remainingPurse: purse,
-      playersBought,
+      remainingPurse: finalTeamMeta?.purse || 0,
+      playersBought: finalTeamMeta?.playersBought || 0,
       soldPlayer,
+      team: result.team,
     };
   }
 
@@ -1245,6 +1219,7 @@ export class LiveAuctionService {
               ...t,
               playersCount: patch.payload.playersCount ?? t.playersCount,
               purse: patch.payload.purse ?? t.purse,
+              purseSpent: patch.payload.purseSpent ?? t.purseSpent,
             }
             : t,
         );
