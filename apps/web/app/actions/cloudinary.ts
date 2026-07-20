@@ -8,7 +8,7 @@ export async function uploadImage(formData: FormData) {
 
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const apiSecret = process.env.NEXT_PUBLIC_CLOUDINARY_API_SECRET;
 
     if (!cloudName || !apiKey || !apiSecret) {
         throw new Error("Cloudinary configuration missing in environment variables");
