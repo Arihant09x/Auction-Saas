@@ -82,7 +82,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
         // 1. Listen for Auth State changes
         const unsubscribeAuth = onAuthStateChanged(auth, (fbUser) => {
-            ("[AuthGuard] Firebase Auth status received. User:", !!fbUser);
+            console.error("[AuthGuard] Firebase Auth status received. User:", !!fbUser);
             setIsFirebaseChecked(true);
 
             if (fbUser) {
@@ -119,7 +119,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             const currentToken = useAuthStore.getState().firebaseToken;
             const currentUser = useAuthStore.getState().user;
 
-            ("[AuthGuard] Security Check Status:", {
+            console.error("[AuthGuard] Security Check Status:", {
                 firebaseChecked: isFirebaseChecked,
                 validStoreToken: !!currentToken,
                 fbUserSession: !!auth.currentUser

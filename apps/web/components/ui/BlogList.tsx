@@ -44,7 +44,7 @@ export function BlogList({ limit = 6 }: BlogListProps) {
   });
 
   const blogs = data?.data?.items || [];
-  ("Backend Blogs", data);
+  console.error("Backend Blogs", data);
 
 
   const totalPages = data?.data?.totalPages || 1;
