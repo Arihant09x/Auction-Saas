@@ -267,7 +267,7 @@ export class LiveAuctionRedisService {
       // SEQUENCE (Default): Take the first one in the list
       selectedPlayer = players[0];
     }
-    // console.log("🔎 First Redis Player Sample:", players[0]);
+    //  ("🔎 First Redis Player Sample:", players[0]);
     await this.redis.lrem(
       `auction:${auctionId}:unsold`,
       1,

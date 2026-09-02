@@ -1,0 +1,370 @@
+import { useState, useEffect, useRef, useMemo } from "react";
+import dynamic from "next/dynamic";
+import {
+  LogOut,
+  Users,
+  FileText,
+  Database,
+  MessageSquare,
+  CheckCircle,
+  Trash2,
+  Plus,
+  Search,
+  Edit,
+  Eye,
+  Copy,
+  RotateCcw,
+  Sparkles,
+  Image as ImageIcon,
+  Tag as TagIcon,
+  FolderPlus,
+TrendingUp,
+  Flame,
+  Check,
+  AlertCircle,
+  X,
+  Upload,
+  Calendar,
+Clock,
+  Layers,
+  ShieldAlert,
+BarChart3,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+}from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { signOut } from "firebase/auth";
+import { auth } from "../../lib/firebase";
+import {
+  adminBlogsApi,
+  AdminBlogArticle,
+  AdminCategory,
+  AdminTag,
+  MediaItem,
+} from "../../lib/admin-blogs-api";
+// Dynamically import BlogEditor to avoid SSR issues with BlockNote
+const BlogEditor = dynamic(
+  () => import("@/components/BlogEditor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[480px] flex items-center justify-center bg-slate-50 rounded-xl border border-slate-200">
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <div className="w-8 h-8 border-4 border-[#072460] border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-semibold">Loading editor...</span>
+          </div>
+          </div>
+          </div>
+    ),
+    });
+
+    const BlogRenderer = dynamic(
+  () => import("@/components/BlogRenderer"),
+  { ssr: false }
+);
+
+  const [newCatDesc, setNewCatDesc] = useState("");
+  const [newCatColor, setNewCatColor] = useState("#072460");
+  const [newTagName, setNewTagName] = useState("");
+  // Media Library Upload State
+  const [mediaUploadAlt, setMediaUploadAlt] = useState("");
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  // Logout Modal State
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  // ----------------------------------------------------
+  // DATA FETCHING HOOKS
+  // ----------------------------------------------------
+  // Analytics Query
+  const { data: analytics, isLoading: isLoadingAnalytics } = useQuery({
+    queryKey: ["admin-analytics"],
+    queryFn: () => adminBlogsApi.getAnalytics(firebaseToken!),
+    enabled: !!firebaseToken && (user as any)?.role === "ADMIN",
+  });
+
+  // Admin Blogs List Query
+  const { data: blogsData, isLoading: isLoadingBlogs } = useQuery({
+    queryKey: ["admin-blogs", articlePage, articleSearch, articleStatusFilter],
+    queryFn: () =>
+      adminBlogsApi.getAdminBlogs(firebaseToken!, {
+        page: articlePage,
+        limit: 10,
+        search: articleSearch.trim() || undefined,
+        status: articleStatusFilter !== "ALL" ? articleStatusFilter : undefined,
+      }),
+    enabled: !!firebaseToken && (user as any)?.role === "ADMIN",
+  });
+
+  // Categories Query
+  const { data: categories = [] } = useQuery({
+    queryKey: ["admin-categories"],
+    queryFn: () => adminBlogsApi.getCategories(),
+    enabled: !!firebaseToken && (user as any)?.role === "ADMIN",
+  });
+
+  // Tags Query
+  const { data: tags = [] } = useQuery({
+    queryKey: ["admin-tags"],
+    queryFn: () => adminBlogsApi.getTags(),
+    enabled: !!firebaseToken && (user as any)?.role === "ADMIN",
+  });
+
+    }
+  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  // ----------------------------------------------------
+  // AUTH GUARD CHECK (UNAUTHENTICATED / NOT ADMIN)
+  // ----------------------------------------------------
+  if (!isHydrated) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-100 font-poppins">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-[#072460] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-bold text-[#072460]">Authenticating Admin Session...</p>
+            </div>
+            </div>
+    )}
+
+    if (!firebaseToken || (user as any)?.role !== "ADMIN") {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-900 font-poppins text-white p-4">
+        <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-3xl p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Access Denied (403 Forbidden)</h2>
+          <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+            You do not have Administrator permissions to access the Auction11 CMS. Please sign in with an official admin account.
+          </p>
+          <a
+            href={`${process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001"}/login`}
+            className="inline-flex items-center justify-center w-full py-3 bg-[#ffba00] text-[#072460] font-extrabold text-sm uppercase rounded-xl hover:bg-[#ffe066] transition-all"
+          >
+            Go to Admin Login
+          </a>
+        </div>
+</div>
+    )};
+
+    const blogsList = blogsData?.items || [];
+  const totalBlogPages = blogsData?.totalPages || 1;
+  return (
+    <div className="flex h-screen w-full bg-slate-100 font-poppins overflow-hidden">
+      {/* Sidebar Navigation */}
+      <aside className="w-64 bg-[#072460] text-white flex flex-col justify-between py-6 shrink-0 shadow-xl z-20">
+        <div>
+          {/* Brand Logo Header */}
+          <div className="px-6 mb-8 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#ffba00] text-[#072460] font-black text-xl flex items-center justify-center shadow-md">
+              A11
+                            : "text-slate-300 hover:bg-white/10"
+                }`}
+            >
+              <ImageIcon className="w-4 h-4 text-[#ffba00]" /> Media Library
+            </button>
+            <button
+              onClick={() => setActiveTab("contact")}
+              className={`flex items-center gap-3 w-full rounded-xl px-4 py-3 text-xs font-bold transition-all text-left cursor-pointer ${activeTab === "contact"
+                ? "bg-white/20 text-white shadow-sm"
+                : "text-slate-300 hover:bg-white/10"
+                }`}
+            >
+              <MessageSquare className="w-4 h-4 text-[#ffba00]" /> Contact Inquiries
+            </button>
+          </nav>
+            </div>
+            {/* Footer Admin User Profile & Logout */}
+        <div className="px-4 pt-4 border-t border-white/10">
+          <div className="flex items-center justify-between mb-3 bg-white/10 p-3 rounded-2xl">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-[#ffba00] text-[#072460] font-bold text-xs flex items-center justify-center shrink-0">
+                {(user as any)?.name?.charAt(0) || "A"}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate">{(user as any)?.name || "Administrator"}</p>
+                <p className="text-[10px] text-slate-300 truncate">{(user as any)?.email}</p>
+              </div>
+                </div>
+                </div>
+                <button
+            onClick={() => setShowLogoutModal(true)}
+            className="flex items-center justify-center gap-2 w-full py-2.5 bg-red-500/20 text-red-300 hover:bg-red-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            >
+          >
+            <LogOut className="w-4 h-4" /> Sign Out Admin
+          </button>
+           </div>
+        </div>
+      </aside>
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto bg-slate-50 flex flex-col">
+        {/* Top Header Navigation Bar */}
+        <header className="h-16 border-b border-slate-200 bg-white px-8 flex items-center justify-between shrink-0 shadow-xs z-10">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span>Admin CMS</span>
+            <span>/</span>
+            <span className="font-bold text-[#072460] uppercase tracking-wider">{activeTab}</span>
+                          target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> View Live Blog Website
+            </a>
+          </div>
+        </header>
+        <div className="p-8 flex-1">
+          {/* TAB 1: OVERVIEW & ANALYTICS */}
+          {activeTab === "dashboard" && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 font-['Poppins']">Dashboard Overview &amp; Analytics</h2>
+                <p className="text-xs text-slate-500 mt-1">Real-time statistics on articles, engagement, views, and categories.</p>
+              </div>
+              {/* Metric Stat Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Articles</span>
+                  <p className="text-3xl font-black text-[#072460] mt-2 font-['Poppins']">
+                    {analytics?.overview?.totalBlogs ?? 0}
+                     </p>
+                  </p>
+                  <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
+                    {analytics?.overview?.publishedBlogs ?? 0} Published
+                  </span>
+                </div>
+                </div>
+                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#072460]"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              {/* Pagination Controls */}
+              {totalBlogPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6">
+                  <button
+                    onClick={() => setArticlePage((p) => Math.max(1, p - 1))}
+                    disabled={articlePage === 1}
+                    className="p-2 bg-white border border-slate-200 rounded-xl disabled:opacity-40"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-bold text-slate-700 px-3">
+                    Page {articlePage} of {totalBlogPages}
+                    </span>
+                    <button
+                    onClick={() => setArticlePage((p) => Math.min(totalBlogPages, p + 1))}
+                    disabled={articlePage === totalBlogPages}
+                    className="p-2 bg-white border border-slate-200 rounded-xl disabled:opacity-40">
+                      <ChevronRight className="w-4 h-4" />
+                  </button>
+                    </div>
+                              {activeTab === "editor" && (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 font-['Poppins']">
+                    {editingArticleId ? "Edit Article" : "Create New Article"}
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">Markdown editor, AI helper, Cloudinary uploader, and SEO drawer.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowAiModal(true)}
+                    className="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-extrabold rounded-xl hover:opacity-90 transition-all inline-flex items-center gap-1.5 shadow-md cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4" /> AI Draft Assistant
+                  </button>
+                  <button
+                    onClick={() => saveBlogMutation.mutate()}
+                    disabled={saveBlogMutation.isPending}
+                    className="px-5 py-2.5 bg-[#072460] text-white text-xs font-black uppercase rounded-xl hover:bg-[#0a307f] transition-all shadow-md cursor-pointer"
+                  >
+                    {saveBlogMutation.isPending ? "Saving..." : "Save Blog Article"}
+                  </button>
+                </div>
+                </div>
+                {/* Title & Subtitle Inputs */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+               <div>
+                                   </span>
+                    <span className="px-2 py-0.5 bg-[#072460]/10 text-[#072460] text-[10px] font-bold rounded-full">
+                      {editorMode === "preview" ? "Preview" : "BlockNote"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    {editorMode === "edit" && "Type / to insert blocks • Supports headings, images, tables, stats, CTA buttons"}
+                    {editorMode === "split" && "Edit on left • Live preview on right"}
+                    {editorMode === "preview" && "Final rendered article view"}
+                  </p>
+                  </div>
+                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div>
+                        <BlogEditor
+                          key={editingArticleId ?? "new"}
+                          initialContent={editorBlockContent}
+                          onChange={setEditorBlockContent}
+                        />
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded-xl p-4 min-h-[400px] overflow-y-auto prose prose-sm max-w-none">
+                        <BlogRenderer blockContent={editorBlockContent ?? []} />
+                      </div>
+                    </div>
+                  )}
+                  {editorMode === "preview" && (
+                    <div className="bg-white border border-slate-200 rounded-xl p-6 min-h-[500px] overflow-y-auto prose prose-sm max-w-none">
+                      <BlogRenderer blockContent={editorBlockContent ?? []} />
+                    </div>
+                  )}
+                  </div>
+                  </div>
+
+                                    topic: aiTopic,
+                  targetAudience: aiAudience,
+                  tone: aiTone,
+                })
+              }
+              disabled={aiDraftMutation.isPending || !aiTopic}
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-extrabold uppercase rounded-xl shadow-md cursor-pointer hover:opacity-90 transition-all"
+            >
+              {aiDraftMutation.isPending ? "Generating Draft..." : "Generate AI Draft"}
+            </button>
+            </div>
+                        </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Confirm Admin Signout</h3>
+            <p className="text-xs text-slate-500 mb-6">Are you sure you want to end your administrator session?</p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleLogout}
+                className="w-full py-2.5 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition cursor-pointer"
+              >
+                Yes, Sign Out
+              </button>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="w-full py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+      )};

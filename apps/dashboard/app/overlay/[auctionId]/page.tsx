@@ -174,7 +174,7 @@ export default function OverlayPage() {
             };
 
             setCurrentPlayer(fullPlayerData);
-            console.log("data", fullPlayerData);
+
 
             // Use the merged data to set the starting bid safely
             setCurrentBid(Number(data.currentBid) || Number(fullPlayerData.basePrice) || 0);

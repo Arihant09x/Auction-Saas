@@ -38,18 +38,20 @@ export function BlogList({ limit = 6 }: BlogListProps) {
   const gridRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["cricket-blogs", page, limit],
-    queryFn: () => blogsApi.getBlogs(page, limit),
+    queryKey: ["auction-blogs", page, limit],
+    queryFn: () => blogsApi.getBlogs({ page, limit }),
     staleTime: 60000,
   });
 
-  const blogs = Array.isArray(data?.data?.data) ? data.data.data : [];
-  const meta = data?.data?.meta ?? { total: 0, page: 1, limit };
-  const totalPages = Math.ceil(meta.total / limit);
+  const blogs = data?.data?.items || [];
+  ("Backend Blogs", data);
+
+
+  const totalPages = data?.data?.totalPages || 1;
 
   if (isLoading) {
     return (
-      <div 
+      <div
         className="flex overflow-x-auto gap-4 sm:gap-6 w-full pb-8 scroll-smooth px-4 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         data-lenis-prevent
@@ -85,8 +87,8 @@ export function BlogList({ limit = 6 }: BlogListProps) {
   return (
     <div className="space-y-8 w-full">
       {/* Grid Layout with horizontal flex scroll on mobile */}
-      <div 
-        ref={gridRef} 
+      <div
+        ref={gridRef}
         className="flex overflow-x-auto gap-4 sm:gap-6 w-full pb-8 scroll-smooth px-4 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-3"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         data-lenis-prevent
@@ -127,8 +129,11 @@ export function BlogList({ limit = 6 }: BlogListProps) {
   );
 }
 
-// Individual blog card with GSAP hover effect (similar to plan cards)
 function BlogCard({ article }: { article: BlogArticle }) {
+  const imgSrc = article.coverImage || article.thumbnailImage || article.heroImage || "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=600&q=80";
+  const desc = article.excerpt || article.subtitle || article.content?.replace(/#|\*|`/g, "").slice(0, 120) || "";
+  const catName = article.categories?.[0]?.name || "Auction11 Blog";
+
   return (
     <article
       className="blog-card rounded-2xl overflow-hidden border border-[#e0e7f5] flex flex-col h-full bg-white shadow-sm cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(1,41,114,0.15)] shrink-0 w-[290px] md:w-auto md:shrink group"
@@ -136,14 +141,14 @@ function BlogCard({ article }: { article: BlogArticle }) {
       {/* Image Container */}
       <div className="h-48 w-full relative overflow-hidden bg-gray-100">
         <SafeImage
-          src={article.imageUrl}
+          src={imgSrc}
           alt={article.title}
           fill={true}
           className="transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
         <div className="absolute top-4 left-4 bg-[#FFBA00] text-[#012972] text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full">
-          Cricket News
+          {catName}
         </div>
       </div>
 
@@ -166,15 +171,13 @@ function BlogCard({ article }: { article: BlogArticle }) {
             {article.title}
           </h3>
           <p className="text-sm text-[#4a6090] line-clamp-3 leading-relaxed">
-            {article.description}
+            {desc}
           </p>
         </div>
 
         <a
-          href={article.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#FFBA00] hover:underline w-fit pt-2"
+          href={`/blogs/${article.slug}`}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#072460] group-hover:text-[#FFBA00] hover:underline w-fit pt-2"
         >
           Read Article
           <ExternalLink size={14} />

@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "../../../store/auth.store";
 import { Loader2 } from "lucide-react";
 
+// Generic default paths that should be overridden by DB role
+const GENERIC_DEFAULTS = new Set(["/", "/dashboard/organizer", ""]);
+
 function AuthSyncContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -14,48 +17,66 @@ function AuthSyncContent() {
 
     useEffect(() => {
         const token = searchParams.get("token");
-        const nextUrl = searchParams.get("next") || "/dashboard/organizer";
+        // The `next` param from the login page — may be stale or generic
+        const nextParam = searchParams.get("next") || "";
 
-        if (token) {
-            setFirebaseToken(token);
-            
-            // Fetch real user object from Backend
-            const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-            fetch(`${backendUrl}/auth/login`, {
-                 method: "POST",
-                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
-            })
+        if (!token) {
+            console.error("[AuthSync] No token provided. Redirecting to home.");
+            router.replace("/");
+            return;
+        }
+
+        setFirebaseToken(token);
+
+        // Always fetch the real user from the backend — role MUST come from DB, never from Firebase
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+        fetch(`${backendUrl}/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            }
+        })
             .then(res => {
                 if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                 return res.json();
             })
             .then(resData => {
-                 console.log("[AuthSync] Received data:", resData);
-                 // The backend returns { success: true, data: { ...userinfo }, message: "..." }
-                 const userData = resData.data || resData;
-                 
-                 if (userData && (userData.id || userData.email || userData.name)) {
+
+
+                // Backend returns { success: true, data: { ...user } } or flat { ...user }
+                const userData = resData.data || resData;
+
+                if (userData && (userData.id || userData.email || userData.name)) {
                     setUser(userData);
-                     console.log("[AuthSync] User set successfully:", userData);
-                 } else {
-                     console.warn("[AuthSync] Received empty or invalid user data");
-                     setUser({ id: "synced", role: "USER", name: "User" } as any);
-                 }
-                 setLoading(false);
-                 router.replace(nextUrl);
+
+                } else {
+                    console.warn("[AuthSync] Received empty or invalid user data.");
+                    setUser({ id: "synced", role: "USER", name: "User" } as any);
+                }
+
+                setLoading(false);
+
+                // ─── Role-Based Navigation (Single Source of Truth) ───────────────
+                // The DB role always wins over whatever the login page sent in `next`.
+                // Only respect `nextParam` if it's a real deep-link (e.g. payment page),
+                // not just the generic default home routes.
+                const dbRole: string = userData?.role || "USER";
+                const roleDefault = dbRole === "ADMIN" ? "/admin" : "/dashboard/organizer";
+                const destination = (nextParam && !GENERIC_DEFAULTS.has(nextParam))
+                    ? nextParam
+                    : roleDefault;
+                router.replace(destination);
             })
             .catch(err => {
-                 console.error("Sync error:", err);
-                 // Fallback
-                 setUser({ id: "synced", role: "USER", name: "User" } as any);
-                 setLoading(false);
-                 router.replace(nextUrl);
+                console.error("[AuthSync] Sync error:", err);
+                setUser({ id: "synced", role: "USER", name: "User" } as any);
+                setLoading(false);
+                router.replace("/dashboard/organizer");
             });
-        } else {
-            console.error("No token provided to AuthSync");
-            router.replace("/");
-        }
-    }, [searchParams, router, setFirebaseToken, setUser, setLoading]);
+        // Run once on mount only — token & next are URL params, they won't change
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
         <div className="flex h-screen w-full items-center justify-center bg-[#072460] flex-col gap-4 text-white">

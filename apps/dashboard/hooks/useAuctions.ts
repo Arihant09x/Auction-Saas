@@ -30,16 +30,16 @@ export function useAuctions() {
         queryKey: ["auctions"],
         queryFn: async () => {
             if (!firebaseToken) return [];
-            
+
             if (isTokenExpired(firebaseToken)) {
                 console.warn("[useAuctions] Intercepted expired token natively. Booting user...");
                 handleAuthError();
                 throw new Error("Token expired locally.");
             }
-            
+
             const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-            console.log("[useAuctions] Fetching real auction data...");
-            
+
+
             const res = await fetch(`${backendUrl}/auction`, {
                 headers: { Authorization: `Bearer ${firebaseToken}` }
             });
@@ -48,7 +48,7 @@ export function useAuctions() {
                 handleAuthError(res);
                 throw new Error("Failed to fetch auctions");
             }
-            
+
             const resData = await res.json();
             // Handle { success: true, data: [...], message: "..." }
             return Array.isArray(resData.data) ? resData.data : (Array.isArray(resData) ? resData : []);
@@ -65,16 +65,16 @@ export function useJoinedAuctions() {
         queryKey: ["joined-auctions"],
         queryFn: async () => {
             if (!firebaseToken) return [];
-            
+
             if (isTokenExpired(firebaseToken)) {
                 console.warn("[useJoinedAuctions] Intercepted expired token natively. Booting user...");
                 handleAuthError();
                 throw new Error("Token expired locally.");
             }
-            
+
             const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-            console.log("[useJoinedAuctions] Fetching joined auction data...");
-            
+            ("[useJoinedAuctions] Fetching joined auction data...");
+
             const res = await fetch(`${backendUrl}/auction/joined`, {
                 headers: { Authorization: `Bearer ${firebaseToken}` }
             });
@@ -83,7 +83,7 @@ export function useJoinedAuctions() {
                 handleAuthError(res);
                 throw new Error("Failed to fetch joined auctions");
             }
-            
+
             const resData = await res.json();
             return Array.isArray(resData.data) ? resData.data : (Array.isArray(resData) ? resData : []);
         },

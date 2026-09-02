@@ -38,6 +38,7 @@ import { BlogList } from "@/components/ui/BlogList";
 
 const DASHBOARD_URL = process.env["NEXT_PUBLIC_DASHBOARD_URL"] ?? "http://localhost:3002";
 
+
 // =============================================================================
 // HERO SECTION
 // =============================================================================
@@ -50,6 +51,7 @@ function HeroSection() {
   const [stars, setStars] = useState(0);
   const [auctions, setAuctions] = useState(0);
   const [speed, setSpeed] = useState(0);
+
 
   useEffect(() => {
     const duration = 1500;
@@ -70,6 +72,8 @@ function HeroSection() {
 
     requestAnimationFrame(animate);
   }, []);
+
+
   const stats = [
     {
       icon: Star,
@@ -620,16 +624,42 @@ function AboutSection() {
 // PRICING SECTION - realistic auction platform pricing
 // =============================================================================
 const PLANS = [
-  { id: "p1", label: "Basic", price: "₹ 1,049/-", originalPrice: "₹ 1,500/-", period: "per Auction", teams: "4", },
-  { id: "p2", label: "Standard", price: "₹ 1,749/-", originalPrice: "₹ 2,500/-", period: "per Auction", teams: "8", },
-  { id: "p3", label: "Premium", price: "₹ 2,449/-", originalPrice: "₹ 3,500/-", period: "per Auction", teams: "12", },
-  { id: "p4", label: "Elite", price: "₹ 2,799/-", originalPrice: "₹ 4,000/-", period: "per Auction", teams: "16", },
-  { id: "p5", label: "Ultimate", price: "₹ 3,849/-", originalPrice: "₹ 5,500/-", period: "per Auction", teams: "20", },
-  { id: "p6", label: "Mega", price: "₹ 4,899/-", originalPrice: "₹ 6,999/-", period: "per Auction", teams: "30", },
+  { id: "p1", label: "Basic", teams: "04", price: "₹1,049/-", originalPrice: "₹1,500/-", period: "per Auction", highlight: false },
+  { id: "p2", label: "Standard", teams: "08", price: "₹1,749/-", originalPrice: "₹2,500/-", period: "per Auction", highlight: false },
+  { id: "p3", label: "Premium", teams: "12", price: "₹2,449/-", originalPrice: "₹3,500/-", period: "per Auction", highlight: true },
+  { id: "p4", label: "Elite", teams: "16", price: "₹2,799/-", originalPrice: "₹4,000/-", period: "per Auction", highlight: false },
+  { id: "p5", label: "Ultimate", teams: "20", price: "₹3,849/-", originalPrice: "₹5,500/-", period: "per Auction", highlight: false },
+  { id: "p6", label: "Mega", teams: "30", price: "₹4,899/-", originalPrice: "₹6,999/-", period: "per Auction", highlight: false },
 ];
+
 
 function PricingSection() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [user, setUser] = useState<any>(null);
+  const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3002";
+
+  useEffect(() => {
+    const getSharedCookie = (name: string): string | null => {
+      if (typeof document === "undefined") return null;
+      const nameEQ = name + "=";
+      const ca = document.cookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        if (!c) continue;
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+      }
+      return null;
+    };
+
+    const cookieVal = getSharedCookie("auction11_auth");
+    if (cookieVal) {
+      try {
+        const { user: userData } = JSON.parse(cookieVal);
+        setUser(userData);
+      } catch { }
+    }
+  }, []);
 
   const scrollLeft = () => {
     if (scrollRef.current) {
@@ -675,38 +705,51 @@ function PricingSection() {
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           data-lenis-prevent
         >
-          {PLANS.map((plan) => (
-            <div key={plan.id} className="shrink-0 w-[280px] lg:w-[280px] bg-white rounded-[16px] p-5 flex flex-col items-center justify-between min-h-[285px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative border border-[#eef3ff] group">
-              <div className="flex flex-col items-center w-full">
-                <span className="text-[#000] font-bold text-[16px] mb-1 font-['Poppins']">{plan.label}</span>
-                <div className="text-[#000] font-black text-[28px] tracking-tight whitespace-nowrap">{plan.price}</div>
-                <span className="text-gray-400 font-bold text-sm tracking-tight whitespace-nowrap line-through">{plan.originalPrice}</span>
-                {plan.price !== "Free" && (
-                  <div className="inline-block text-[11px] font-bold px-2 py-0.5 rounded bg-[#00379d] text-white w-fit shadow-sm mt-1 mb-2">
-                    You Save ₹{(parseInt(plan.originalPrice.replace(/\D/g, "")) - parseInt(plan.price.replace(/\D/g, ""))).toLocaleString()} (30% off)
+          {PLANS.map((plan) => {
+            const planKey = plan.label.toUpperCase();
+            const targetUrl = user
+              ? `${DASHBOARD_URL}/dashboard/select-auction-payment?plan=${planKey}`
+              : `/login?redirect=${DASHBOARD_URL}/dashboard/select-auction-payment?plan=${planKey}`;
+
+            return (
+              <div key={plan.id} className="shrink-0 w-[280px] lg:w-[280px] bg-white rounded-[16px] p-5 flex flex-col items-center justify-between min-h-[285px] shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] relative border border-[#eef3ff] group">
+                <div className="flex flex-col items-center w-full">
+                  <span className="text-[#000] font-bold text-[16px] mb-1 font-['Poppins']">{plan.label}</span>
+                  <div className="text-[#000] font-black text-[28px] tracking-tight whitespace-nowrap">{plan.price}</div>
+                  <span className="text-gray-400 font-bold text-sm tracking-tight whitespace-nowrap line-through">{plan.originalPrice}</span>
+                  {plan.price !== "Free" && (
+                    <div className="inline-block text-[11px] font-bold px-2 py-0.5 rounded bg-[#00379d] text-white w-fit shadow-sm mt-1 mb-2">
+                      You Save ₹{(parseInt(plan.originalPrice.replace(/\D/g, "")) - parseInt(plan.price.replace(/\D/g, ""))).toLocaleString()} (30% off)
+                    </div>
+                  )}
+                  <div className="text-[#4a6090] text-[12px] font-medium mb-4">{plan.period}</div>
+
+                  <div className="w-full h-px border-t-2 border-dashed border-[#d1d5db] mb-4" />
+
+                  {/* ✅ Fixed: "up to" row centered */}
+                  <div className="flex items-baseline justify-center gap-1.5 font-['Poppins'] w-full">
+                    <span className="text-[#4a6090] text-[14px] font-medium">upto</span>
+                    <span className="text-[#000] font-black text-[32px] leading-none">{plan.teams}</span>
+                    <span className="text-[#000] text-[14px] font-semibold">Teams</span>
                   </div>
-                )}
-                <div className="text-[#4a6090] text-[12px] font-medium mb-4">{plan.period}</div>
-
-                <div className="w-full h-px border-t-2 border-dashed border-[#d1d5db] mb-4" />
-
-                <div className="flex items-baseline justify-center gap-1.5  font-['Poppins']">
-                  <span className="text-[#4a6090] text-[14px] font-medium">upto</span>
-                  <span className="text-[#000] font-black text-[32px] leading-none">{plan.teams}</span>
-                  <span className="text-[#000] text-[14px] font-semibold">Teams</span>
                 </div>
-              </div>
 
-              <Button className="font-epilogue bg-[#00379d] border border-[#ffaf2e] mb-5 text-white font-bold px-8 py-2 rounded-[99px] hover:bg-[#002a6e] hover:scale-105 transition-all duration-200 w-full max-w-[150px] text-[13px] shadow-[0_4px_16px_rgba(0,55,157,0.2)] focus:ring-2 focus:ring-[#ffaf2e] focus:outline-none">
-                <Link href="/login">Select Plan</Link>
-              </Button>
-            </div>
-          ))}
+
+                <Link href={targetUrl} className="w-full flex justify-center">
+                  <Button className="font-epilogue bg-[#00379d] border border-[#ffaf2e] mb-5 mt-2 text-white font-bold px-8 py-2 rounded-[99px] hover:bg-[#002a6e] hover:scale-105 transition-all duration-200 w-full max-w-[150px] text-[13px] shadow-[0_4px_16px_rgba(0,55,157,0.2)] focus:ring-2 focus:ring-[#ffaf2e] focus:outline-none cursor-pointer">
+                    Select Plan
+                  </Button>
+                </Link>
+              </div>
+            );
+          })}
         </div>
 
         <p className="text-center text-sm mt-8 text-[#8AABDF]">
           Need a custom plan for your league?{" "}
-          <a href="mailto:auction11.live@gmail.com" target="_black" className="font-semibold hover:underline text-[#FFBA00] transition-colors">Contact us</a>
+          <a href="mailto:auction11.live@gmail.com" target="_blank" className="font-semibold hover:underline text-[#FFBA00] transition-colors">
+            Contact us
+          </a>
         </p>
       </motion.div>
     </section>

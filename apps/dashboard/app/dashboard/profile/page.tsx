@@ -129,7 +129,6 @@ export default function ProfilePage() {
                         <DetailRow label="Email Address" value={userData.email} />
                         <DetailRow label="Phone Number" value={userData.phone} />
                         <DetailRow label="Member Since" value={userData.joinedDate} />
-                        <DetailRow label="User ID" value={userData.uid} className="sm:col-span-2" />
                     </div>
                 </motion.div>
             </motion.div>

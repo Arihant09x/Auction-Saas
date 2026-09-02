@@ -10,7 +10,7 @@ const SLOW_QUERY_THRESHOLD_MS = 500;
  * Neon Postgres auto-suspends after ~5 min of inactivity (free tier).
  * Keep-alive ping interval must be < 5 minutes to prevent suspension.
  */
-const NEON_KEEPALIVE_INTERVAL_MS = 4 * 60 * 1000; // 4 minutes
+const NEON_KEEPALIVE_INTERVAL_MS = 10 * 60 * 1000; // 4 minutes
 
 @Injectable()
 export class PrismaService

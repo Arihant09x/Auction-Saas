@@ -157,8 +157,8 @@ export class TeamService {
       where: { auctionId: currentAuctionId },
       select: { name: true, shortName: true }
     });
-    const existingNames = new Set(existingTeams.map(t => t.name.toLowerCase()));
-    const existingShortNames = new Set(existingTeams.map(t => t.shortName.toUpperCase()));
+    const existingNames = new Set(existingTeams.map((t: any) => t.name.toLowerCase()));
+    const existingShortNames = new Set(existingTeams.map((t: any) => t.shortName.toUpperCase()));
 
     // Filter out teams that already exist
     const newTeamsData = oldTeams
@@ -183,7 +183,7 @@ export class TeamService {
     // 4. Check Plan Limit for Target Auction
     const limit = this.getTeamLimit(currentAuction.planTier);
     const currentCount = await this.prisma.prisma.team.count({ where: { auctionId: currentAuctionId } });
-    
+
     const allowedToImport = limit - currentCount;
     if (allowedToImport <= 0) {
       throw new BadRequestException(
@@ -201,7 +201,7 @@ export class TeamService {
     });
 
     await this.redis.del(`auction:${currentAuctionId}:settings`, `auction:${currentAuctionId}:snapshot`);
-    
+
     return {
       success: true,
       importedCount: finalTeamsToImport.length,

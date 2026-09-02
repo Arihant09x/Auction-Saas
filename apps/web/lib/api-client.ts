@@ -84,27 +84,88 @@ export interface ApiResponse<T> {
     message: string;
 }
 
-export interface BlogArticle {
+export interface BlogCategoryItem {
     id: string;
-    title: string;
-    description: string;
-    imageUrl: string;
-    url: string;
-    publishedAt: string;
+    name: string;
+    slug: string;
+    description?: string;
+    color?: string;
+    coverImage?: string;
+    blogsCount?: number;
 }
 
-export interface BlogsResponse {
-    data: BlogArticle[];
-    meta: {
+export interface BlogTagItem {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    blogsCount?: number;
+}
+
+export interface InternalBlogArticle {
+    id: string;
+    slug: string;
+    title: string;
+    subtitle?: string;
+    excerpt?: string;
+    content: string;
+    status: string;
+    coverImage?: string;
+    thumbnailImage?: string;
+    heroImage?: string;
+    readingTime: number;
+    viewsCount: number;
+    likesCount: number;
+    isFeatured: boolean;
+    isPinned: boolean;
+    isTrending: boolean;
+    publishedAt?: string;
+    createdAt: string;
+    updatedAt: string;
+    author?: { id: string; name: string; profileUrl?: string; email?: string };
+    categories: BlogCategoryItem[];
+    tags: BlogTagItem[];
+    seo?: {
+        metaTitle?: string;
+        metaDescription?: string;
+        keywords?: string;
+        canonicalUrl?: string;
+        ogImage?: string;
+    };
+    jsonLd?: any;
+}
+
+export type BlogArticle = InternalBlogArticle;
+
+export interface PublicBlogsResponse {
+    data: {
+        items: InternalBlogArticle[];
         total: number;
         page: number;
         limit: number;
-    };
+        totalPages: number;
+    }
 }
 
 export const blogsApi = {
-    getBlogs: (page: number, limit: number) =>
-        fetchJson<ApiResponse<BlogsResponse>>(`/blogs?page=${page}&limit=${limit}`),
+    getBlogs: (params?: { page?: number; limit?: number; search?: string; category?: string; tag?: string; featuredOnly?: boolean; trendingOnly?: boolean }) => {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.set('page', String(params.page));
+        if (params?.limit) queryParams.set('limit', String(params.limit));
+        if (params?.search) queryParams.set('search', params.search);
+        if (params?.category) queryParams.set('category', params.category);
+        if (params?.tag) queryParams.set('tag', params.tag);
+        if (params?.featuredOnly) queryParams.set('featuredOnly', 'true');
+        if (params?.trendingOnly) queryParams.set('trendingOnly', 'true');
+
+        const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+        return fetchJson<PublicBlogsResponse>(`/blogs${queryString}`);
+    },
+    getBlogBySlug: (slug: string) => fetchJson<InternalBlogArticle>(`/blogs/${slug}`),
+    getCategories: () => fetchJson<BlogCategoryItem[]>('/blogs/categories'),
+    getTags: () => fetchJson<BlogTagItem[]>('/blogs/tags'),
+    recordView: (id: string) => fetchJson<{ success: boolean }>(`/blogs/${id}/view`, { method: 'POST' }),
+    recordLike: (id: string) => fetchJson<{ likesCount: number }>(`/blogs/${id}/like`, { method: 'POST' }),
 };
 
 export { fetchJson };

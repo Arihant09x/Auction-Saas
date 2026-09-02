@@ -9,7 +9,7 @@ const nextConfig = {
             },
         ],
     },
-    transpilePackages: ["@repo/ui"],
+    transpilePackages: ["@repo/ui", "@repo/blocknote-content"],
 };
 
 export default nextConfig;

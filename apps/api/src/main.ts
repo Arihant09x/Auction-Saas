@@ -121,9 +121,9 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`🚀 Server running on port ${port}`);
-  console.log(`🏥 Health: http://localhost:${port}/api/health`);
-  console.log(`📊 Metrics: http://localhost:${port}/api/metrics`);
+  (`🚀 Server running on port ${port}`);
+  (`🏥 Health: http://localhost:${port}/api/health`);
+  (`📊 Metrics: http://localhost:${port}/api/metrics`);
 }
 
 bootstrap();

@@ -100,7 +100,7 @@ export function Navbar() {
             domain = "; domain=.auction11.live";
         }
         document.cookie = "auction11_auth=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;" + domain;
-        
+
         if (typeof window !== "undefined") {
             localStorage.removeItem("bid-arena-auth");
             setUser(null);
@@ -120,10 +120,10 @@ export function Navbar() {
                                 <Image
                                     src="/final-1.png"
                                     alt="Auction 11 Logo"
-                                    width={140}
-                                    height={55}
-                                    className="h-10 lg:h-[55px] w-auto"
-                                    priority
+                                    width={220}
+                                    height={220}
+                                    className="object-contain"
+
                                 />
                             </Link>
 
@@ -132,10 +132,10 @@ export function Navbar() {
                                     <Image
                                         src="/final-1.png"
                                         alt="Auction 11 Logo"
-                                        width={140}
-                                        height={55}
-                                        className="h-[55px] w-auto"
-                                        priority
+                                        width={220}
+                                        height={220}
+                                        className="object-contain"
+
                                     />
                                 </Link>
                             </div>

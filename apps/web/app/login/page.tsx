@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Copy, Check, ArrowRight, UserPlus, LogIn, Upload, Image as ImageIcon } from "lucide-react";
+import { Copy, Check, ArrowRight, UserPlus, LogIn, Upload, Image as ImageIcon, EyeOff, Eye } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { uploadImage } from "@/app/actions/cloudinary";
 
@@ -23,6 +23,9 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+
+// ✅ Import posthog wrapper
+import { posthog } from "@/lib/posthog";
 
 // Zod Schemas
 const loginSchema = z.object({
@@ -43,7 +46,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"]; // Strict checking for jpg/png to prevent hacking
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"];
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -51,6 +54,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
@@ -110,7 +114,6 @@ export default function LoginPage() {
     setProfileFile(file);
   };
 
-
   const uploadToCloudinary = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
@@ -120,7 +123,7 @@ export default function LoginPage() {
   const syncUserToDatabase = async (firebaseUid: string, data: any, idToken: string) => {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const res = await fetch(`${backendUrl}/auth/register`, {
@@ -177,24 +180,29 @@ export default function LoginPage() {
         mobile: data.mobile,
         city: data.city || null,
         profileUrl: profileUrl,
-        password: data.password, // Optional backup
+        password: data.password,
         role: "USER"
       };
 
       await syncUserToDatabase(cred.user.uid, dbPayload, idToken);
 
-      // Redirect seamlessly to Dashboard
+      // ✅ Identify user with PostHog
+      posthog.identify(cred.user.uid, {
+        email: data.email,
+        role: "USER",
+        plan: "free",
+      });
+
       toast.success("Welcome! Your account has been created.");
       const nextPath = redirectUrl ? getNextPath(redirectUrl) : "/dashboard/organizer";
       window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=${encodeURIComponent(nextPath)}`;
     } catch (err: any) {
       console.error("Registration error:", err);
 
-      // Clean up Firebase Auth user if DB sync fails
       if (createdUser) {
         try {
           await deleteUser(createdUser);
-          console.log("[Auth] Cleaned up Firebase user after database sync failure.");
+          ("[Auth] Cleaned up Firebase user after database sync failure.");
         } catch (cleanupErr) {
           console.error("[Auth] Failed to clean up Firebase user:", cleanupErr);
         }
@@ -202,7 +210,6 @@ export default function LoginPage() {
 
       let message = "We couldn't create your account. Please try again.";
 
-      // Handle Firebase specific errors
       if (err.code === "auth/email-already-in-use") {
         message = "This email address is already registered. Please log in instead.";
       } else if (err.code === "auth/invalid-email") {
@@ -212,7 +219,6 @@ export default function LoginPage() {
       } else if (err.code === "auth/network-request-failed") {
         message = "Network error. Please check your internet connection.";
       } else if (err.message) {
-        // This handles our backend ConflictException messages (mobile exists, etc)
         message = err.message;
       }
 
@@ -231,7 +237,6 @@ export default function LoginPage() {
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
       const idToken = await cred.user.getIdToken();
 
-      // Ensure DB knows user logged in or explicitly perform /api/auth/login
       const res = await fetch(`${backendUrl}/auth/login`, {
         method: "POST",
         headers: {
@@ -253,6 +258,13 @@ export default function LoginPage() {
       const dbUser = await res.json();
 
       const role = dbUser.role || "USER";
+
+      // ✅ Identify user with PostHog
+      posthog.identify(cred.user.uid, {
+        email: cred.user.email,
+        role: role,
+        plan: "free",
+      });
 
       toast.success("Glad to see you back! Opening your dashboard...");
 
@@ -301,9 +313,32 @@ export default function LoginPage() {
 
       await syncUserToDatabase(cred.user.uid, dbPayload, idToken);
 
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const roleRes = await fetch(`${backendUrl}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+      });
+      const dbUser = roleRes.ok ? await roleRes.json() : {};
+      const role = dbUser?.data?.role || dbUser?.role || "USER";
+
+      // ✅ Identify user with PostHog
+      posthog.identify(cred.user.uid, {
+        email: cred.user.email,
+        role: role,
+        plan: "free",
+      });
+
       toast.success("Successfully signed in with Google!");
-      const nextPath = redirectUrl ? getNextPath(redirectUrl) : "/dashboard/organizer";
-      window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=${encodeURIComponent(nextPath)}`;
+
+      if (role === "ADMIN") {
+        window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=/admin`;
+      } else {
+        const nextPath = redirectUrl ? getNextPath(redirectUrl) : "/dashboard/organizer";
+        window.location.href = `${DASHBOARD_URL}/auth/sync?token=${idToken}&next=${encodeURIComponent(nextPath)}`;
+      }
     } catch (err: any) {
       console.error("Google login error:", err);
       let message = "Failed to sign in with Google. Please try again.";
@@ -337,7 +372,7 @@ export default function LoginPage() {
       >
         <div className="flex flex-col items-center mt-10  ">
           <Link href="/">
-            <Image src="/final-1.png" alt="Auction 11 Logo" width={220} height={60} className="object-contain" />
+            <Image src="/final-1.png" alt="Auction 11 Logo" width={220} height={60} className="object-contain " />
           </Link>
           <div className="mt-5 text-center">
             <h1 className="text-2xl font-bold text-white font-['Poppins']">
@@ -374,16 +409,25 @@ export default function LoginPage() {
 
                 <div>
                   <label className="text-white/80 text-sm font-medium mb-1 block">Password</label>
-                  <input
-                    {...loginForm.register("password")}
-                    type="password"
-                    placeholder="••••••••"
-                    className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${loginForm.formState.errors.password
-                      ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                      : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
-                      }`}
-                  />
-                  {loginForm.formState.errors.password && <p className="text-[#fe7c0a] text-xs mt-1">{loginForm.formState.errors.password.message}</p>}
+                  <div className="relative">
+                    <input
+                      {...loginForm.register("password")}
+                      type={isPasswordVisible ? "text" : "password"}
+                      placeholder="••••••••"
+                      className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${loginForm.formState.errors.password
+                        ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                        : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
+                        }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
+                    >
+                      {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                    {loginForm.formState.errors.password && <p className="text-[#fe7c0a] text-xs mt-1">{loginForm.formState.errors.password.message}</p>}
+                  </div>
                 </div>
 
                 <Button type="submit" disabled={loading} className="w-full font-epilogue bg-[#ffba00] text-[#012972] font-bold text-[15px] py-3.5 rounded-xl hover:bg-[#e0a400] transition-all mt-2 flex gap-2 items-center justify-center disabled:opacity-70">
@@ -443,15 +487,24 @@ export default function LoginPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-white/80 text-sm font-medium mb-1 block">Password <span className="text-red-500">*</span></label>
-                    <input
-                      {...registerForm.register("password")}
-                      type="password"
-                      placeholder="••••••••"
-                      className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${registerForm.formState.errors.password
-                        ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                        : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
-                        }`}
-                    />
+                    <div className="relative">
+                      <input
+                        {...registerForm.register("password")}
+                        type={isPasswordVisible ? "text" : "password"}
+                        placeholder="••••••••"
+                        className={`w-full bg-white/5 border rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none transition-all ${registerForm.formState.errors.password
+                          ? "border-red-500 focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
+                          : "border-white/10 focus:ring-2 focus:ring-[#ffba00]/50 focus:border-[#ffba00]"
+                          }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
+                      >
+                        {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                     {registerForm.formState.errors.password && <p className="text-[#fe7c0a] text-[10px] mt-1">{registerForm.formState.errors.password.message}</p>}
                   </div>
                   <div>

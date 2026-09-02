@@ -39,7 +39,7 @@ export function GlobalBackground({
             // the two diagonal bands use position:fixed so they never scroll.
             // The parent overflow must NOT be hidden for this to work.
             <div className={`pointer-events-none z-0 hidden lg:block ${className}`}
-                style={{ position: 'sticky', top: 0, height: 0, width: '100%' }}
+                style={{ position: 'sticky', top: 24, height: 0, width: '100%' }}
             >
                 {/* Band 1 */}
                 <div className="absolute hidden lg:block" style={{ position: 'absolute', width: '140px', height: '5316px', background: 'linear-gradient(80deg, #08245E, #0A307F  )', transform: 'rotate(18deg)', left: "22%", top: "-150px" }} />

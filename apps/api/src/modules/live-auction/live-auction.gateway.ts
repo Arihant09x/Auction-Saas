@@ -181,7 +181,7 @@ export class LiveAuctionGateway
   ) {
     return this.executeWithLogging("select_player", client, async () => {
       await this.requireOrganizer(client, data.auctionId);
-      console.log("✅ Organizer verified. Selecting next player...");
+      ("✅ Organizer verified. Selecting next player...");
       const status = await this.redisService.getAuctionStatus(data.auctionId);
 
       if (status === "BIDDING") {
@@ -519,13 +519,13 @@ export class LiveAuctionGateway
 
       // Increment active connection count in Redis
       const activeConnections = await this.redisService.incrementConnectionCount(auctionId);
-      console.log(`📡 [WS MONITOR] Client connected: ${client.id} (Auction: ${auctionId}). Active connections: ${activeConnections}`);
+      (`📡 [WS MONITOR] Client connected: ${client.id} (Auction: ${auctionId}). Active connections: ${activeConnections}`);
 
       // ── Fetch shared snapshot once ─────────────────────────────────────
       let snap = await this.redisService.getDashboardSnapshot(auctionId);
 
       if (client.data.viewer) {
-        console.log(`Viewer ${client.id} joined Auction ${auctionId}`);
+        (`Viewer ${client.id} joined Auction ${auctionId}`);
         if (!snap) {
           snap =
             await this.liveAuctionService.buildDashboardSnapshot(auctionId);
@@ -533,7 +533,7 @@ export class LiveAuctionGateway
         }
         client.emit("snapshot_sync", snap);
       } else {
-        console.log(`User ${client.data.user?.id || "unknown"} joined Auction ${auctionId}`);
+        (`User ${client.data.user?.id || "unknown"} joined Auction ${auctionId}`);
         if (!snap) {
           snap =
             await this.liveAuctionService.buildDashboardSnapshot(auctionId);
@@ -545,7 +545,7 @@ export class LiveAuctionGateway
       const currentPlayer = await this.redisService.getCurrentPlayer(auctionId);
       const lastBid = await this.redisService.getLastBid(auctionId);
       const bidHistory = await this.redisService.getBidHistory(auctionId);
-      
+
       // Request FULL state on initial connection
       const state = await this.liveAuctionService.getCurrentState(auctionId, true);
 
@@ -586,9 +586,7 @@ export class LiveAuctionGateway
           }
 
           if (auctionMeta?.auctionDate) {
-            console.log(
-              `⏱️  Emitting auction_countdown to ${client.id} for auction ${auctionId}`,
-            );
+            console.log(`⏱️  Emitting auction_countdown to ${client.id} for auction ${auctionId}`);
             client.emit("auction_countdown", {
               auctionName: auctionMeta.name,
               scheduledDate: auctionMeta.auctionDate,
@@ -636,9 +634,9 @@ export class LiveAuctionGateway
     const auctionId = client.data?.auctionId;
     if (auctionId) {
       const activeConnections = await this.redisService.decrementConnectionCount(auctionId);
-      console.log(`❌ Client disconnected: ${client.id} (Auction: ${auctionId}). Active connections: ${activeConnections}`);
+      (`❌ Client disconnected: ${client.id} (Auction: ${auctionId}). Active connections: ${activeConnections}`);
     } else {
-      console.log(`❌ Client disconnected: ${client.id}`);
+      (`❌ Client disconnected: ${client.id}`);
     }
   }
 
@@ -663,7 +661,7 @@ export class LiveAuctionGateway
       if (!userdata) {
         throw new Error("Unauthorized");
       }
-      console.log("✅ Organizer verified. Initializing auction...");
+      ("✅ Organizer verified. Initializing auction...");
 
       // A. Check if user is actually the Organizer of THIS auction
       const auction = await this.prisma.prisma.auction.findUnique({
@@ -674,7 +672,7 @@ export class LiveAuctionGateway
         throw new Error("You are not the organizer of this auction");
       }
 
-      console.log("✅ Ownership Verified. Initializing Redis...");
+      ("✅ Ownership Verified. Initializing Redis...");
       const settings = await this.redisService.getSettings(data.auctionId);
 
       if (settings) {
@@ -683,7 +681,7 @@ export class LiveAuctionGateway
         client.emit("auction_state_update", state);
         return state;
       }
-      console.log("🆕 First time init → loading from DB");
+      ("🆕 First time init → loading from DB");
       const state = await this.liveAuctionService.initAuction(data.auctionId);
       await this.pushSnapshot(data.auctionId);
       // Send the current state back to the Organizer
@@ -753,7 +751,7 @@ export class LiveAuctionGateway
       const result = await this.liveAuctionService.reauctionUnsold(
         data.auctionId,
       );
-      const ids = result.players?.map((p) => p.id) || [];
+      const ids = result.players?.map((p: any) => p.id) || [];
 
       await this.liveAuctionService.patchSnapshot(data.auctionId, {
         type: "PLAYER_REAUCTION",
@@ -828,15 +826,15 @@ export class LiveAuctionGateway
           try {
             const settings = await this.redisService.getSettings(data.auctionId);
             const teamMeta = await this.redisService.getTeam(data.auctionId, winningTeamId);
-            
+
             let purseRevert = soldPrice;
             let boostersUsedRevert = 0;
-            
+
             if (teamMeta) {
               const trigger = Number(settings?.boosterTrigger || 0);
               const boosterAmount = Number(settings?.boosterAmount || 0);
               const playersBoughtBeforeUndo = Number(teamMeta.playersBought || 0);
-              
+
               if (trigger > 0 && boosterAmount > 0 && playersBoughtBeforeUndo % trigger === 0) {
                 purseRevert -= boosterAmount;
                 boostersUsedRevert = 1;
@@ -851,7 +849,7 @@ export class LiveAuctionGateway
 
             let updatedTeam: any = null;
             // 1. Database Updates inside a transaction
-            await this.prisma.prisma.$transaction(async (tx) => {
+            await this.prisma.prisma.$transaction(async (tx: any) => {
               // Revert team spent/count
               updatedTeam = await tx.team.update({
                 where: { id: winningTeamId },
@@ -889,11 +887,11 @@ export class LiveAuctionGateway
               const playersBought = Math.max(Number(teamMeta.playersBought || 0) - 1, 0);
               const purse = Number(teamMeta.purse) + purseRevert;
               const purseSpent = Math.max(Number(teamMeta.purseSpent || 0) - purseSpentDecrement, 0);
-              
+
               const reservableSlots = Math.max(minPlayers - playersBought - 1, 0);
               const reserved = reservableSlots * minBid;
               const maxAllowedBid = purse - reserved;
-              
+
               const updatedTeamMeta = {
                 ...teamMeta,
                 purse,
@@ -903,9 +901,9 @@ export class LiveAuctionGateway
                 purseSpent,
                 boostersUsed: Math.max(Number(teamMeta.boostersUsed || 0) - boostersUsedRevert, 0),
               };
-              
+
               await this.redisService.setTeam(data.auctionId, winningTeamId, updatedTeamMeta);
-              
+
               // Emit team update patch to clients
               this.server.to(`auction:${data.auctionId}`).emit("team_updated_patch", {
                 id: winningTeamId,
@@ -934,7 +932,7 @@ export class LiveAuctionGateway
         } else if (prevPlayerStatus === "UNSOLD") {
           // Revert unsold pool in Redis
           await this.redisService.removePlayerFromUnsold(data.auctionId, player.id);
-          
+
           const unsoldPoolKey = `auction:${data.auctionId}:unsold_pool`;
           const rawPool = await this.redisService.redis.lrange(unsoldPoolKey, 0, -1);
           const updatedPool = rawPool.filter((p: string) => JSON.parse(p).id !== player.id);

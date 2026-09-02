@@ -8,10 +8,15 @@
 
 html,
 body {
-  overflow-x: hidden;
+  /* `clip` (not `hidden`): hidden turns body into a scroll container,
+     which breaks position: sticky for page-level sidebars. clip still
+     hides horizontal overflow without creating a scroll container. */
+  overflow-x: clip;
   /* Hide scrollbar for IE, Edge and Firefox */
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
@@ -31,13 +36,11 @@ body {
   left: -150%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(255, 186, 0, 0) 0%,
-    rgba(255, 186, 0, 0.5) 50%,
-    rgba(255, 186, 0, 0) 100%
-  );
+  background: linear-gradient(to right,
+      transparent 0%,
+      rgba(255, 186, 0, 0) 0%,
+      rgba(255, 186, 0, 0.5) 50%,
+      rgba(255, 186, 0, 0) 100%);
   transform: skewX(-25deg);
   pointer-events: none;
   z-index: 30;
@@ -53,12 +56,15 @@ body {
     left: -150%;
     opacity: 0;
   }
+
   20% {
     opacity: 1;
   }
+
   80% {
     opacity: 1;
   }
+
   100% {
     left: 150%;
     opacity: 0;
@@ -66,3 +72,100 @@ body {
 }
 
 /* Smooth scrolling already set in @repo/ui/globals.css */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BLOG ARTICLE CONTENT (BlockNote renderer) — RESPONSIVE
+   Scoped to .blocknote-renderer so only the article body is affected.
+   Uses high-specificity selectors + !important because BlockNote's own
+   stylesheet is injected after globals.css and otherwise wins the cascade.
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ── Fluid base text (paragraphs, lists, quotes inherit this) ── */
+.blocknote-renderer .bn-editor,
+.blocknote-renderer .bn-editor .bn-blocks,
+.blocknote-renderer .bn-editor .bn-block-content,
+.blocknote-renderer .bn-editor p.bn-block-content,
+.blocknote-renderer .bn-editor li {
+  font-size: clamp(15px, 0.85rem + 0.55vw, 17px) !important;
+  line-height: 1.75;
+}
+
+.blocknote-renderer .bn-editor {
+  /* Card provides horizontal padding; remove BlockNote's own inset */
+  padding-inline: 0 !important;
+  /* Wide children (tables, wide code, big media) scroll inside the card
+     instead of stretching the page on phones */
+  overflow-x: auto;
+}
+
+/* ── Fluid heading scale: phone → tablet → laptop ──
+   Targets both the element and BlockNote's data-attribute markup so no
+   internal selector can out-rank it. */
+.blocknote-renderer .bn-editor h1,
+.blocknote-renderer .bn-editor h1.bn-block-content,
+.blocknote-renderer .bn-editor [data-content-type="heading"][data-level="1"] {
+  font-size: clamp(1.6rem, 1rem + 2.4vw, 2.25rem) !important;
+  line-height: 1.22 !important;
+}
+
+.blocknote-renderer .bn-editor h2,
+.blocknote-renderer .bn-editor h2.bn-block-content,
+.blocknote-renderer .bn-editor [data-content-type="heading"][data-level="2"] {
+  font-size: clamp(1.35rem, 0.95rem + 1.6vw, 1.75rem) !important;
+  line-height: 1.28 !important;
+}
+
+.blocknote-renderer .bn-editor h3,
+.blocknote-renderer .bn-editor h3.bn-block-content,
+.blocknote-renderer .bn-editor [data-content-type="heading"][data-level="3"] {
+  font-size: clamp(1.15rem, 0.95rem + 0.9vw, 1.375rem) !important;
+  line-height: 1.32 !important;
+}
+
+/* ── Secondary text ── */
+.blocknote-renderer .bn-editor blockquote,
+.blocknote-renderer .bn-editor [data-content-type="quote"] {
+  font-size: clamp(15px, 0.9rem + 0.4vw, 17px) !important;
+}
+
+.blocknote-renderer .bn-editor code,
+.blocknote-renderer .bn-editor pre code {
+  font-size: clamp(12px, 0.78rem + 0.3vw, 14px) !important;
+}
+
+/* ── Media never overflows its column ── */
+.blocknote-renderer img,
+.blocknote-renderer video,
+.blocknote-renderer iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Tables keep readable cells and scroll horizontally when needed ── */
+.blocknote-renderer table {
+  border-collapse: collapse;
+}
+
+.blocknote-renderer td,
+.blocknote-renderer th {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ── Code blocks wrap instead of forcing page-wide scroll ── */
+.blocknote-renderer pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}

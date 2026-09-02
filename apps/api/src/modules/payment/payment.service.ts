@@ -65,7 +65,7 @@ export class PaymentService {
     // If they already paid for a plan, subtract that amount
     if (auction.isPaid && targetPrice > currentPrice) {
       amountToPay = targetPrice - currentPrice;
-      console.log(
+      (
         `User upgrading from ${currentPlan} to ${targetPlan}. Paying difference: ${amountToPay}`
       );
     } else if (targetPrice <= currentPrice && auction.isPaid) {

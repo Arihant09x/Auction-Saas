@@ -4,7 +4,7 @@ import { CreateContactDto } from './dto/create-contact.dto';
 
 @Injectable()
 export class ContactService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async create(createContactDto: CreateContactDto) {
     return this.prisma.prisma.contactMessage.create({

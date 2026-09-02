@@ -40,13 +40,12 @@ export function BlogList({ limit = 6 }: BlogListProps) {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["cricket-blogs-dashboard", page, limit],
-    queryFn: () => blogsApi.getBlogs(page, limit),
+    queryFn: () => blogsApi.getBlogs({ page, limit }),
     staleTime: 60000, // 1 minute stale time
   });
 
-  const blogs = Array.isArray(data?.data?.data) ? data.data.data : [];
-  const meta = data?.data?.meta ?? { total: 0, page: 1, limit };
-  const totalPages = Math.ceil(meta.total / limit);
+  const blogs = data?.items || [];
+  const totalPages = data?.totalPages || 1;
 
   if (isLoading) {
     return (
@@ -128,7 +127,7 @@ export function BlogList({ limit = 6 }: BlogListProps) {
 
                 {/* Description */}
                 <p className="text-xs text-gray-500 line-clamp-3 leading-relaxed">
-                  {article.description}
+                  {article.description ?? ""}
                 </p>
               </div>
 

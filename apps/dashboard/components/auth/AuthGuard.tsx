@@ -34,7 +34,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             if (!cookieVal) {
                 const currentToken = useAuthStore.getState().firebaseToken;
                 if (currentToken) {
-                    console.log("[AuthGuard] Cookie session removed. Logging out...");
+                    ("[AuthGuard] Cookie session removed. Logging out...");
                     useAuthStore.getState().logout();
                     window.location.reload();
                 }
@@ -48,7 +48,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                 if (session && session.token && session.user) {
                     const currentToken = useAuthStore.getState().firebaseToken;
                     if (!currentToken || currentToken !== session.token) {
-                        console.log("[AuthGuard] Restoring session from shared cookie.");
+                        ("[AuthGuard] Restoring session from shared cookie.");
                         setFirebaseToken(session.token);
                         setUser(session.user);
                     }
@@ -61,7 +61,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         // Storage listener for logout from other tabs of the same dashboard domain
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === "bid-arena-auth" && !e.newValue) {
-                console.log("[AuthGuard] Logout from another tab detected.");
+                ("[AuthGuard] Logout from another tab detected.");
                 window.location.reload();
             }
         };
@@ -82,11 +82,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
         // 1. Listen for Auth State changes
         const unsubscribeAuth = onAuthStateChanged(auth, (fbUser) => {
-            console.log("[AuthGuard] Firebase Auth status received. User:", !!fbUser);
+            ("[AuthGuard] Firebase Auth status received. User:", !!fbUser);
             setIsFirebaseChecked(true);
 
             if (fbUser) {
                 const existingUser = useAuthStore.getState().user;
+                // ⚠️  IMPORTANT: Never set role here. Role comes exclusively from the
+                // backend DB (set during /auth/sync). Only merge Firebase identity fields.
                 setUser({
                     ...existingUser,
                     id: existingUser?.id && existingUser.id !== fbUser.uid ? existingUser.id : fbUser.uid,
@@ -94,7 +96,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                     email: fbUser.email || existingUser?.email || "",
                     name: fbUser.displayName || existingUser?.name || "User",
                     profileUrl: fbUser.photoURL || existingUser?.profileUrl || null,
-                    role: existingUser?.role || "USER",
+                    // role is intentionally NOT set here — preserve whatever the DB returned
                 } as any);
                 setInitialized(true);
                 setIsInternalLoading(false);
@@ -117,7 +119,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             const currentToken = useAuthStore.getState().firebaseToken;
             const currentUser = useAuthStore.getState().user;
 
-            console.log("[AuthGuard] Security Check Status:", {
+            ("[AuthGuard] Security Check Status:", {
                 firebaseChecked: isFirebaseChecked,
                 validStoreToken: !!currentToken,
                 fbUserSession: !!auth.currentUser
@@ -126,7 +128,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             // If Firebase checked and found nothing, but we DO have a synced token/user...
             // We allow it! This is the cross-origin bridge.
             if (isFirebaseChecked && !auth.currentUser && currentToken && currentUser) {
-                console.log("[AuthGuard] Using synced session token.");
+                ("[AuthGuard] Using synced session token.");
                 setInitialized(true);
                 setIsInternalLoading(false);
                 return;

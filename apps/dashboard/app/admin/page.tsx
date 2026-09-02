@@ -1,234 +1,318 @@
 "use client";
 
-import { useState } from "react";
 import { useAuthStore } from "../../store/auth.store";
-import { LogOut, Users, FileText, Database, MessageSquare, CheckCircle, Trash2 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { signOut } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { useQuery } from "@tanstack/react-query";
+import { adminStatsApi, AdminAuction, AdminStats, AdminAnalytics } from "../../lib/admin-api";
+import {
+  Users,
+  Layers,
+  DollarSign,
+  Radio,
+  TrendingUp,
+  ArrowUpRight,
+  Clock,
+  Activity,
+  BarChart3,
+  Zap,
+} from "lucide-react";
+import Link from "next/link";
 
-export default function AdminDashboardPage() {
-    const { logout, firebaseToken } = useAuthStore();
-    const queryClient = useQueryClient();
-    const [activeTab, setActiveTab] = useState("dashboard");
 
-    const handleLogout = async () => {
-        toast.success("Logged out successfully! Redirecting...");
-        try {
-            if (auth && typeof auth.signOut === "function") {
-                await signOut(auth);
-            }
-        } catch (err) {
-            console.error("Admin signout error:", err);
-        }
-        logout();
-        if (typeof window !== "undefined") {
-            localStorage.removeItem("bid-arena-auth");
-            setTimeout(() => {
-                window.location.href = `${process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001"}/login`;
-            }, 1000);
-        }
-    };
-
-    const { data: messages, isLoading: isLoadingMessages } = useQuery({
-        queryKey: ["contact-messages"],
-        queryFn: async () => {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/contact`, {
-                headers: {
-                    Authorization: `Bearer ${firebaseToken}`
-                }
-            });
-            if (!res.ok) throw new Error("Failed to fetch messages");
-            return res.json();
-        },
-        enabled: activeTab === "contact" && !!firebaseToken
-    });
-
-    const markAsReadMutation = useMutation({
-        mutationFn: async (id: string) => {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/contact/${id}/read`, {
-                method: "PATCH",
-                headers: {
-                    Authorization: `Bearer ${firebaseToken}`
-                }
-            });
-            if (!res.ok) throw new Error("Failed to mark as read");
-            return res.json();
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["contact-messages"] });
-            toast.success("Message marked as read");
-        }
-    });
-
-    const deleteMessageMutation = useMutation({
-        mutationFn: async (id: string) => {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/contact/${id}`, {
-                method: "DELETE",
-                headers: {
-                    Authorization: `Bearer ${firebaseToken}`
-                }
-            });
-            if (!res.ok) throw new Error("Failed to delete message");
-            return res.json();
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["contact-messages"] });
-            toast.success("Message deleted");
-        }
-    });
-
-    return (
-        <div className="flex h-screen w-full bg-slate-100 font-poppins">
-            {/* Simple Sidebar */}
-            <aside className="w-64 bg-[#072460] text-white flex flex-col items-center py-8">
-                <h1 className="text-2xl font-bold mb-12 text-[#ffba00]">Auction 11</h1>
-                
-                <nav className="flex flex-col gap-4 w-full px-4 flex-1">
-                    <button 
-                        onClick={() => setActiveTab("dashboard")}
-                        className={`flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-semibold transition-colors text-left ${activeTab === "dashboard" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"}`}
-                    >
-                        <Database size={18} /> Dashboard
-                    </button>
-                    <button className="flex items-center gap-3 w-full bg-white/5 rounded-xl px-4 py-3 text-sm font-semibold hover:bg-white/10 transition-colors text-left opacity-50 cursor-not-allowed">
-                        <Users size={18} /> Manage Users
-                    </button>
-                    <button className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-semibold bg-white/5 hover:bg-white/10 transition-colors text-left opacity-50 cursor-not-allowed">
-                        <FileText size={18} /> All Auctions
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab("contact")}
-                        className={`flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-semibold transition-colors text-left ${activeTab === "contact" ? "bg-white/20" : "bg-white/5 hover:bg-white/10"}`}
-                    >
-                        <MessageSquare size={18} /> Contact Messages
-                    </button>
-                </nav>
-
-                <div className="w-full px-4">
-                    <button 
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 w-full rounded-xl px-4 py-3 text-sm font-bold text-red-400 hover:bg-red-500/10 transition-colors text-left"
-                    >
-                        <LogOut size={18} /> Logout
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto p-10">
-                {activeTab === "dashboard" && (
-                    <>
-                        <header className="mb-10">
-                            <h2 className="text-3xl font-bold text-gray-900 drop-shadow-sm">Admin Dashboard</h2>
-                            <p className="text-gray-500 mt-2">Welcome to the super-secret admin panel.</p>
-                        </header>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {/* Stats Cards Placeholder */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                                <span className="text-sm font-semibold text-gray-500">Total Users</span>
-                                <span className="text-4xl font-black text-[#012972] mt-2">1,248</span>
-                            </div>
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                                <span className="text-sm font-semibold text-gray-500">Active Auctions</span>
-                                <span className="text-4xl font-black text-[#012972] mt-2">45</span>
-                            </div>
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                                <span className="text-sm font-semibold text-gray-500">System Health</span>
-                                <span className="text-4xl font-black text-emerald-500 mt-2">100%</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-10 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                            <h3 className="text-lg font-bold text-gray-800 mb-4">Recent System Activity</h3>
-                            <div className="flex flex-col gap-4">
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold">
-                                                Us
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold text-sm">New user registered</span>
-                                                <span className="text-xs text-gray-400">user_{i}@example.com</span>
-                                            </div>
-                                        </div>
-                                        <span className="text-xs text-gray-400">{i} hour{i > 1 ? 's' : ''} ago</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </>
-                )}
-
-                {activeTab === "contact" && (
-                    <>
-                        <header className="mb-10">
-                            <h2 className="text-3xl font-bold text-gray-900 drop-shadow-sm">Contact Messages</h2>
-                            <p className="text-gray-500 mt-2">Manage inquiries from the landing page contact form.</p>
-                        </header>
-
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                            {isLoadingMessages ? (
-                                <div className="p-8 text-center text-gray-500">Loading messages...</div>
-                            ) : messages && messages.length > 0 ? (
-                                <div className="flex flex-col divide-y divide-gray-100">
-                                    {messages.map((msg: any) => (
-                                        <div key={msg.id} className={`p-6 flex flex-col gap-3 ${msg.isRead ? 'bg-white' : 'bg-blue-50/50'}`}>
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                                                        {msg.name}
-                                                        {!msg.isRead && <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">New</span>}
-                                                    </h4>
-                                                    <div className="text-sm text-gray-500 flex gap-4 mt-1">
-                                                        <span><a href={`mailto:${msg.email}`} className="hover:text-[#012972] hover:underline">{msg.email}</a></span>
-                                                        {msg.mobile && <span><a href={`tel:${msg.mobile}`} className="hover:text-[#012972] hover:underline">{msg.mobile}</a></span>}
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-gray-400">{new Date(msg.createdAt).toLocaleString()}</span>
-                                                    {!msg.isRead && (
-                                                        <button 
-                                                            onClick={() => markAsReadMutation.mutate(msg.id)}
-                                                            title="Mark as read"
-                                                            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                                                        >
-                                                            <CheckCircle size={18} />
-                                                        </button>
-                                                    )}
-                                                    <button 
-                                                        onClick={() => {
-                                                            if (window.confirm("Are you sure you want to delete this message?")) {
-                                                                deleteMessageMutation.mutate(msg.id);
-                                                            }
-                                                        }}
-                                                        title="Delete message"
-                                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 whitespace-pre-wrap border border-gray-100">
-                                                {msg.message}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="p-12 text-center text-gray-500 flex flex-col items-center">
-                                    <MessageSquare size={48} className="text-gray-300 mb-4" />
-                                    <h3 className="text-lg font-bold text-gray-700">No messages</h3>
-                                    <p className="text-sm mt-1">You're all caught up! There are no contact inquiries right now.</p>
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
-            </main>
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+  href,
+  delta,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ElementType;
+  color: string;
+  href?: string;
+  delta?: string;
+}) {
+  const content = (
+    <div
+      className={`group bg-white  border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 ${href ? "cursor-pointer hover:-translate-y-0.5" : ""
+        }`}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+          <Icon className="w-5 h-5" />
         </div>
-    );
+        {href && (
+          <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-[#072460] transition-colors" />
+        )}
+      </div>
+      <p className="text-3xl  font-black text-slate-900 tabular-nums">{value}</p>
+      <p className="text-xs font-semibold text-slate-500 mt-1">{label}</p>
+      {delta && (
+        <p className="text-[11px] text-emerald-600 font-bold mt-2 flex items-center gap-1">
+          <TrendingUp className="w-3 h-3" /> {delta}
+        </p>
+      )}
+    </div>
+  );
+  return href ? <Link href={href}>{content}</Link> : content;
+}
+
+export default function AdminOverviewPage() {
+  const { firebaseToken, user } = useAuthStore();
+  const userRole = (user as any)?.role as string;
+
+  // ─── Queries ──────────────────────────────────────────────────────────────
+
+  const { data: statsResponse, isLoading: loadingStats } = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: () => adminStatsApi.getStats(firebaseToken!),
+    enabled: !!firebaseToken,
+    refetchInterval: 30_000,
+  });
+
+  const { data: analyticsResponse, isLoading: loadingAnalytics } = useQuery({
+    queryKey: ["admin-analytics-overview"],
+    queryFn: () => adminStatsApi.getAnalytics(firebaseToken!),
+    enabled: !!firebaseToken,
+  });
+
+  const { data: liveResponse, isLoading: loadingLive } = useQuery({
+    queryKey: ["admin-live-auctions"],
+    queryFn: () => adminStatsApi.getLiveAuctions(firebaseToken!),
+    enabled: !!firebaseToken,
+    refetchInterval: 15_000,
+  });
+
+  // ─── Extract data from responses ─────────────────────────────────────────
+
+  const stats: AdminStats | undefined = statsResponse?.data;
+  const analytics: AdminAnalytics | undefined = analyticsResponse?.data;
+  const liveAuctions: AdminAuction[] = liveResponse?.data || [];
+
+  const shimmer = "animate-pulse bg-slate-200 rounded-xl";
+
+  return (
+    <div className="p-6 space-y-8 max-w-7xl mx-auto">
+      {/* Page Title */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">Overview Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Welcome back, <span className="font-bold text-[#072460]">{(user as any)?.name || "Admin"}</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-xl">
+          <Activity className="w-3.5 h-3.5 text-emerald-500" />
+          Live updates every 30s
+        </div>
+      </div>
+
+      {/* ── Stat Cards ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {loadingStats ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className={`${shimmer} h-32`} />
+          ))
+        ) : (
+          <>
+            <StatCard
+              label="Total Users"
+              value={stats?.totalUsers ?? 0}
+              icon={Users}
+              color="bg-blue-50 text-blue-600"
+              href="/admin/users"
+              delta="+users this month"
+            />
+            <StatCard
+              label="Total Auctions"
+              value={stats?.totalAuctions ?? 0}
+              icon={Layers}
+              color="bg-purple-50 text-purple-600"
+              href="/admin/auctions"
+            />
+            <StatCard
+              label="Paid Auctions"
+              value={stats?.totalPaidAuctions ?? 0}
+              icon={DollarSign}
+              color="bg-emerald-50 text-emerald-600"
+              href="/admin/payments"
+            />
+            <StatCard
+              label="Live Right Now"
+              value={stats?.liveAuctions ?? 0}
+              icon={Radio}
+              color="bg-rose-50 text-rose-600"
+              href="/admin/live"
+              delta={stats?.liveAuctions ? "Active live sessions" : "No live auctions"}
+            />
+          </>
+        )}
+      </div>
+
+      {/* ── Two-column: Auction Status + User Roles ──────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Auctions by Status */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-[#072460]" /> Auctions by Status
+          </h3>
+          {loadingAnalytics ? (
+            <div className={`${shimmer} h-32`} />
+          ) : (
+            <div className="space-y-3">
+              {(analytics?.auctionsByStatus ?? []).map((item) => {
+                const total = analytics?.summary.totalAuctions || 1;
+                const pct = Math.round((item.count / total) * 100);
+                const colors: Record<string, string> = {
+                  LIVE: "bg-rose-500",
+                  UPCOMING: "bg-blue-500",
+                  COMPLETED: "bg-emerald-500",
+                  DRAFT: "bg-slate-400",
+                  ARCHIVED: "bg-slate-300",
+                };
+                return (
+                  <div key={item.status}>
+                    <div className="flex justify-between text-xs font-semibold mb-1">
+                      <span className="text-slate-700">{item.status}</span>
+                      <span className="text-slate-500">{item.count} ({pct}%)</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${colors[item.status] || "bg-slate-400"} transition-all duration-700`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Users by Role */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Users className="w-4 h-4 text-[#072460]" /> Users by Role
+          </h3>
+          {loadingAnalytics ? (
+            <div className={`${shimmer} h-32`} />
+          ) : (
+            <div className="space-y-2">
+              {(analytics?.usersByRole ?? []).map((item) => {
+                const roleColors: Record<string, string> = {
+                  SUPER_ADMIN: "bg-purple-100 text-purple-700",
+                  ADMIN: "bg-blue-100 text-blue-700",
+                  MODERATOR: "bg-amber-100 text-amber-700",
+                  SUPPORT: "bg-teal-100 text-teal-700",
+                  CONTENT_EDITOR: "bg-pink-100 text-pink-700",
+                  ANALYST: "bg-indigo-100 text-indigo-700",
+                  USER: "bg-slate-100 text-slate-600",
+                };
+                return (
+                  <div key={item.role} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+                    <span className={`text-[11px] font-bold px-2 py-1 rounded-md ${roleColors[item.role] || "bg-slate-100 text-slate-600"}`}>
+                      {item.role}
+                    </span>
+                    <span className="text-sm font-black text-slate-800">{item.count.toLocaleString()}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Live Auctions Monitor ─────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <span className="flex h-2.5 w-2.5 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
+            </span>
+            Live Auctions
+          </h3>
+          <Link
+            href="/admin/live"
+            className="text-xs font-bold text-[#072460] hover:underline flex items-center gap-1"
+          >
+            View Control Center <ArrowUpRight className="w-3 h-3" />
+          </Link>
+        </div>
+
+        {loadingLive ? (
+          <div className={`${shimmer} h-20`} />
+        ) : liveAuctions.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">
+            <Radio className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm font-medium">No live auctions at this moment</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {liveAuctions.map((auction) => (
+              <div key={auction.id} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-bold text-slate-900">{auction.name}</p>
+                  <p className="text-xs text-slate-500">
+                    By {auction.organizer?.name} · {auction._count?.teams ?? 0} teams · {auction._count?.players ?? 0} players
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-1 rounded-full border border-rose-100 flex items-center gap-1">
+                    <Zap className="w-2.5 h-2.5" /> LIVE
+                  </span>
+                  <Link
+                    href="/admin/live"
+                    className="text-xs font-bold text-[#072460] bg-[#072460]/5 px-3 py-1.5 rounded-lg hover:bg-[#072460]/10 transition-all"
+                  >
+                    Manage
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Recent Payments ───────────────────────────────────────────────── */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-[#072460]" /> Recent Payments
+          </h3>
+          <Link
+            href="/admin/payments"
+            className="text-xs font-bold text-[#072460] hover:underline flex items-center gap-1"
+          >
+            View All <ArrowUpRight className="w-3 h-3" />
+          </Link>
+        </div>
+        {loadingAnalytics ? (
+          <div className={`${shimmer} h-24`} />
+        ) : !analytics?.recentPayments?.length ? (
+          <p className="text-sm text-slate-400 text-center py-6">No payments yet</p>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {analytics.recentPayments.slice(0, 5).map((p: any) => (
+              <div key={p.id} className="flex items-center justify-between py-2.5">
+                <div>
+                  <p className="text-xs font-bold text-slate-800">{p.name}</p>
+                  <p className="text-[10px] text-slate-500">
+                    {p.organizer?.name} · {p.planTier}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-right">
+                  <Clock className="w-3 h-3 text-slate-300" />
+                  <span className="text-[10px] text-slate-400">
+                    {new Date(p.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

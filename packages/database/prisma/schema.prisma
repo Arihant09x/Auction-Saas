@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      =   "postgresql://neondb_owner:npg_LB32OGWqDdFy@ep-rapid-haze-ahjafp6t.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+  url      =  env("DATABASE_URL")
 }
 
 model User {
@@ -25,15 +25,41 @@ model User {
   profileUrl     String?
   createdAt      DateTime  @default(now())
   stripeCustomerId String? @unique
+  status         UserStatus @default(ACTIVE)
+  deletedAt      DateTime?
+  sessionVersion Int       @default(0)
   auctions       Auction[]
   joinedAuctions JoinedAuction[]
-  auditLogs     AuditLog[]
-  feedback Feedback?
+  auditLogs      AuditLog[]
+  feedback       Feedback?
+  blogs          Blog[]
+  blogRevisions  BlogRevision[]
+  loginHistories LoginHistory[]
 }
-// 2. Create Enum
+
 enum Role {
-  USER
+  SUPER_ADMIN
   ADMIN
+  MODERATOR
+  SUPPORT
+  CONTENT_EDITOR
+  ANALYST
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  device    String?
+  createdAt DateTime @default(now())
 }
 
 // 2. The Pricing Plans (Based on Screenshot 17)
@@ -261,13 +287,18 @@ model BidHistory {
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String
-  action    String   // e.g., "CREATE_AUCTION", "DELETE_PLAYER"
-  endpoint  String   // e.g., "/auction"
-  details   Json?    // Store the request body or specific IDs
-  ipAddress String?
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  userId        String
+  action        String   // e.g., "CREATE_AUCTION", "DELETE_PLAYER"
+  endpoint      String   // e.g., "/auction"
+  details       Json?    // Store the request body or specific IDs
+  ipAddress     String?
+  userAgent     String?  // Browser/device info
+  targetEntity  String?  // e.g., "User", "Auction", etc.
+  targetId      String?  // ID of the target entity
+  previousValue Json?    // State before mutation
+  newValue      Json?    // State after mutation
+  createdAt     DateTime @default(now())
   
   // Optional: Relation to User if you want foreign keys
   user      User     @relation(fields: [userId], references: [id])
@@ -302,3 +333,195 @@ model ContactMessage {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+// ==========================================
+// ENTERPRISE BLOG CMS MODELS
+// ==========================================
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+model Blog {
+  id              String      @id @default(uuid())
+  slug            String      @unique
+  title           String
+  subtitle        String?
+  excerpt         String?
+  content         String      @db.Text // Markdown / Rich Text
+  blockContent    Json?
+  status          BlogStatus  @default(DRAFT)
+  
+  coverImage      String?     // Cloudinary URL
+  thumbnailImage  String?     // Cloudinary URL
+  heroImage       String?     // Cloudinary URL
+  
+  readingTime     Int         @default(3) // In minutes
+  viewsCount      Int         @default(0)
+  likesCount      Int         @default(0)
+  
+  isFeatured      Boolean     @default(false)
+  isPinned        Boolean     @default(false)
+  isTrending      Boolean     @default(false)
+  allowComments   Boolean     @default(true)
+  
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  authorId        String?
+  author          User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  
+  seo             BlogSEO?
+  categories      BlogCategoryMapping[]
+  tags            BlogTagMapping[]
+  revisions       BlogRevision[]
+  viewsHistory    BlogViewHistory[]
+  featuredMeta    FeaturedArticle?
+  slugHistories   BlogSlugHistory[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([status, publishedAt])
+  @@index([isFeatured, status])
+  @@index([isTrending, status])
+  @@index([authorId])
+}
+
+model BlogCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  color       String?  @default("#072460")
+  coverImage  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  blogs       BlogCategoryMapping[]
+
+  @@index([slug])
+}
+
+model BlogTag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  
+  blogs       BlogTagMapping[]
+
+  @@index([slug])
+}
+
+model BlogCategoryMapping {
+  blogId     String
+  categoryId String
+  blog       Blog         @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  category   BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([blogId, categoryId])
+  @@index([blogId])
+  @@index([categoryId])
+}
+
+model BlogTagMapping {
+  blogId String
+  tagId  String
+  blog   Blog    @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  tag    BlogTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([blogId, tagId])
+  @@index([blogId])
+  @@index([tagId])
+}
+
+model BlogSEO {
+  id              String   @id @default(uuid())
+  blogId          String   @unique
+  blog            Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  metaTitle       String?
+  metaDescription String?
+  keywords        String?
+  canonicalUrl    String?
+  ogImage         String?
+  ogType          String?  @default("article")
+  twitterCard     String?  @default("summary_large_image")
+  structuredData  Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model MediaImage {
+  id         String   @id @default(uuid())
+  publicId   String   @unique // Cloudinary public_id
+  secureUrl  String   // Cloudinary secure_url
+  width      Int?
+  height     Int?
+  format     String?
+  size       Int?     // In bytes
+  altText    String?
+  caption    String?
+  folder     String?  @default("blog_media")
+  createdAt  DateTime @default(now())
+
+  @@index([publicId])
+}
+
+model BlogRevision {
+  id          String   @id @default(uuid())
+  blogId      String
+  blog        Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  revisionNum Int
+  title       String
+  subtitle    String?
+  excerpt     String?
+  content     String   @db.Text
+  blockContent Json?
+  
+  createdBy   String?
+  createdUser User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([blogId])
+}
+
+model BlogViewHistory {
+  id        String   @id @default(uuid())
+  blogId    String
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  ipAddress String?
+  userAgent String?
+  referrer  String?
+  viewedAt  DateTime @default(now())
+
+  @@index([blogId])
+  @@index([viewedAt])
+}
+
+model FeaturedArticle {
+  id        String   @id @default(uuid())
+  blogId    String   @unique
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model BlogSlugHistory {
+  id        String   @id @default(uuid())
+  blogId    String
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  oldSlug   String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([oldSlug])
+}

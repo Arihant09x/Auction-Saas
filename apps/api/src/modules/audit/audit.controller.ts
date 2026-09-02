@@ -1,42 +1,66 @@
 import {
   Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
   Delete,
-} from "@nestjs/common";
-import { AuditService } from "./audit.service";
-// import { CreateAuditDto } from "./dto/create-audit.dto";
-// import { UpdateAuditDto } from "./dto/update-audit.dto";
+  Get,
+  Param,
+  Post,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { AuditService } from './audit.service';
 
-@Controller("audit")
+/**
+ * AuditController — secured, admin-only endpoints.
+ * All routes require Firebase JWT auth + ADMIN/SUPER_ADMIN role.
+ */
+@Controller('audit')
+@UseGuards(AuthGuard('firebase-jwt'), RolesGuard)
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
-  // @Post()
-  // create(@Body() createAuditDto: CreateAuditDto) {
-  //   return this.auditService.create(createAuditDto);
-  // }
-
+  /**
+   * GET /audit?page=1&limit=50
+   * Paginated audit log list.
+   */
   @Get()
-  findAll() {
-    return this.auditService.findAll();
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.auditService.findAll(
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 50,
+    );
   }
 
-  @Get(":id")
-  findOne(@Param("id") id: string) {
+  /**
+   * GET /audit/:id
+   * Single audit log entry.
+   */
+  @Get(':id')
+  findOne(@Param('id') id: string) {
     return this.auditService.findOne(id);
   }
 
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateAuditDto: UpdateAuditDto) {
-  //   return this.auditService.update(id, updateAuditDto);
-  // }
+  /**
+   * POST /audit/:id/undo
+   * Attempt to reverse a logged mutation using previousValue.
+   * Only SUPER_ADMIN / ADMIN can perform undo.
+   */
+  @Post(':id/undo')
+  undoAction(@Param('id') id: string, @Request() req: any) {
+    return this.auditService.undoAction(id, req.user?.id);
+  }
 
-  @Delete(":id")
-  remove(@Param("id") id: string) {
+  /**
+   * DELETE /audit/:id
+   * Remove a single audit log entry (SUPER_ADMIN only, via RolesGuard bypass).
+   */
+  @Delete(':id')
+  remove(@Param('id') id: string) {
     return this.auditService.remove(id);
   }
 }

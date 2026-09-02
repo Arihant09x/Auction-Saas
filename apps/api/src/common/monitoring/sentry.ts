@@ -30,7 +30,7 @@ export function initSentry(): void {
         release: process.env.APP_VERSION || 'unknown',
     });
 
-    console.log(`✅ Sentry initialized [env=${env}]`);
+    (`✅ Sentry initialized [env=${env}]`);
 }
 
 /**

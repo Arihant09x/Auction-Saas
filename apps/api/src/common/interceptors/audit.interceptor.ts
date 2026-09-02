@@ -16,23 +16,22 @@ export class AuditInterceptor implements NestInterceptor {
     const req = context.switchToHttp().getRequest();
     const method = req.method;
 
-    // Only Log "Writes" (POST, PATCH, PUT, DELETE)
-    // Ignore GET requests to save DB space
+    // Only log "writes" (POST, PATCH, PUT, DELETE); skip GETs to save space
     if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
       return next.handle().pipe(
         tap(() => {
-          // This code runs AFTER the request is successful
+          // Runs AFTER the request succeeds
           if (req.user) {
-            // Only log if user is logged in
             this.auditService.log(
               req.user.id,
-              `${method} ${req.route.path}`, // Action: "POST /auction"
+              `${method} ${req.route?.path ?? req.url}`,
               req.originalUrl,
-              req.body, // Capture what they sent
-              req.ip
+              req.body,
+              req.ip,
+              req.headers['user-agent'],
             );
           }
-        })
+        }),
       );
     }
 

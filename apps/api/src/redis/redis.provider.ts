@@ -11,7 +11,9 @@ export const RedisProvider = {
       port: Number(process.env.REDIS_PORT) || 6379,
       db: Number(process.env.REDIS_DB) || 0,
       maxRetriesPerRequest: null,
-
+      ...(process.env.REDIS_PASSWORD && {
+        password: process.env.REDIS_PASSWORD
+      }),
       // Resilience settings
       retryStrategy: (times) => {
         const delay = Math.min(times * 200, 5000); // cap at 5s
@@ -31,11 +33,11 @@ export const RedisProvider = {
 
     // ── Event handlers ──────────────────────────────────────────────────
     redis.on('connect', () => {
-      console.log(`🔴 Redis connected to ${redis.options.host}:${redis.options.port} [db=${redis.options.db}]`);
+      (`🔴 Redis connected to ${redis.options.host}:${redis.options.port} [db=${redis.options.db}]`);
     });
 
     redis.on('ready', () => {
-      console.log('✅ Redis ready');
+      ('✅ Redis ready');
     });
 
     redis.on('error', (err: Error) => {

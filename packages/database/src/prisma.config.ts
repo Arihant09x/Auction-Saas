@@ -8,8 +8,5 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
-  engine: "classic",
-  datasource: {
-    url: "postgresql://neondb_owner:npg_LB32OGWqDdFy@ep-rapid-haze-ahjafp6t.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
-  },
+
 });

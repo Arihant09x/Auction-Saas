@@ -132,7 +132,7 @@ export class LiveAuctionService {
         upcoming: players.map(mapPlayer),
       },
       teams: teams.map(mapTeam),
-      categories: auction.categories.map((c) => ({
+      categories: auction.categories.map((c: any) => ({
         id: c.id,
         name: c.name,
         color: c.color,
@@ -176,7 +176,7 @@ export class LiveAuctionService {
       where: { id: auctionId },
       data: { status: 'LIVE' },
     });
-    console.log(`✅ Auction ${auctionId} marked LIVE in DB`);
+    (`✅ Auction ${auctionId} marked LIVE in DB`);
 
     // 6. Return State
     return this.getCurrentState(auctionId);
@@ -245,7 +245,7 @@ export class LiveAuctionService {
     const winningTeamId = lastBid.teamId;
 
     // 2. DB Transaction
-    const result = await this.prisma.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.prisma.$transaction(async (tx: any) => {
       const team = await tx.team.findUnique({
         where: { id: winningTeamId },
         include: { auction: true },
@@ -354,7 +354,7 @@ export class LiveAuctionService {
     player.teamName = result.team.name;
     await this.redisService.setCurrentPlayer(auctionId, player);
     await this.redisService.removePlayerFromUnsold(auctionId, player.id);
-    
+
     // Deduct budget (accounting for booster if applied) and increment players bought helper
     await this.redisService.deductBudget(auctionId, winningTeamId, soldPrice - boosterAmount);
     await this.redisService.incrementPlayersBought(auctionId, winningTeamId);
@@ -413,7 +413,7 @@ export class LiveAuctionService {
 
     // 3. Push to Redis Queue
     // We map them to the same JSON structure as Init
-    const redisPlayers = unsoldPlayers.map((p) => ({
+    const redisPlayers = unsoldPlayers.map((p: any) => ({
       id: p.id,
       name: p.name,
       profilePic: p.profilePic,
@@ -505,7 +505,7 @@ export class LiveAuctionService {
     if (full) {
       const categories = await this.redisService.getCategories(auctionId);
       const bidHistory = await this.redisService.getBidHistory(auctionId);
-      
+
       let settings = await this.redisService.getSettings(auctionId);
       if (!settings) {
         const auction = await this.prisma.prisma.auction.findUnique({
@@ -643,7 +643,7 @@ export class LiveAuctionService {
     const basePrice = Number(player.basePrice) || 0;
 
     // DB Transaction
-    const result = await this.prisma.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.prisma.$transaction(async (tx: any) => {
       const team = await tx.team.findUnique({
         where: { id: teamId },
         include: { auction: true },
@@ -781,9 +781,9 @@ export class LiveAuctionService {
       auctionId,
       logo: auction?.logo || null,
       players: {
-        sold: players.filter((p) => p.status === "SOLD"),
-        unsold: players.filter((p) => p.status === "UNSOLD"),
-        upcoming: players.filter((p) => p.status === "UPCOMING"),
+        sold: players.filter((p: any) => p.status === "SOLD"),
+        unsold: players.filter((p: any) => p.status === "UNSOLD"),
+        upcoming: players.filter((p: any) => p.status === "UPCOMING"),
       },
       teams,
       categories,
@@ -986,7 +986,7 @@ export class LiveAuctionService {
     // ==============================
     // 5. FINALIZE AUCTION (TRANSACTION)
     // ==============================
-    await this.prisma.prisma.$transaction(async (tx) => {
+    await this.prisma.prisma.$transaction(async (tx: any) => {
       // A. Mark auction completed
       await tx.auction.update({
         where: { id: auctionId },
@@ -1264,19 +1264,19 @@ export class LiveAuctionService {
       }),
     ]);
 
-    const soldPlayers = players.filter((p) => p.status === "SOLD");
+    const soldPlayers = players.filter((p: any) => p.status === "SOLD");
 
     // ===============================
     // GLOBAL METRICS
     // ===============================
     const totalRevenue = soldPlayers.reduce(
-      (sum, p) => sum + Number(p.soldPrice || 0),
+      (sum: any, p: any) => sum + Number(p.soldPrice || 0),
       0,
     );
 
     const mostExpensive =
       soldPlayers.sort(
-        (a, b) => Number(b.soldPrice) - Number(a.soldPrice),
+        (a: any, b: any) => Number(b.soldPrice) - Number(a.soldPrice),
       )[0] || null;
 
     const averagePrice =
@@ -1284,19 +1284,19 @@ export class LiveAuctionService {
 
     // MOST AGGRESSIVE TEAM (most bids)
     const bidCountMap: Record<string, number> = {};
-    bids.forEach((b) => {
+    bids.forEach((b: any) => {
       bidCountMap[b.teamId] = (bidCountMap[b.teamId] || 0) + 1;
     });
 
     const mostAggressiveTeamId = Object.keys(bidCountMap).sort(
-      (a, b) => (bidCountMap[b] ?? 0) - (bidCountMap[a] ?? 0),
+      (a: any, b: any) => (bidCountMap[b] ?? 0) - (bidCountMap[a] ?? 0),
     )[0];
 
     // ===============================
     // TEAM INSIGHTS
     // ===============================
-    const teamInsights = teams.map((team) => {
-      const bought = soldPlayers.filter((p) => p.teamId === team.id);
+    const teamInsights = teams.map((team: any) => {
+      const bought = soldPlayers.filter((p: any) => p.teamId === team.id);
 
       return {
         teamId: team.id,
@@ -1304,7 +1304,7 @@ export class LiveAuctionService {
         spent: Number(team.purseSpent),
         playersBought: team.playersCount,
         highestBuy:
-          bought.sort((a, b) => Number(b.soldPrice) - Number(a.soldPrice))[0] ||
+          bought.sort((a: any, b: any) => Number(b.soldPrice) - Number(a.soldPrice))[0] ||
           null,
       };
     });
@@ -1314,7 +1314,7 @@ export class LiveAuctionService {
     // ===============================
     const categoryMap: Record<string, any[]> = {};
 
-    soldPlayers.forEach((p) => {
+    soldPlayers.forEach((p: any) => {
       const cat = p.category?.name || "UNCATEGORIZED";
 
       if (!categoryMap[cat]) categoryMap[cat] = [];
@@ -1338,10 +1338,10 @@ export class LiveAuctionService {
       summary: {
         totalRevenue,
         playersSold: soldPlayers.length,
-        unsold: players.filter((p) => p.status === "UNSOLD").length,
+        unsold: players.filter((p: any) => p.status === "UNSOLD").length,
         averagePrice,
         mostExpensive,
-        mostAggressiveTeam: teams.find((t) => t.id === mostAggressiveTeamId),
+        mostAggressiveTeam: teams.find((t: any) => t.id === mostAggressiveTeamId),
       },
 
       teams: teamInsights,
