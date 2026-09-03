@@ -21,10 +21,15 @@ RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
 COPY turbo.json turbo.json
 
-# Run Prisma Client generation before building NestJS (Crucial Step)
-RUN pnpm --filter @repo/database_postgres exec prisma generate
 
-# Build NestJS API
+
+# Build database package (includes prisma generate and tsc)
+RUN pnpm run build --filter=@repo/database_postgres
+# Debug: verify generated client exists
+RUN ls -la packages/database/dist/ || echo "dist missing"
+RUN ls -la node_modules/.prisma/client/ || echo ".prisma/client missing"
+RUN ls -la node_modules/@prisma/client/ || echo "@prisma/client missing"
+# Build NestJS API (depends on database package)
 RUN pnpm run build --filter=api
 
 # Stage 3: Runner
@@ -40,6 +45,7 @@ ARG DATABASE_URL
 ARG REDIS_DB
 ARG REDIS_HOST
 ARG REDIS_PORT
+ARG REDIS_PASSWORD
 ARG FIREBASE_PROJECT_ID
 ARG FIREBASE_CLIENT_EMAIL
 ARG FIREBASE_PRIVATE_KEY
@@ -60,6 +66,7 @@ ENV DATABASE_URL=${DATABASE_URL}
 ENV REDIS_DB=${REDIS_DB}
 ENV REDIS_HOST=${REDIS_HOST}
 ENV REDIS_PORT=${REDIS_PORT}
+ENV REDIS_PASSWORD=${REDIS_PASSWORD}
 ENV FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
 ENV FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
 ENV FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
@@ -75,4 +82,4 @@ ENV APP_VERSION=${APP_VERSION}
 COPY --from=installer /app .
 
 EXPOSE 3000
-CMD ["pnpm", "--filter", "api", "start:prod"]
+CMD ["sh", "-c", "pnpm run --filter=@repo/database_postgres generate && pnpm --filter api start:prod"]

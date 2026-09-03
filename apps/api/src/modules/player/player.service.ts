@@ -22,7 +22,7 @@ import {
   PlayerRole,
   PlayerStatus,
   PlanTier,
-} from "../../../../../packages/database/dist/generated/index";
+} from "@repo/database_postgres";
 @Injectable()
 export class PlayerService {
   constructor(

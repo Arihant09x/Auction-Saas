@@ -4,7 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
 import * as crypto from "crypto";
 import { PLAN_LIMITS } from "../../common/constants/plan-limits";
-import { PlanTier } from "../../../../../packages/database/dist/generated";
+import { PlanTier } from "@repo/database_postgres";
 
 const PLAN_PRIORITY = {
   BASIC: 1,

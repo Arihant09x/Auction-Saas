@@ -7,7 +7,7 @@ import {
   IsNumber,
   Min,
 } from "class-validator";
-import { PlayerRole } from "../../../../../../packages/database/dist/generated";
+import { PlayerRole } from "@repo/database_postgres";
 
 export class CreatePlayerDto {
   @IsUUID()

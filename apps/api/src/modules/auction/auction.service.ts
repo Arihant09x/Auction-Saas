@@ -10,7 +10,7 @@ import Redis from "ioredis";
 import {
   AuctionStatus,
   PlanTier,
-} from "../../../../../packages/database/dist/generated/index";
+} from "@repo/database_postgres";
 
 @Injectable()
 export class AuctionService {

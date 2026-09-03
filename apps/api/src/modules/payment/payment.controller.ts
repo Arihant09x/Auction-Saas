@@ -1,12 +1,12 @@
 import { Controller, Post, Body, UseGuards, Request } from "@nestjs/common";
 import { PaymentService } from "./payment.service";
 import { AuthGuard } from "@nestjs/passport";
-import { PlanTier } from "../../../../../packages/database/dist/generated";
+import { PlanTier } from "@repo/database_postgres";
 
 @Controller("payment")
 @UseGuards(AuthGuard("firebase-jwt"))
 export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(private readonly paymentService: PaymentService) { }
 
   // Step 1: Frontend calls this when user clicks "Pay 5000"
   @Post("create-order")

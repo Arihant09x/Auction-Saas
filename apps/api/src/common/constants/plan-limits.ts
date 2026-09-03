@@ -2,7 +2,7 @@ import {
   AuctionStatus,
   PlanTier,
 
-} from "../../../../../packages/database/dist/generated";
+} from "@repo/database_postgres";
 
 export const PLAN_LIMITS: Record<
   PlanTier,

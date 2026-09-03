@@ -524,4 +524,4 @@ model BlogSlugHistory {
   createdAt DateTime @default(now())
 
   @@index([oldSlug])
-}
+}

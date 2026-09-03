@@ -1,13 +1,18 @@
 {
   "name": "@repo/database_postgres",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./db": "./dist/index.js"
   },
   "scripts": {
-    "build": "prisma generate && tsc -b",
-    "postbuild": "cp -r prisma/generated dist/ || xcopy prisma\\generated dist\\generated /E /I /Y"
+    "generate": "prisma generate",
+    "build": "pnpm run generate && tsc"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
@@ -15,10 +20,6 @@
     "dotenv": "^17.2.3",
     "typescript": "^5.0.0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "@prisma/client": "^6.19.1",
     "prisma": "^6.19.1"
