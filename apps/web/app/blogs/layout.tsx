@@ -1,24 +1,24 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Sports Auction Blogs",
+    title: "Sports Auction Blogs | Auction 11",
     description:
-        "Explore the Auction11 Blog for player auction tips, cricket auction strategies, tournament management guides, product updates, and sports auction insights.",
+        "Explore the Auction11.live Blog for player auction tips, cricket auction strategies, tournament management guides, product updates, and sports auction insights.",
     keywords: ["upcoming auctions", "scheduled sports auctions", "cricket auction calendar", "football auction schedule", "kabaddi auction", " Auction11"],
     openGraph: {
         title: "Sports Auction Blogs | Auction11",
         description:
-            "Explore the Auction11 Blog for player auction tips, cricket auction strategies, tournament management guides, product updates, and sports auction insights.",
-        url: "https://auctionxi.com/today-auction",
-        siteName: "Auction11",
+            "Explore the Auction11.live Blog for player auction tips, cricket auction strategies, tournament management guides, product updates, and sports auction insights.",
+        url: "https://auction11.live/blogs",
+        siteName: "Auction11.live",
         type: "website",
         locale: "en_IN",
     },
     twitter: {
         card: "summary_large_image",
-        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11",
+        title: "Sports Auction Blogs | Auction 11",
         description:
-            "Discover today's live player auctions on Auction11. Track player bidding, team formations, budgets, and auction results in real time.",
+            "Explore the Auction11.live Blog for player auction tips, cricket auction strategies, tournament management guides, product updates, and sports auction insights.",
     },
 };
 

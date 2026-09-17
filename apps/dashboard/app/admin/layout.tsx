@@ -128,7 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
           <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-            You do not have the required permissions to view the Auction11 Admin Panel.
+            You do not have the required permissions to view the Auction11.live Admin Panel.
           </p>
           <a
             href={`${MAIN_WEBSITE_URL}/login`}

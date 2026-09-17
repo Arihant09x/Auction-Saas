@@ -34,7 +34,7 @@ export default function AdminSettingsPage() {
       title: "Platform Configuration",
       icon: Globe,
       items: [
-        { label: "Site Name", value: "Auction11", type: "text" },
+        { label: "Site Name", value: "Auction11.live", type: "text" },
         { label: "Support Email", value: "support@auction11.live", type: "text" },
         { label: "Default Plan Tier", value: "FREE", type: "select" },
       ],

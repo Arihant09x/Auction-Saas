@@ -159,7 +159,7 @@ export default function BlogListingPage() {
 
                   <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                     <div>
-                      <p className="text-xs font-bold text-slate-900">By Auction11</p>
+                      <p className="text-xs font-bold text-slate-900">By Auction11.live</p>
                       <p className="text-[11px] text-slate-400">
                         {featuredArticle.publishedAt
                           ? new Date(featuredArticle.publishedAt).toLocaleDateString("en-US", {
@@ -484,7 +484,7 @@ function ArticleCard({ article }: { article: InternalBlogArticle }) {
         </div>
 
         <div className="px-4 pb-4 pt-2 flex items-center justify-between border-t border-slate-100 mt-2">
-          <span className="text-[11px] font-bold text-slate-400">By Auction11</span>
+          <span className="text-[11px] font-bold text-slate-400">By Auction11.live</span>
           <span className="text-xs font-bold text-[#072460] group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
             Read <ArrowRight className="w-3.5 h-3.5" />
           </span>

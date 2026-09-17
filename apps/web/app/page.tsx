@@ -558,9 +558,9 @@ function HowItWorksSection() {
 // ABOUT SECTION - cricket auction specific benefits
 // =============================================================================
 const ABOUT_POINTS = [
-  { title: "Real-time Bidding Engine", desc: "Low-latency bid updates with live leaderboard and automatic budget tracking for all teams." },
-  { title: "Transparent Auction Process", desc: "Complete audit trail of every bid, public/private auction modes, and fair play guarantees." },
-  { title: "Advanced Squad Management", desc: "Manage player pools, base prices, role filters, and generate squad sheets post-auction." },
+  { title: "Real-time Bidding Engine", desc: "One Platform, Zero Chaos Manage player registrations, team budgets, live bidding, and squad creation in one place." },
+  { title: "Transparent Auction Process", desc: "Real-Time & Automated Live updates and automatic calculations make auctions faster, smoother, and more professional." },
+  { title: "Advanced Squad Management", desc: "Made for Every Tournament From local cricket leagues to large multi-team tournaments, simplifying auctions for organizers, teams, and players." },
 ];
 
 function AboutSection() {
@@ -593,7 +593,9 @@ function AboutSection() {
               Why Choose Auction 11?
             </h3>
             <p className="text-[15px] text-[#4a6090] mb-8 leading-relaxed">
-              Built for cricket enthusiasts & professional leagues — manage auctions with enterprise-grade reliability.
+              Built From Real Experience
+              <br />
+              10+ years of managing sports tournaments and understanding real auction challenges.
             </p>
 
             <div className="flex flex-col gap-6 mb-10">

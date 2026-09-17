@@ -5,6 +5,9 @@ import { PrismaService } from "../../prisma/prisma.service";
 import * as crypto from "crypto";
 import { PLAN_LIMITS } from "../../common/constants/plan-limits";
 import { PlanTier } from "@repo/database_postgres";
+import { config } from "dotenv";
+
+config();
 
 const PLAN_PRIORITY = {
   BASIC: 1,
@@ -23,9 +26,9 @@ export class PaymentService {
     private configService: ConfigService,
     private prisma: PrismaService
   ) {
-    const keyId = "rzp_test_Rucoly3LqinHM4";
-    const keySecret = "xmpgeDUW7nIB19lkFoiJ8oNW";
-
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    console.log("KEYID AND KEY SECRET", keyId, keySecret);
     if (!keyId || !keySecret) {
       throw new Error("Razorpay configuration is missing");
     }

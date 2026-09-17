@@ -3,22 +3,22 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
     title: "Cancellation & Refund Policy",
     description:
-        "Review Auction11's Cancellation & Refund Policy to understand subscription cancellations, refund eligibility, payment terms, and service-related policies.",
-    keywords: ["upcoming auctions", "scheduled sports auctions", "cricket auction calendar", "football auction schedule", "kabaddi auction", " Auction11"],
+        "Review Auction11.live's Cancellation & Refund Policy to understand subscription cancellations, refund eligibility, payment terms, and service-related policies.",
+    keywords: ["upcoming auctions", "scheduled sports auctions", "cricket auction calendar", "football auction schedule", "kabaddi auction", " Auction11.live"],
     openGraph: {
-        title: "Cancellation & Refund Policy | Auction11",
+        title: "Cancellation & Refund Policy | Auction11.live",
         description:
-            "Review Auction11's Cancellation & Refund Policy to understand subscription cancellations, refund eligibility, payment terms, and service-related policies.",
+            "Review Auction11.live's Cancellation & Refund Policy to understand subscription cancellations, refund eligibility, payment terms, and service-related policies.",
         url: "https://auctionxi.com/today-auction",
-        siteName: "Auction11",
+        siteName: "Auction11.live",
         type: "website",
         locale: "en_IN",
     },
     twitter: {
         card: "summary_large_image",
-        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11",
+        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11.live",
         description:
-            "Discover today's live player auctions on Auction11. Track player bidding, team formations, budgets, and auction results in real time.",
+            "Discover today's live player auctions on Auction11.live. Track player bidding, team formations, budgets, and auction results in real time.",
     },
 };
 

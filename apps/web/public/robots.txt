@@ -56,4 +56,4 @@ Allow: /cancellation-policy
 Allow: /shipping-policy
 Allow: /terms-and-conditions
 
-Sitemap: https://auction11.com/sitemap.xml
+Sitemap: https://auction11.live/sitemap.xml

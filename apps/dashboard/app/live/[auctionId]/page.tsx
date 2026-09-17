@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Users, LayoutDashboard, Settings, User, Trophy, Play, CheckCircle, XCircle, RotateCcw, AlertTriangle, Menu, Maximize, Monitor, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
 
-const auctionLogo = "/logo-1.svg";
+const auctionLogo = "/final-1.png";
 
 const polarToCartesian = (centerX: number, centerY: number, radius: number, angleInDegrees: number) => {
     const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
@@ -281,7 +281,22 @@ export default function OrganizerLiveDashboard() {
 
         socket.on("dashboard_snapshot", (data: any) => {
             setDashboardSnapshot(data);
+
+            // Populate teams from snapshot if not already set
+            if (data.teams && data.teams.length > 0) {
+                setTeams(data.teams);
+            }
+
             if (data.categories) setCategories(data.categories);
+
+            // Set auction info (logo, name) from snapshot
+            if (data.logo || data.auctionId) {
+                setAuctionInfo((prev: any) => ({
+                    ...prev,
+                    logo: data.logo || prev?.logo,
+                    auctionName: data.auctionName || prev?.auctionName,
+                }));
+            }
         });
 
         socket.on("auction_countdown", (data: any) => {

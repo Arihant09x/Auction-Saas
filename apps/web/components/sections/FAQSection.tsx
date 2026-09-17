@@ -18,7 +18,7 @@ const FAQS = [
         answer: "A: Yes. You can create as many player categories as you need (e.g., Elite, All-Rounder, Youngster) and set individual base prices, bid increment rules, and min/max squad limits per category."
     },
     {
-        question: "Does Auction11 support online UPI payments?",
+        question: "Does Auction11.live support online UPI payments?",
         answer: "Yes, Organizers can directly make payments through UPI."
     },
     {

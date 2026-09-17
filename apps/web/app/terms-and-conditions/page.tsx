@@ -9,7 +9,7 @@ export default function TermsAndConditionsPage() {
                 <h1 className="text-4xl font-extrabold text-[#012972] mb-8 font-epilogue">Terms & Conditions</h1>
                 <div className="space-y-6 text-[#012972]/80 leading-relaxed text-[15px]">
                     <p>
-                        {"Welcome to Auction11. These Terms & Conditions (\"Terms\") constitute a legally binding agreement between you (\"User\", \"you\", or \"your\") and Auction11 (\"Company\", \"we\", \"us\", or \"our\"), governing your access to and use of our platform and digital services available at https://www.auction11.live."}
+                        {"Welcome to Auction11.live. These Terms & Conditions (\"Terms\") constitute a legally binding agreement between you (\"User\", \"you\", or \"your\") and Auction11.live (\"Company\", \"we\", \"us\", or \"our\"), governing your access to and use of our platform and digital services available at https://www.auction11.live."}
                     </p>
                     <p>
                         {"By accessing or using our Services, you acknowledge that you have read, understood, and agree to be bound by these Terms. IF YOU DO NOT AGREE WITH ANY PART OF THESE TERMS, YOU MUST IMMEDIATELY DISCONTINUE USE OF OUR SERVICES."}
@@ -20,7 +20,7 @@ export default function TermsAndConditionsPage() {
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">1. Our Services</h2>
                     <p>
-                        {"Auction11 is a digital platform providing online cricket auction services. Our Services are intended solely for lawful use within applicable jurisdictions. Users who access our platform from locations outside India do so at their own initiative and are solely responsible for compliance with local laws."}
+                        {"Auction11.live is a digital platform providing online cricket auction services. Our Services are intended solely for lawful use within applicable jurisdictions. Users who access our platform from locations outside India do so at their own initiative and are solely responsible for compliance with local laws."}
                     </p>
                     <p>
                         {"The content, features, and functionality of our Services are subject to change at any time without notice, at our sole discretion."}
@@ -29,7 +29,7 @@ export default function TermsAndConditionsPage() {
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">2. Intellectual Property Rights</h2>
                     <h3 className="text-xl font-bold text-[#012972] mt-4 mb-2">2.1 Our Intellectual Property</h3>
                     <p>
-                        {"All content, materials, and features available through our Services — including but not limited to software, source code, databases, design elements, text, graphics, logos, audio, and video (\"Content\") — are owned by or licensed to Auction11 and are protected under applicable intellectual property laws in India and internationally."}
+                        {"All content, materials, and features available through our Services — including but not limited to software, source code, databases, design elements, text, graphics, logos, audio, and video (\"Content\") — are owned by or licensed to Auction11.live and are protected under applicable intellectual property laws in India and internationally."}
                     </p>
                     <p>
                         {"Our trademarks, service marks, and brand identifiers (\"Marks\") may not be used without our prior written consent."}
@@ -47,7 +47,7 @@ export default function TermsAndConditionsPage() {
                     </p>
                     <h3 className="text-xl font-bold text-[#012972] mt-4 mb-2">2.3 Your Submissions</h3>
                     <p>
-                        {"By submitting feedback, suggestions, or any other communications to Auction11 (\"Submissions\"), you agree to assign all intellectual property rights therein to us. We may use such Submissions for any lawful purpose without acknowledgment or compensation to you."}
+                        {"By submitting feedback, suggestions, or any other communications to Auction11.live (\"Submissions\"), you agree to assign all intellectual property rights therein to us. We may use such Submissions for any lawful purpose without acknowledgment or compensation to you."}
                     </p>
                     <p>
                         {"You represent and warrant that your Submissions are original, do not infringe any third-party rights, and are not confidential in nature. You remain solely responsible for any Submissions you provide and agree to indemnify us against any loss arising from a breach of this section."}
@@ -70,9 +70,9 @@ export default function TermsAndConditionsPage() {
                     <p>{"You agree not to engage in any of the following activities in connection with our Services:"}</p>
                     <ul className="list-disc pl-6 space-y-2">
                         <li>{"Systematically scraping, extracting, or aggregating data from our platform without written authorisation."}</li>
-                        <li>{"Attempting to deceive, defraud, or mislead Auction11 or other users, including efforts to obtain sensitive account credentials."}</li>
+                        <li>{"Attempting to deceive, defraud, or mislead Auction11.live or other users, including efforts to obtain sensitive account credentials."}</li>
                         <li>{"Interfering with or disabling security features or access controls."}</li>
-                        <li>{"Using the Services in any manner that disparages, harms, or reflects negatively on Auction11 or its reputation."}</li>
+                        <li>{"Using the Services in any manner that disparages, harms, or reflects negatively on Auction11.live or its reputation."}</li>
                         <li>{"Uploading or transmitting malware, viruses, spyware, Trojan horses, or other harmful code."}</li>
                         <li>{"Engaging in automated activity, including bots, scrapers, or data mining tools."}</li>
                         <li>{"Attempting to impersonate any user, person, or entity."}</li>
@@ -91,7 +91,7 @@ export default function TermsAndConditionsPage() {
                         {"To the extent that our platform permits you to submit, post, or share content (\"Contributions\"), you are solely responsible for all Contributions you make. While we retain the right to monitor, edit, or remove Contributions at our discretion, we do not assume any liability for user-submitted content."}
                     </p>
                     <p>
-                        {"You retain ownership of your Contributions but grant Auction11 a non-exclusive, royalty-free, worldwide licence to use, reproduce, modify, and display such Contributions in connection with the operation of our Services."}
+                        {"You retain ownership of your Contributions but grant Auction11.live a non-exclusive, royalty-free, worldwide licence to use, reproduce, modify, and display such Contributions in connection with the operation of our Services."}
                     </p>
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">6. Contribution Licence</h2>
@@ -100,7 +100,7 @@ export default function TermsAndConditionsPage() {
                     </p>
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">7. Services Management</h2>
-                    <p>{"Auction11 reserves the right, at its sole discretion, to:"}</p>
+                    <p>{"Auction11.live reserves the right, at its sole discretion, to:"}</p>
                     <ol className="list-decimal pl-6 space-y-2">
                         <li>{"Monitor the platform for violations of these Terms."}</li>
                         <li>{"Take appropriate legal action against users who violate applicable laws or these Terms."}</li>
@@ -157,7 +157,7 @@ export default function TermsAndConditionsPage() {
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">13. Disclaimer of Warranties</h2>
                     <p className="font-semibold text-gray-900">
-                        {"THE SERVICES ARE PROVIDED ON AN \"AS IS\" AND \"AS AVAILABLE\" BASIS WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, AUCTION11 DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT."}
+                        {"THE SERVICES ARE PROVIDED ON AN \"AS IS\" AND \"AS AVAILABLE\" BASIS WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, AUCTION11.LIVE DISCLAIMS ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT."}
                     </p>
                     <p>
                         {"WE DO NOT WARRANT THAT: (A) THE SERVICES WILL BE UNINTERRUPTED, ERROR-FREE, OR SECURE; (B) THE INFORMATION PROVIDED IS ACCURATE, COMPLETE, OR CURRENT; OR (C) DEFECTS, IF ANY, WILL BE CORRECTED. YOUR USE OF THE SERVICES IS ENTIRELY AT YOUR OWN RISK."}
@@ -165,14 +165,14 @@ export default function TermsAndConditionsPage() {
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">14. Limitation of Liability</h2>
                     <p className="font-semibold text-gray-900">
-                        {"TO THE MAXIMUM EXTENT PERMITTED BY LAW, AUCTION11 AND ITS OFFICERS, EMPLOYEES, AGENTS, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, CONSEQUENTIAL, PUNITIVE, OR SPECIAL DAMAGES ARISING FROM YOUR USE OF — OR INABILITY TO USE — THE SERVICES, INCLUDING LOSS OF DATA, REVENUE, OR PROFIT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES."}
+                        {"TO THE MAXIMUM EXTENT PERMITTED BY LAW, AUCTION11.LIVE AND ITS OFFICERS, EMPLOYEES, AGENTS, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, CONSEQUENTIAL, PUNITIVE, OR SPECIAL DAMAGES ARISING FROM YOUR USE OF — OR INABILITY TO USE — THE SERVICES, INCLUDING LOSS OF DATA, REVENUE, OR PROFIT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES."}
                     </p>
                     <p>
                         {"OUR AGGREGATE LIABILITY TO YOU FOR ANY CAUSE OF ACTION SHALL NOT EXCEED THE TOTAL AMOUNT PAID BY YOU TO US IN THE SIX (6) MONTHS PRECEDING THE CLAIM."}
                     </p>
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">15. Indemnification</h2>
-                    <p>{"You agree to indemnify, defend, and hold harmless Auction11 and its officers, employees, agents, and partners from and against any claims, losses, damages, liabilities, and expenses (including reasonable legal fees) arising from:"}</p>
+                    <p>{"You agree to indemnify, defend, and hold harmless Auction11.live and its officers, employees, agents, and partners from and against any claims, losses, damages, liabilities, and expenses (including reasonable legal fees) arising from:"}</p>
                     <ol className="list-decimal pl-6 space-y-2">
                         <li>{"Your use of the Services."}</li>
                         <li>{"Your breach of these Terms."}</li>
@@ -198,7 +198,7 @@ export default function TermsAndConditionsPage() {
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">18. Miscellaneous</h2>
                     <p>
-                        {"These Terms, along with our Privacy Policy, Shipping Policy, and Cancellation & Refund Policy, constitute the entire agreement between you and Auction11 and supersede all prior agreements."}
+                        {"These Terms, along with our Privacy Policy, Shipping Policy, and Cancellation & Refund Policy, constitute the entire agreement between you and Auction11.live and supersede all prior agreements."}
                     </p>
                     <p>
                         {"If any provision of these Terms is found to be unlawful or unenforceable, it shall be severed from the remaining provisions, which will continue in full force and effect. Our failure to enforce any provision does not constitute a waiver of our right to do so in the future."}
@@ -210,7 +210,7 @@ export default function TermsAndConditionsPage() {
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">19. Contact Us</h2>
                     <p>{"For any questions, concerns, or feedback regarding these Terms, please reach out to us:"}</p>
                     <p className="mt-2">
-                        <strong>{"Auction11"}</strong><br />
+                        <strong>{"Auction11.live"}</strong><br />
                         {"Email: auction11.live@gmail.com"}<br />
                         {"Website: https://www.auction11.live"}<br />
                         {"Location: Karnataka, India"}

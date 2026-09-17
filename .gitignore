@@ -50,3 +50,5 @@ apps/api/test-*.html
 docker-cmd.txt
 aws-lightsail_deployment_guide.md
 auction11.pem
+
+docs

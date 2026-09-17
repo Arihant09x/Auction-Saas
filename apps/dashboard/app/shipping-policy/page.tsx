@@ -10,13 +10,13 @@ export default function ShippingAndDeliveryPage() {
                 <h1 className="text-4xl font-extrabold text-[#012972] mb-8 font-epilogue">Shipping & Delivery Policy</h1>
                 <div className="space-y-6 text-[#012972]/80 leading-relaxed text-[15px]">
                     <p>
-                        Auction11 is a fully digital platform that delivers online cricket auction services. We do not manufacture, stock, or ship any physical products. This Shipping & Delivery Policy outlines how we fulfil service orders, manage digital delivery, and address related queries. By placing an order on our platform, you acknowledge and agree to the terms described in this policy.
+                        Auction11.live is a fully digital platform that delivers online cricket auction services. We do not manufacture, stock, or ship any physical products. This Shipping & Delivery Policy outlines how we fulfil service orders, manage digital delivery, and address related queries. By placing an order on our platform, you acknowledge and agree to the terms described in this policy.
                     </p>
 
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">1. Nature of Services</h2>
                     <p>
-                        All products and services offered by Auction11 are digital in nature. Upon successful purchase, you will receive access to the relevant features or service packages within the Auction11 application. No physical delivery is required or applicable.
+                        All products and services offered by Auction11.live are digital in nature. Upon successful purchase, you will receive access to the relevant features or service packages within the Auction11.live application. No physical delivery is required or applicable.
                     </p>
 
 
@@ -24,7 +24,7 @@ export default function ShippingAndDeliveryPage() {
                     <p>Upon completing a purchase, you will receive:</p>
                     <ul className="list-disc pl-6 space-y-2">
                         <li>A confirmation email containing your order details, selected service package, and access instructions.</li>
-                        <li>Access to your purchased auction service through the Auction11 application, based on the package chosen.</li>
+                        <li>Access to your purchased auction service through the Auction11.live application, based on the package chosen.</li>
                         <li>The ability to track the progress of your auction in real-time directly through the platform.</li>
                     </ul>
                     <p>
@@ -38,7 +38,7 @@ export default function ShippingAndDeliveryPage() {
                     </p>
 
 
-                    <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">4. Service Cancellations by Auction11</h2>
+                    <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">4. Service Cancellations by Auction11.live</h2>
                     <p>
                         We reserve the right to cancel your order if we are unable to provide the requested service due to technical limitations, platform incompatibility, or other operational constraints. In such cases, you will be entitled to a full refund of any amount paid. We will notify you promptly via email in the event that your order is cancelled by us, along with the reason for cancellation and refund timelines.
                     </p>
@@ -52,14 +52,14 @@ export default function ShippingAndDeliveryPage() {
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">6. Changes to This Policy</h2>
                     <p>
-                        Auction11 reserves the right to update or modify this Shipping & Delivery Policy at any time. In the event of significant changes, we will notify you via email and update this page accordingly. Your continued use of the Services following such changes indicates your acceptance of the revised policy.
+                        Auction11.live reserves the right to update or modify this Shipping & Delivery Policy at any time. In the event of significant changes, we will notify you via email and update this page accordingly. Your continued use of the Services following such changes indicates your acceptance of the revised policy.
                     </p>
 
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">7. Contact Us</h2>
                     <p>If you have any questions regarding your order, service delivery, or this policy, please get in touch with us:</p>
                     <ul className="list-disc pl-6 space-y-2">
-                        <li>Auction11</li>
+                        <li>Auction11.live</li>
                         <li>Email: [auction11.live@gmail.com](mailto:auction11.live@gmail.com)</li>
                         <li>Website: [https://www.auction11.live](https://www.auction11.live)</li>
                         <li>Location: Karnataka, India</li>

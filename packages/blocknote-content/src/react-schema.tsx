@@ -648,6 +648,7 @@ const ButtonBlock = () =>
       type: "button",
       propSchema: {
         schemaVersion: { default: 1, type: "number" },
+        variant: { default: "custom", type: "string" },
         text: { default: DEFAULTS.button.text, type: "string" },
         url: { default: DEFAULTS.button.url, type: "string" },
         alignment: { default: DEFAULTS.button.alignment, type: "string" },
@@ -670,6 +671,42 @@ const ButtonBlock = () =>
         const blockProps = props.block.props;
         const isEditable = props.editor.isEditable;
         const safeUrl = isValidUrl(blockProps.url) ? blockProps.url : "#";
+        const variant = (blockProps.variant || "custom") as "custom" | "primary" | "secondary";
+
+        const PRESETS = {
+          primary: {
+            backgroundColor: "#FFBA00",
+            textColor: "#012972",
+            hoverColor: "#e6a800",
+            borderColor: "#0C3278",
+            borderWidth: 1,
+            radius: 99,
+            fontFamily: "var(--font-epilogue), Epilogue, sans-serif",
+            fontWeight: 700,
+          },
+          secondary: {
+            backgroundColor: "#00379d",
+            textColor: "#ffffff",
+            hoverColor: "#002a6e",
+            borderColor: "#ffaf2e",
+            borderWidth: 1,
+            radius: 99,
+            fontFamily: "var(--font-epilogue), Epilogue, sans-serif",
+            fontWeight: 700,
+          },
+          custom: {
+            backgroundColor: blockProps.backgroundColor ?? "#2563eb",
+            textColor: blockProps.textColor ?? "#ffffff",
+            hoverColor: blockProps.hoverColor ?? blockProps.backgroundColor ?? "#2563eb",
+            borderColor: blockProps.borderColor ?? "#000000",
+            borderWidth: blockProps.borderWidth ?? 0,
+            radius: blockProps.radius ?? 8,
+            fontFamily: undefined,
+            fontWeight: 600,
+          },
+        } as const;
+
+        const preset = PRESETS[variant] ?? PRESETS.custom;
 
         return (
           <div
@@ -677,231 +714,409 @@ const ButtonBlock = () =>
             style={{ alignItems: alignmentValue(blockProps.alignment as Alignment) }}
           >
             {isEditable && (
-              <div
-                contentEditable={false}
-                className="w-full flex flex-col gap-2 rounded-lg border border-dashed border-gray-300 bg-gray-100 p-4"
-              >
-                <label className="text-xs font-bold text-gray-600">
-                  Button content and design
-                </label>
-                <input
-                  value={blockProps.text}
-                  onChange={(event) =>
-                    updateBlockProps(props.editor, props.block, {
-                      ...props.block.props,
-                      text: event.target.value,
-                    })
-                  }
-                  className="w-full rounded border bg-white px-3 py-2 text-sm outline-none"
-                  placeholder="Button text"
-                />
-                <input
-                  value={blockProps.url}
-                  onChange={(event) =>
-                    updateBlockProps(props.editor, props.block, {
-                      ...props.block.props,
-                      url: event.target.value,
-                    })
-                  }
-                  className="w-full rounded border bg-white px-3 py-2 text-sm outline-none"
-                  placeholder="https://example.com"
-                />
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  <label className="text-xs font-semibold text-gray-600">
-                    Alignment
-                    <select
-                      value={blockProps.alignment}
-                      onChange={(event) =>
-                        updateBlockProps(props.editor, props.block, {
-                          ...props.block.props,
-                          alignment: event.target.value,
-                        })
-                      }
-                      className="mt-1 w-full rounded border bg-white px-2 py-2 text-sm"
-                    >
-                      <option value="start">Start</option>
-                      <option value="center">Center</option>
-                      <option value="end">End</option>
-                    </select>
-                  </label>
-                  <label className="text-xs font-semibold text-gray-600">
-                    Size
-                    <select
-                      value={blockProps.size}
-                      onChange={(event) =>
-                        updateBlockProps(props.editor, props.block, {
-                          ...props.block.props,
-                          size: event.target.value,
-                        })
-                      }
-                      className="mt-1 w-full rounded border bg-white px-2 py-2 text-sm"
-                    >
-                      <option value="small">Small</option>
-                      <option value="medium">Medium</option>
-                      <option value="large">Large</option>
-                    </select>
-                  </label>
-                  <label className="text-xs font-semibold text-gray-600">
-                    Width: {blockProps.width}px
-                    <input
-                      type="range"
-                      min="80"
-                      max="900"
-                      value={blockProps.width}
-                      onChange={(event) =>
-                        updateBlockProps(props.editor, props.block, {
-                          ...props.block.props,
-                          width: Number(event.target.value),
-                        })
-                      }
-                      className="mt-2 w-full"
-                    />
-                  </label>
-                  <label className="text-xs font-semibold text-gray-600">
-                    Height: {blockProps.height}px
-                    <input
-                      type="range"
-                      min="30"
-                      max="140"
-                      value={blockProps.height}
-                      onChange={(event) =>
-                        updateBlockProps(props.editor, props.block, {
-                          ...props.block.props,
-                          height: Number(event.target.value),
-                        })
-                      }
-                      className="mt-2 w-full"
-                    />
-                  </label>
-                </div>
+              <div contentEditable={false} className="w-full">
+                <details className="w-full max-w-3xl rounded-lg border border-gray-200 bg-white p-3">
+                  <summary className="cursor-pointer select-none text-sm font-semibold text-gray-700">
+                    Design settings
+                  </summary>
 
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  {(
-                    [
-                      ["backgroundColor", "Background"],
-                      ["textColor", "Text"],
-                      ["hoverColor", "Hover"],
-                      ["borderColor", "Border"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label key={key} className="text-xs font-semibold text-gray-600">
-                      {label}
+                  <div className="mt-4 flex flex-col gap-3">
+                    {/* ─── Segmented variant picker ─── */}
+                    <div className="flex flex-col gap-2">
+                      <span className="text-xs font-semibold text-gray-600">Button Style</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateBlockProps(props.editor, props.block, {
+                              ...props.block.props,
+                              variant: "custom",
+                            })
+                          }
+                          className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all cursor-pointer ${variant === "custom"
+                            ? "border-[#2563eb] bg-[#2563eb]/10 shadow-sm"
+                            : "border-gray-200 bg-white hover:border-gray-300"
+                            }`}
+                        >
+                          <span
+                            className="w-full h-6 rounded flex items-center justify-center text-[10px] font-bold"
+                            style={{
+                              backgroundColor: blockProps.backgroundColor ?? "#2563eb",
+                              color: blockProps.textColor ?? "#ffffff",
+                              border: `${blockProps.borderWidth ?? 0}px solid ${blockProps.borderColor ?? "#000000"}`,
+                              borderRadius: `${Math.min(blockProps.radius ?? 8, 10)}px`,
+                            }}
+                          >
+                            Aa
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-700">Custom</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateBlockProps(props.editor, props.block, {
+                              ...props.block.props,
+                              variant: "primary",
+                            })
+                          }
+                          className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all cursor-pointer ${variant === "primary"
+                            ? "border-[#2563eb] bg-[#2563eb]/10 shadow-sm"
+                            : "border-gray-200 bg-white hover:border-gray-300"
+                            }`}
+                        >
+                          <span
+                            className="w-full h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                            style={{
+                              backgroundColor: "#FFBA00",
+                              color: "#012972",
+                              border: "1px solid #0C3278",
+                            }}
+                          >
+                            Aa
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-700">Primary</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateBlockProps(props.editor, props.block, {
+                              ...props.block.props,
+                              variant: "secondary",
+                            })
+                          }
+                          className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all cursor-pointer ${variant === "secondary"
+                            ? "border-[#2563eb] bg-[#2563eb]/10 shadow-sm"
+                            : "border-gray-200 bg-white hover:border-gray-300"
+                            }`}
+                        >
+                          <span
+                            className="w-full h-6 rounded-full flex items-center justify-center text-[10px] font-bold"
+                            style={{
+                              backgroundColor: "#00379d",
+                              color: "#ffffff",
+                              border: "1px solid #ffaf2e",
+                            }}
+                          >
+                            Aa
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-700">Secondary</span>
+                        </button>
+                      </div>
+
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        {variant === "custom" && "Fully customizable colors, borders, and shadow."}
+                        {variant === "primary" && "Matches the 'Start Now / Login' button (yellow)."}
+                        {variant === "secondary" && "Matches the 'View All' button (blue)."}
+                      </p>
+                    </div>
+
+                    {/* ─── Live preview ─── */}
+                    <div className="flex items-center justify-center my-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: buttonPadding(blockProps.size as ButtonSize),
+                          fontSize: buttonFontSize(blockProps.size as ButtonSize),
+                          color: preset.textColor,
+                          backgroundColor: preset.backgroundColor,
+                          border: `${preset.borderWidth}px solid ${preset.borderColor}`,
+                          borderRadius: `${preset.radius}px`,
+                          fontWeight: preset.fontWeight,
+                          ...(preset.fontFamily ? { fontFamily: preset.fontFamily } : {}),
+                          boxShadow: shadowValue(blockProps.shadow as ShadowSize),
+                          minWidth: "120px",
+                        }}
+                      >
+                        {blockProps.text || "Preview"}
+                      </span>
+                    </div>
+
+                    {/* ─── Text & URL ─── */}
+                    <label className="text-xs font-semibold text-gray-600">
+                      Button Text
                       <input
-                        type="color"
-                        value={blockProps[key]}
+                        value={blockProps.text}
                         onChange={(event) =>
                           updateBlockProps(props.editor, props.block, {
                             ...props.block.props,
-                            [key]: event.target.value,
+                            text: event.target.value,
                           })
                         }
-                        className="mt-1 block h-9 w-full cursor-pointer rounded border"
+                        className="mt-1 w-full rounded border bg-white px-3 py-2 text-sm outline-none"
+                        placeholder="Button text"
                       />
                     </label>
-                  ))}
-                </div>
+                    <label className="text-xs font-semibold text-gray-600">
+                      Link URL
+                      <input
+                        value={blockProps.url}
+                        onChange={(event) =>
+                          updateBlockProps(props.editor, props.block, {
+                            ...props.block.props,
+                            url: event.target.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded border bg-white px-3 py-2 text-sm outline-none"
+                        placeholder="https://example.com"
+                      />
+                    </label>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <label className="text-xs font-semibold text-gray-600">
-                    Border: {blockProps.borderWidth}px
-                    <input
-                      type="range"
-                      min="0"
-                      max="8"
-                      value={blockProps.borderWidth}
-                      onChange={(event) =>
-                        updateBlockProps(props.editor, props.block, {
-                          ...props.block.props,
-                          borderWidth: Number(event.target.value),
-                        })
-                      }
-                      className="mt-2 w-full"
-                    />
-                  </label>
-                  <label className="text-xs font-semibold text-gray-600">
-                    Radius: {blockProps.radius}px
-                    <input
-                      type="range"
-                      min="0"
-                      max="50"
-                      value={blockProps.radius}
-                      onChange={(event) =>
-                        updateBlockProps(props.editor, props.block, {
-                          ...props.block.props,
-                          radius: Number(event.target.value),
-                        })
-                      }
-                      className="mt-2 w-full"
-                    />
-                  </label>
-                  <label className="text-xs font-semibold text-gray-600">
-                    Shadow
-                    <select
-                      value={blockProps.shadow}
-                      onChange={(event) =>
-                        updateBlockProps(props.editor, props.block, {
-                          ...props.block.props,
-                          shadow: event.target.value,
-                        })
-                      }
-                      className="mt-1 w-full rounded border bg-white px-2 py-2 text-sm"
-                    >
-                      <option value="none">None</option>
-                      <option value="small">Small</option>
-                      <option value="medium">Medium</option>
-                      <option value="large">Large</option>
-                    </select>
-                  </label>
-                </div>
+                    {/* ─── Layout controls ─── */}
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+                      <label className="text-xs font-semibold text-gray-600">
+                        Alignment
+                        <select
+                          value={blockProps.alignment}
+                          onChange={(event) =>
+                            updateBlockProps(props.editor, props.block, {
+                              ...props.block.props,
+                              alignment: event.target.value,
+                            })
+                          }
+                          className="mt-1 w-full rounded border bg-white px-2 py-2 text-sm"
+                        >
+                          <option value="start">Start</option>
+                          <option value="center">Center</option>
+                          <option value="end">End</option>
+                        </select>
+                      </label>
+                      <label className="text-xs font-semibold text-gray-600">
+                        Size
+                        <select
+                          value={blockProps.size}
+                          onChange={(event) =>
+                            updateBlockProps(props.editor, props.block, {
+                              ...props.block.props,
+                              size: event.target.value,
+                            })
+                          }
+                          className="mt-1 w-full rounded border bg-white px-2 py-2 text-sm"
+                        >
+                          <option value="small">Small</option>
+                          <option value="medium">Medium</option>
+                          <option value="large">Large</option>
+                        </select>
+                      </label>
+                      <label className="text-xs font-semibold text-gray-600">
+                        Width: {blockProps.width}px
+                        <input
+                          type="range"
+                          min="80"
+                          max="900"
+                          value={blockProps.width}
+                          onChange={(event) =>
+                            updateBlockProps(props.editor, props.block, {
+                              ...props.block.props,
+                              width: Number(event.target.value),
+                            })
+                          }
+                          className="mt-2 w-full"
+                        />
+                      </label>
+                      <label className="text-xs font-semibold text-gray-600">
+                        Height: {blockProps.height}px
+                        <input
+                          type="range"
+                          min="30"
+                          max="140"
+                          value={blockProps.height}
+                          onChange={(event) =>
+                            updateBlockProps(props.editor, props.block, {
+                              ...props.block.props,
+                              height: Number(event.target.value),
+                            })
+                          }
+                          className="mt-2 w-full"
+                        />
+                      </label>
+                    </div>
 
-                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={blockProps.newTab}
-                    onChange={(event) =>
-                      updateBlockProps(props.editor, props.block, {
-                        ...props.block.props,
-                        newTab: event.target.checked,
-                      })
-                    }
-                  />
-                  Open link in a new tab
-                </label>
+                    {/* ─── Custom-only color controls ─── */}
+                    {variant === "custom" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                          {(
+                            [
+                              ["backgroundColor", "Background"],
+                              ["textColor", "Text"],
+                              ["hoverColor", "Hover"],
+                              ["borderColor", "Border"],
+                            ] as const
+                          ).map(([key, label]) => (
+                            <label key={key} className="text-xs font-semibold text-gray-600">
+                              {label}
+                              <input
+                                type="color"
+                                value={(blockProps[key] as string) || "#000000"}
+                                onChange={(event) =>
+                                  updateBlockProps(props.editor, props.block, {
+                                    ...props.block.props,
+                                    [key]: event.target.value,
+                                  })
+                                }
+                                className="mt-1 block h-9 w-full cursor-pointer rounded border"
+                              />
+                            </label>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                          <label className="text-xs font-semibold text-gray-600">
+                            Border: {blockProps.borderWidth}px
+                            <input
+                              type="range"
+                              min="0"
+                              max="8"
+                              value={blockProps.borderWidth}
+                              onChange={(event) =>
+                                updateBlockProps(props.editor, props.block, {
+                                  ...props.block.props,
+                                  borderWidth: Number(event.target.value),
+                                })
+                              }
+                              className="mt-2 w-full"
+                            />
+                          </label>
+                          <label className="text-xs font-semibold text-gray-600">
+                            Radius: {blockProps.radius}px
+                            <input
+                              type="range"
+                              min="0"
+                              max="50"
+                              value={blockProps.radius}
+                              onChange={(event) =>
+                                updateBlockProps(props.editor, props.block, {
+                                  ...props.block.props,
+                                  radius: Number(event.target.value),
+                                })
+                              }
+                              className="mt-2 w-full"
+                            />
+                          </label>
+                          <label className="text-xs font-semibold text-gray-600">
+                            Shadow
+                            <select
+                              value={blockProps.shadow}
+                              onChange={(event) =>
+                                updateBlockProps(props.editor, props.block, {
+                                  ...props.block.props,
+                                  shadow: event.target.value,
+                                })
+                              }
+                              className="mt-1 w-full rounded border bg-white px-2 py-2 text-sm"
+                            >
+                              <option value="none">None</option>
+                              <option value="small">Small</option>
+                              <option value="medium">Medium</option>
+                              <option value="large">Large</option>
+                            </select>
+                          </label>
+                        </div>
+                      </>
+                    )}
+
+                    {/* ─── Preset color previews ─── */}
+                    {variant !== "custom" && (
+                      <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="text-xs font-semibold text-gray-600">
+                            Background
+                            <div
+                              className="mt-1 block h-9 w-full rounded border"
+                              style={{ backgroundColor: preset.backgroundColor }}
+                            />
+                          </div>
+                          <div className="text-xs font-semibold text-gray-600">
+                            Text
+                            <div
+                              className="mt-1 block h-9 w-full rounded border"
+                              style={{ backgroundColor: preset.textColor }}
+                            />
+                          </div>
+                          <div className="text-xs font-semibold text-gray-600">
+                            Hover
+                            <div
+                              className="mt-1 block h-9 w-full rounded border"
+                              style={{ backgroundColor: preset.hoverColor }}
+                            />
+                          </div>
+                        </div>
+
+                        <label className="text-xs font-semibold text-gray-600">
+                          Shadow
+                          <select
+                            value={blockProps.shadow}
+                            onChange={(event) =>
+                              updateBlockProps(props.editor, props.block, {
+                                ...props.block.props,
+                                shadow: event.target.value,
+                              })
+                            }
+                            className="mt-1 w-full rounded border bg-white px-2 py-2 text-sm"
+                          >
+                            <option value="none">None</option>
+                            <option value="small">Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                          </select>
+                        </label>
+
+                        <p className="text-[10px] text-gray-500">
+                          Preset colors are locked. Switch to <strong>Custom</strong> to edit individual colors.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* ─── Open in new tab ─── */}
+                    <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={blockProps.newTab}
+                        onChange={(event) =>
+                          updateBlockProps(props.editor, props.block, {
+                            ...props.block.props,
+                            newTab: event.target.checked,
+                          })
+                        }
+                      />
+                      Open link in a new tab
+                    </label>
+                  </div>
+                </details>
               </div>
             )}
 
+            {/* ─── Rendered button (always visible) ─── */}
             <a
               href={safeUrl}
               target={blockProps.newTab ? "_blank" : undefined}
               rel={blockProps.newTab ? "noopener noreferrer" : undefined}
-              className="group/button inline-flex items-center justify-center font-semibold transition-all duration-200"
+              className="group/button inline-flex items-center justify-center transition-all duration-200"
               contentEditable={false}
               style={{
-                // Responsive: shrink below configured width on small screens
                 width: `min(${blockProps.width ?? 220}px, 100%)`,
-                // minHeight instead of height so long labels can wrap on mobile
                 minHeight: `${blockProps.height ?? 48}px`,
                 padding: buttonPadding(blockProps.size as ButtonSize),
                 fontSize: buttonFontSize(blockProps.size as ButtonSize),
-                color: blockProps.textColor ?? "#fff",
-                backgroundColor: blockProps.backgroundColor ?? "#2563eb",
-                border: `${(blockProps.borderWidth ?? 0) > 0 ? `${blockProps.borderWidth}px solid ${blockProps.borderColor ?? "#000"}` : ""}`,
-                borderRadius: `${blockProps.radius ?? 8}px`,
-                boxShadow: blockProps.shadow ? shadowValue(blockProps.shadow as ShadowSize) : "none",
+                color: preset.textColor,
+                backgroundColor: preset.backgroundColor,
+                border: `${preset.borderWidth}px solid ${preset.borderColor}`,
+                borderRadius: `${preset.radius}px`,
+                boxShadow: shadowValue(blockProps.shadow as ShadowSize),
+                fontWeight: preset.fontWeight,
+                ...(preset.fontFamily ? { fontFamily: preset.fontFamily } : {}),
                 whiteSpace: "normal",
                 textAlign: "center",
               }}
               onMouseEnter={(event) => {
-                const target = event.currentTarget;
-                const originalBg = target.style.backgroundColor;
-                const hoverBg = blockProps.hoverColor ?? target.style.backgroundColor;
-                target.style.setProperty("background-color", hoverBg);
+                event.currentTarget.style.backgroundColor = preset.hoverColor;
               }}
               onMouseLeave={(event) => {
-                const target = event.currentTarget;
-                const originalBg = target.style.backgroundColor;
-                const defaultBg = blockProps.backgroundColor ?? originalBg;
-                target.style.setProperty("background-color", defaultBg);
+                event.currentTarget.style.backgroundColor = preset.backgroundColor;
               }}
             >
               {blockProps.text}

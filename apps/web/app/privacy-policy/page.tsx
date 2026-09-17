@@ -9,7 +9,7 @@ export default function PrivacyPolicyPage() {
                 <h1 className="text-4xl font-extrabold text-[#012972] mb-8 font-epilogue">Privacy Policy</h1>
                 <div className="space-y-6 text-[#012972]/80 leading-relaxed text-[15px]">
                     <p>
-                        {"At Auction11, we are committed to protecting your privacy and handling your personal information with care, transparency, and integrity. This Privacy Policy explains how we collect, use, store, and disclose information when you use our Services available at https://www.auction11.live."}
+                        {"At Auction11.live, we are committed to protecting your privacy and handling your personal information with care, transparency, and integrity. This Privacy Policy explains how we collect, use, store, and disclose information when you use our Services available at https://www.auction11.live."}
                     </p>
                     <p>
                         {"By accessing or using our Services, you agree to the practices described in this Privacy Policy. If you do not agree with any part of this policy, please discontinue your use of our Services."}
@@ -27,10 +27,10 @@ export default function PrivacyPolicyPage() {
                             <strong>{"Affiliate "}</strong>{"refers to any entity that controls, is controlled by, or is under common control with a party, where \"control\" means ownership of 50% or more of voting shares or equivalent authority."}
                         </li>
                         <li>
-                            <strong>{"Application "}</strong>{"refers to Auction11, the digital platform and services provided by the Company."}
+                            <strong>{"Application "}</strong>{"refers to Auction11.live, the digital platform and services provided by the Company."}
                         </li>
                         <li>
-                            <strong>{"Company "}</strong>{"(referred to as \"we,\" \"us,\" or \"our\") refers to Auction11, an individual business operating from Belagavi, Karnataka, India."}
+                            <strong>{"Company "}</strong>{"(referred to as \"we,\" \"us,\" or \"our\") refers to Auction11.live, an individual business operating from Belagavi, Karnataka, India."}
                         </li>
                         <li>
                             <strong>{"Device "}</strong>{"refers to any device capable of accessing the Service, including computers, smartphones, and tablets."}
@@ -39,7 +39,7 @@ export default function PrivacyPolicyPage() {
                             <strong>{"Personal Data "}</strong>{"refers to any information that relates to an identified or identifiable individual."}
                         </li>
                         <li>
-                            <strong>{"Service "}</strong>{"refers to the Auction11 platform and all related digital services."}
+                            <strong>{"Service "}</strong>{"refers to the Auction11.live platform and all related digital services."}
                         </li>
                         <li>
                             <strong>{"Service Provider "}</strong>{"refers to any third-party individual or organisation that processes data on behalf of the Company to support the delivery or improvement of the Service."}
@@ -135,7 +135,7 @@ export default function PrivacyPolicyPage() {
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">8. Disclosure of Personal Data</h2>
                     <h3 className="text-xl font-bold text-[#012972] mt-4 mb-2">8.1 Business Transactions</h3>
                     <p>
-                        {"If Auction11 undergoes a merger, acquisition, or asset sale, your Personal Data may be transferred to the acquiring entity. We will notify you before such a transfer and the applicable privacy policy changes take effect."}
+                        {"If Auction11.live undergoes a merger, acquisition, or asset sale, your Personal Data may be transferred to the acquiring entity. We will notify you before such a transfer and the applicable privacy policy changes take effect."}
                     </p>
                     <h3 className="text-xl font-bold text-[#012972] mt-4 mb-2">8.2 Legal Requirements</h3>
                     <p>
@@ -145,7 +145,7 @@ export default function PrivacyPolicyPage() {
                     <p>{"We may also disclose your data in good faith when we believe it is necessary to:"}</p>
                     <ul className="list-disc pl-6 space-y-2">
                         <li>{"Comply with a legal obligation."}</li>
-                        <li>{"Protect and defend the rights or property of Auction11."}</li>
+                        <li>{"Protect and defend the rights or property of Auction11.live."}</li>
                         <li>{"Investigate or prevent possible wrongdoing in connection with our Services."}</li>
                         <li>{"Protect the personal safety of users or the general public."}</li>
                         <li>{"Mitigate legal liability."}</li>
@@ -183,7 +183,7 @@ export default function PrivacyPolicyPage() {
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">13. Contact Us</h2>
                     <p>{"If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:"}</p>
                     <p className="mt-2">
-                        <strong>{"Auction11"}</strong><br />
+                        <strong>{"Auction11.live"}</strong><br />
                         {"Email: auction11.live@gmail.com"}<br />
                         {"Website: https://www.auction11.live"}<br />
                         {"Location: Karnataka, India"}

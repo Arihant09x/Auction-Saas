@@ -3,22 +3,22 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
     title: "Terms & Conditions",
     description:
-        "Read Auction11's terms and conditions. Understand your rights, responsibilities and usage rules when using our cricket auction platform.",
-    keywords: ["terms and conditions", "terms of service", "auction platform terms", "user agreement", "Auction11", " Auction11"],
+        "Read Auction11.live's terms and conditions. Understand your rights, responsibilities and usage rules when using our cricket auction platform.",
+    keywords: ["terms and conditions", "terms of service", "auction platform terms", "user agreement", "Auction11.live", " Auction11.live"],
     openGraph: {
-        title: "Terms & Conditions | Auction11",
+        title: "Terms & Conditions | Auction11.live",
         description:
-            "Read Auction11's terms and conditions. Understand your rights, responsibilities and usage rules when using our cricket auction platform.",
+            "Read Auction11.live's terms and conditions. Understand your rights, responsibilities and usage rules when using our cricket auction platform.",
         url: "https://auctionxi.com/today-auction",
-        siteName: "Auction11",
+        siteName: "Auction11.live",
         type: "website",
         locale: "en_IN",
     },
     twitter: {
         card: "summary_large_image",
-        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11",
+        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11.live",
         description:
-            "Discover today's live player auctions on Auction11. Track player bidding, team formations, budgets, and auction results in real time.",
+            "Discover today's live player auctions on Auction11.live. Track player bidding, team formations, budgets, and auction results in real time.",
     },
 };
 

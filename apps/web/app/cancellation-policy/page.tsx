@@ -9,7 +9,7 @@ export default function TermsAndConditionsPage() {
                 <h1 className="text-4xl font-extrabold text-[#012972] mb-8 font-epilogue">Cancellation & Refund Policy</h1>
                 <div className="space-y-6 text-[#012972]/80 leading-relaxed text-[15px]">
                     <p>
-                        Thank you for choosing Auction11. We are committed to providing a seamless and reliable auction experience. Please read this Cancellation & Refund Policy carefully before placing an order or subscribing to any of our Services. By using our Services and completing a purchase, you acknowledge and agree to the terms outlined in this policy.
+                        Thank you for choosing Auction11.live. We are committed to providing a seamless and reliable auction experience. Please read this Cancellation & Refund Policy carefully before placing an order or subscribing to any of our Services. By using our Services and completing a purchase, you acknowledge and agree to the terms outlined in this policy.
                     </p>
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">1. Interpretation and Definitions</h2>
@@ -20,10 +20,10 @@ export default function TermsAndConditionsPage() {
 
                     <h3 className="text-xl font-bold text-[#012972] mt-4 mb-2">1.2 Definitions</h3>
                     <p>
-                        {"Company (referred to as \"we\", \"us\", or \"our\") refers to Auction11, an individual business operating from Belagavi, Karnataka, India."}
+                        {"Company (referred to as \"we\", \"us\", or \"our\") refers to Auction11.live, an individual business operating from Belagavi, Karnataka, India."}
                     </p>
                     <p>
-                        {"Order means a request placed by you to purchase or access any service offered by Auction11."}
+                        {"Order means a request placed by you to purchase or access any service offered by Auction11.live."}
                     </p>
                     <p>
                         {"You refers to the individual accessing, using, or placing an Order through our platform."}
@@ -31,7 +31,7 @@ export default function TermsAndConditionsPage() {
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">2. Order Cancellation Policy</h2>
                     <p>
-                        {"Once a service Order has been successfully placed and confirmed through the Auction11 platform, it is considered binding. As our Services are digital and delivered upon confirmation, orders generally cannot be cancelled once placed."}
+                        {"Once a service Order has been successfully placed and confirmed through the Auction11.live platform, it is considered binding. As our Services are digital and delivered upon confirmation, orders generally cannot be cancelled once placed."}
                     </p>
                     <p>
                         {"We strongly recommend that you review your selected service package carefully before confirming your purchase."}
@@ -44,7 +44,7 @@ export default function TermsAndConditionsPage() {
 
                     <h3 className="text-xl font-bold text-[#012972] mt-4 mb-2">Condition 1: Non-Delivery of Services</h3>
                     <p>
-                        {"If Auction11 is unable to deliver the purchased service within the timeframe specified in the Auction11 application, you will be eligible for a full refund of the amount paid."}
+                        {"If Auction11.live is unable to deliver the purchased service within the timeframe specified in the Auction11.live application, you will be eligible for a full refund of the amount paid."}
                     </p>
 
                     <h3 className="text-xl font-bold text-[#012972] mt-4 mb-2">Condition 2: Genuine Dispute</h3>
@@ -52,7 +52,7 @@ export default function TermsAndConditionsPage() {
                         {"If you have a genuine, verifiable reason for requesting a refund that does not fall within Condition 1, you may submit a refund request to our support team at auction11.live@gmail.com. Our team will conduct a thorough review of the circumstances and provide a final decision within a reasonable timeframe."}
                     </p>
                     <p>
-                        {"Auction11 reserves the right to approve or decline refund requests based on the outcome of its investigation. All decisions made by Auction11 in this regard shall be considered final."}
+                        {"Auction11.live reserves the right to approve or decline refund requests based on the outcome of its investigation. All decisions made by Auction11.live in this regard shall be considered final."}
                     </p>
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">4. How to Request a Refund</h2>
@@ -69,7 +69,7 @@ export default function TermsAndConditionsPage() {
                         {"Approved refunds will be processed to the original payment method used at the time of purchase. Processing time may vary depending on your bank or payment provider, but typically takes 5–10 business days from the date of approval."}
                     </p>
                     <p>
-                        {"Auction11 does not bear responsibility for any delays caused by third-party payment processors or financial institutions."}
+                        {"Auction11.live does not bear responsibility for any delays caused by third-party payment processors or financial institutions."}
                     </p>
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">6. Non-Refundable Circumstances</h2>
@@ -87,13 +87,13 @@ export default function TermsAndConditionsPage() {
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">7. Modifications to This Policy</h2>
                     <p>
-                        {"Auction11 reserves the right to revise this Cancellation & Refund Policy at any time. Any changes will be posted on our website, and where significant, we will notify you by email. Your continued use of the Services following such changes constitutes your acceptance of the revised policy."}
+                        {"Auction11.live reserves the right to revise this Cancellation & Refund Policy at any time. Any changes will be posted on our website, and where significant, we will notify you by email. Your continued use of the Services following such changes constitutes your acceptance of the revised policy."}
                     </p>
 
                     <h2 className="text-2xl font-bold text-[#012972] mt-8 mb-4">8. Contact Us</h2>
                     <p>{"For any questions or concerns related to cancellations, refunds, or this policy, please reach out to us:"}</p>
                     <ul className="list-disc pl-6 space-y-2">
-                        <li>{"Auction11"}</li>
+                        <li>{"Auction11.live"}</li>
                         <li>{"Email: auction11.live@gmail.com"}</li>
                         <li>{"Website: https://www.auction11.live"}</li>
                         <li>{"Location: Karnataka, India"}</li>

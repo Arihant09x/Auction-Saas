@@ -22,17 +22,36 @@ export class BlogMediaService {
     return { cloudName, apiKey, apiSecret, uploadPreset };
   }
 
-  async uploadImageBase64(base64Data: string, altText?: string, caption?: string, folder = 'blog_media') {
-    if (!base64Data) {
-      throw new BadRequestException('Image base64 content is required');
+  async uploadImageBase64(input: string, altText?: string, caption?: string, folder = 'blog_media') {
+    if (!input) {
+      throw new BadRequestException('Image content is required');
     }
 
+    // ─── NEW: If a URL is passed, save it directly — no Cloudinary call ───
+    if (/^https?:\/\//i.test(input)) {
+      this.logger.log(`Saving image by URL (skipping Cloudinary): ${input}`);
+      return this.prisma.prisma.mediaImage.create({
+        data: {
+          publicId: `external/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          secureUrl: input,
+          width: null,
+          height: null,
+          format: null,
+          size: null,
+          altText: altText || 'Uploaded image',
+          caption: caption || '',
+          folder,
+        },
+      });
+    }
+
+    // ─── Existing base64 path (only runs if base64 is sent) ───
     const { cloudName, apiKey, apiSecret, uploadPreset } = this.getCloudinaryCredentials();
 
     try {
       const timestamp = Math.floor(Date.now() / 1000);
       let payload: any = {
-        file: base64Data.startsWith('data:') ? base64Data : `data:image/jpeg;base64,${base64Data}`,
+        file: input.startsWith('data:') ? input : `data:image/jpeg;base64,${input}`,
         folder,
       };
 
@@ -74,11 +93,11 @@ export class BlogMediaService {
       return media;
     } catch (err: any) {
       this.logger.error(`Cloudinary upload failed: ${err.message}`, err.response?.data);
-      // Fallback mock record for local development testing if Cloudinary credentials missing
+
+      // Fallback: save a placeholder record so the frontend doesn't crash
       const mockPublicId = `blog_media/mock_${Date.now()}`;
-      const mockUrl = base64Data.startsWith('http')
-        ? base64Data
-        : 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80';
+      const mockUrl =
+        'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=80';
 
       return this.prisma.prisma.mediaImage.create({
         data: {
@@ -196,23 +215,35 @@ export class BlogMediaService {
     });
     if (!media) throw new NotFoundException('Media item not found');
 
-    const { cloudName, apiKey, apiSecret } = this.getCloudinaryCredentials();
+    const isExternal = !media.publicId || media.publicId.startsWith('external/');
 
-    if (apiKey && apiSecret) {
-      try {
-        const timestamp = Math.floor(Date.now() / 1000);
-        const signatureStr = `public_id=${media.publicId}&timestamp=${timestamp}${apiSecret}`;
-        const signature = crypto.createHash('sha1').update(signatureStr).digest('hex');
+    // Only attempt Cloudinary destroy for images we actually uploaded there
+    if (!isExternal) {
+      const { cloudName, apiKey, apiSecret } = this.getCloudinaryCredentials();
 
-        await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
-          public_id: media.publicId,
-          api_key: apiKey,
-          timestamp,
-          signature,
-        });
-      } catch (err: any) {
-        this.logger.warn(`Failed to destroy Cloudinary image ${media.publicId}: ${err.message}`);
+      if (apiKey && apiSecret) {
+        try {
+          const timestamp = Math.floor(Date.now() / 1000);
+          const signatureStr = `public_id=${media.publicId}&timestamp=${timestamp}${apiSecret}`;
+          const signature = crypto.createHash('sha1').update(signatureStr).digest('hex');
+
+          await axios.post(
+            `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
+            {
+              public_id: media.publicId,
+              api_key: apiKey,
+              timestamp,
+              signature,
+            },
+          );
+        } catch (err: any) {
+          this.logger.warn(
+            `Failed to destroy Cloudinary image ${media.publicId}: ${err.message}`,
+          );
+        }
       }
+    } else {
+      this.logger.log(`Skipping Cloudinary destroy for external URL: ${media.secureUrl}`);
     }
 
     return this.prisma.prisma.mediaImage.delete({ where: { id } });

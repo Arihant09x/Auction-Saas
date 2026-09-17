@@ -16,5 +16,14 @@
   "engines": {
     "node": ">=18"
   },
-  "packageManager": "pnpm@9.0.0"
+  "packageManager": "pnpm@9.0.0",
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.0",
+      "react-dom": "19.2.0",
+      "@blocknote/core": "0.54.0",
+      "@blocknote/react": "0.54.0",
+      "@blocknote/mantine": "0.54.0"
+    }
+  }
 }

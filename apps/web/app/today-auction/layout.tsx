@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Today's Auctions | Cricket, Football & Kabaddi ",
+    title: "Today's Auctions | Cricket, Football & Kabaddi | Auction 11 ",
     description:
-        "Discover today's live player auctions on Auction11.Track player bidding, team formations, budgets, and auction results in real time.",
+        "Discover today's live player auctions on Auction11.live.Track player bidding, team formations, budgets, and auction results in real time.",
     keywords: ["Auction today", "Today's Auction"],
     openGraph: {
-        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11",
+        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction 11",
         description:
-            "Discover today's live player auctions on Auction11. Track player bidding, team formations, budgets, and auction results in real time.",
-        url: "https://auctionxi.com/today-auction",
-        siteName: "Auction11",
+            "Discover today's live player auctions on Auction11.live.Track player bidding, team formations, budgets, and auction results in real time.",
+        url: "https://auction11.live/today-auction",
+        siteName: "Auction11.live",
         type: "website",
         locale: "en_IN",
     },

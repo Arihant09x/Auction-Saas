@@ -491,7 +491,7 @@ export default function PaymentPage() {
                                 {activePolicy === "cancellation" ? (
                                     <>
                                         <p className="font-semibold text-gray-800">
-                                            {"Thank you for choosing Auction11. We are committed to providing a seamless and reliable auction experience. Please read this Cancellation & Refund Policy carefully before placing an order or subscribing to any of our Services. By using our Services and completing a purchase, you acknowledge and agree to the terms outlined in this policy."}
+                                            {"Thank you for choosing Auction11.live. We are committed to providing a seamless and reliable auction experience. Please read this Cancellation & Refund Policy carefully before placing an order or subscribing to any of our Services. By using our Services and completing a purchase, you acknowledge and agree to the terms outlined in this policy."}
                                         </p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">1. Interpretation and Definitions</h4>
@@ -499,26 +499,26 @@ export default function PaymentPage() {
                                         <p>{"Capitalised terms used in this policy carry the meanings defined below and shall have the same interpretation whether they appear in singular or plural form."}</p>
                                         <h5 className="font-semibold text-gray-900 mt-2">1.2 Definitions</h5>
                                         <ul className="list-disc pl-5 space-y-2 mt-1">
-                                            <li><strong>{"Company "}</strong>{"(referred to as \"we,\" \"us,\" or \"our\") refers to Auction11, an individual business operating from Belagavi, Karnataka, India."}</li>
-                                            <li><strong>{"Order "}</strong>{"means a request placed by you to purchase or access any service offered by Auction11."}</li>
+                                            <li><strong>{"Company "}</strong>{"(referred to as \"we,\" \"us,\" or \"our\") refers to Auction11.live, an individual business operating from Belagavi, Karnataka, India."}</li>
+                                            <li><strong>{"Order "}</strong>{"means a request placed by you to purchase or access any service offered by Auction11.live."}</li>
                                             <li><strong>{"You "}</strong>{"refers to the individual accessing, using, or placing an Order through our platform."}</li>
                                         </ul>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">2. Order Cancellation Policy</h4>
-                                        <p>{"Once a service Order has been successfully placed and confirmed through the Auction11 platform, it is considered binding. As our Services are digital and delivered upon confirmation, orders generally cannot be cancelled once placed."}</p>
+                                        <p>{"Once a service Order has been successfully placed and confirmed through the Auction11.live platform, it is considered binding. As our Services are digital and delivered upon confirmation, orders generally cannot be cancelled once placed."}</p>
                                         <p>{"We strongly recommend that you review your selected service package carefully before confirming your purchase."}</p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">3. Eligibility for Refund</h4>
                                         <p>{"While orders are non-cancellable by default, we recognise that exceptional circumstances may arise. A refund may be considered under the following conditions only:"}</p>
                                         <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mt-2">
                                             <p className="font-bold text-emerald-900">{"Condition 1: Non-Delivery of Services"}</p>
-                                            <p className="text-emerald-800 mt-1">{"If Auction11 is unable to deliver the purchased service within the timeframe specified in the Auction11 application, you will be eligible for a full refund of the amount paid."}</p>
+                                            <p className="text-emerald-800 mt-1">{"If Auction11.live is unable to deliver the purchased service within the timeframe specified in the Auction11.live application, you will be eligible for a full refund of the amount paid."}</p>
                                         </div>
                                         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mt-2">
                                             <p className="font-bold text-blue-900">{"Condition 2: Genuine Dispute"}</p>
                                             <p className="text-blue-800 mt-1">{"If you have a genuine, verifiable reason for requesting a refund that does not fall within Condition 1, you may submit a refund request to our support team at auction11.live@gmail.com. Our team will conduct a thorough review of the circumstances and provide a final decision within a reasonable timeframe."}</p>
                                         </div>
-                                        <p className="mt-2">{"Auction11 reserves the right to approve or decline refund requests based on the outcome of its investigation. All decisions made by Auction11 in this regard shall be considered final."}</p>
+                                        <p className="mt-2">{"Auction11.live reserves the right to approve or decline refund requests based on the outcome of its investigation. All decisions made by Auction11.live in this regard shall be considered final."}</p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">4. How to Request a Refund</h4>
                                         <ol className="list-decimal pl-5 space-y-2 mt-1">
@@ -529,7 +529,7 @@ export default function PaymentPage() {
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">5. Refund Processing</h4>
                                         <p>{"Approved refunds will be processed to the original payment method used at the time of purchase. Processing time may vary depending on your bank or payment provider, but typically takes 5–10 business days from the date of approval."}</p>
-                                        <p>{"Auction11 does not bear responsibility for any delays caused by third-party payment processors or financial institutions."}</p>
+                                        <p>{"Auction11.live does not bear responsibility for any delays caused by third-party payment processors or financial institutions."}</p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">6. Non-Refundable Circumstances</h4>
                                         <p>{"Refunds will not be issued in the following situations:"}</p>
@@ -541,12 +541,12 @@ export default function PaymentPage() {
                                         </ul>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">7. Modifications to This Policy</h4>
-                                        <p>{"Auction11 reserves the right to revise this Cancellation & Refund Policy at any time. Any changes will be posted on our website, and where significant, we will notify you by email. Your continued use of the Services following such changes constitutes your acceptance of the revised policy."}</p>
+                                        <p>{"Auction11.live reserves the right to revise this Cancellation & Refund Policy at any time. Any changes will be posted on our website, and where significant, we will notify you by email. Your continued use of the Services following such changes constitutes your acceptance of the revised policy."}</p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">8. Contact Us</h4>
                                         <p>{"For any questions or concerns related to cancellations, refunds, or this policy, please reach out to us:"}</p>
                                         <p className="bg-gray-50 border border-gray-100 rounded-xl p-4 mt-2">
-                                            <strong>{"Auction11"}</strong><br />
+                                            <strong>{"Auction11.live"}</strong><br />
                                             {"Email: auction11.live@gmail.com"}<br />
                                             {"Website: https://www.auction11.live"}<br />
                                             {"Location: Karnataka, India"}
@@ -555,17 +555,17 @@ export default function PaymentPage() {
                                 ) : (
                                     <>
                                         <p className="font-semibold text-gray-800">
-                                            {"Auction11 is a fully digital platform that delivers online cricket auction services. We do not manufacture, stock, or ship any physical products. This Shipping & Delivery Policy outlines how we fulfil service orders, manage digital delivery, and address related queries. By placing an order on our platform, you acknowledge and agree to the terms described in this policy."}
+                                            {"Auction11.live is a fully digital platform that delivers online cricket auction services. We do not manufacture, stock, or ship any physical products. This Shipping & Delivery Policy outlines how we fulfil service orders, manage digital delivery, and address related queries. By placing an order on our platform, you acknowledge and agree to the terms described in this policy."}
                                         </p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">1. Nature of Services</h4>
-                                        <p>{"All products and services offered by Auction11 are digital in nature. Upon successful purchase, you will receive access to the relevant features or service packages within the Auction11 application. No physical delivery is required or applicable."}</p>
+                                        <p>{"All products and services offered by Auction11.live are digital in nature. Upon successful purchase, you will receive access to the relevant features or service packages within the Auction11.live application. No physical delivery is required or applicable."}</p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">2. Order Confirmation and Fulfilment</h4>
                                         <p>{"Upon completing a purchase, you will receive:"}</p>
                                         <ul className="list-disc pl-5 space-y-2 mt-1">
                                             <li>{"A confirmation email containing your order details, selected service package, and access instructions."}</li>
-                                            <li>{"Access to your purchased auction service through the Auction11 application, based on the package chosen."}</li>
+                                            <li>{"Access to your purchased auction service through the Auction11.live application, based on the package chosen."}</li>
                                             <li>{"The ability to track the progress of your auction in real-time directly through the platform."}</li>
                                         </ul>
                                         <p className="mt-2">{"If you do not receive a confirmation email within a reasonable time after placing your order, please check your spam or junk folder, or contact our support team at auction11.live@gmail.com."}</p>
@@ -573,19 +573,19 @@ export default function PaymentPage() {
                                         <h4 className="font-bold text-gray-950 text-base mt-6">3. Digital Access and Delivery</h4>
                                         <p>{"Access to purchased services is typically granted immediately or within a short period following confirmation of your payment. The specific service features available to you will depend on your chosen service package. In the event of technical issues or delays in service activation, our team will work diligently to resolve the matter and ensure prompt access."}</p>
 
-                                        <h4 className="font-bold text-gray-950 text-base mt-6">4. Service Cancellations by Auction11</h4>
+                                        <h4 className="font-bold text-gray-950 text-base mt-6">4. Service Cancellations by Auction11.live</h4>
                                         <p>{"We reserve the right to cancel your order if we are unable to provide the requested service due to technical limitations, platform incompatibility, or other operational constraints. In such cases, you will be entitled to a full refund of any amount paid. We will notify you promptly via email in the event that your order is cancelled by us, along with the reason for cancellation and refund timelines."}</p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">5. Refunds</h4>
                                         <p>{"For details regarding refund eligibility and the process for requesting a refund, please refer to our Cancellation & Refund Policy, available on our website. Refund decisions are subject to the conditions outlined therein."}</p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">6. Changes to This Policy</h4>
-                                        <p>{"Auction11 reserves the right to update or modify this Shipping & Delivery Policy at any time. In the event of significant changes, we will notify you via email and update this page accordingly. Your continued use of the Services following such changes indicates your acceptance of the revised policy."}</p>
+                                        <p>{"Auction11.live reserves the right to update or modify this Shipping & Delivery Policy at any time. In the event of significant changes, we will notify you via email and update this page accordingly. Your continued use of the Services following such changes indicates your acceptance of the revised policy."}</p>
 
                                         <h4 className="font-bold text-gray-950 text-base mt-6">7. Contact Us</h4>
                                         <p>{"If you have any questions regarding your order, service delivery, or this policy, please get in touch with us:"}</p>
                                         <p className="bg-gray-50 border border-gray-100 rounded-xl p-4 mt-2">
-                                            <strong>{"Auction11"}</strong><br />
+                                            <strong>{"Auction11.live"}</strong><br />
                                             {"Email: auction11.live@gmail.com"}<br />
                                             {"Website: https://www.auction11.live"}<br />
                                             {"Location: Karnataka, India"}

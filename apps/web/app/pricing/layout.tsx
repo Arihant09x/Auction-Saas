@@ -1,24 +1,24 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Player Auction Software Pricing & Plans ",
+    title: "Player Auction Software Pricing & Plans | Auction 11 ",
     description:
-        "Compare Auction11 pricing plans and find the perfect solution for your tournament. Run live player auctions with advanced features and real-time bidding.",
+        "Compare Auction11.live pricing plans and find the perfect solution for your tournament. Run live player auctions with advanced features and real-time bidding.",
     keywords: ["upcoming auctions", "scheduled sports auctions", "cricket auction calendar", "football auction schedule", "kabaddi auction", " Auction11"],
     openGraph: {
         title: "Player Auction Software Pricing & Plans | Auction 11",
         description:
-            "Compare Auction11 pricing plans and find the perfect solution for your tournament. Run live player auctions with advanced features and real-time bidding.",
-        url: "https://auctionxi.com/today-auction",
-        siteName: "Auction11",
+            "Compare Auction11.live pricing plans and find the perfect solution for your tournament. Run live player auctions with advanced features and real-time bidding.",
+        url: "https://auction11.live/pricing",
+        siteName: "Auction11.live",
         type: "website",
         locale: "en_IN",
     },
     twitter: {
         card: "summary_large_image",
-        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11",
+        title: "Player Auction Software Pricing & Plans | Auction 11",
         description:
-            "Discover today's live player auctions on Auction11. Track player bidding, team formations, budgets, and auction results in real time.",
+            "Compare Auction11.live pricing plans and find the perfect solution for your tournament. Run live player auctions with advanced features and real-time bidding.",
     },
 };
 

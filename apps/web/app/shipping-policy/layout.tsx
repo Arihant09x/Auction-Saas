@@ -3,22 +3,22 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
     title: "Shipping & Delivery Policy",
     description:
-        "Read Auction11's Shipping & Delivery Policy to understand account activation timelines, service delivery, subscription access, and platform onboarding.",
-    keywords: ["upcoming auctions", "scheduled sports auctions", "cricket auction calendar", "football auction schedule", "kabaddi auction", " Auction11"],
+        "Read Auction11.live's Shipping & Delivery Policy to understand account activation timelines, service delivery, subscription access, and platform onboarding.",
+    keywords: ["upcoming auctions", "scheduled sports auctions", "cricket auction calendar", "football auction schedule", "kabaddi auction", " Auction11.live"],
     openGraph: {
-        title: "Shipping & Delivery Policy | Auction11",
+        title: "Shipping & Delivery Policy | Auction11.live",
         description:
-            "Read Auction11's Shipping & Delivery Policy to understand account activation timelines, service delivery, subscription access, and platform onboarding.",
+            "Read Auction11.live's Shipping & Delivery Policy to understand account activation timelines, service delivery, subscription access, and platform onboarding.",
         url: "https://auctionxi.com/today-auction",
-        siteName: "Auction11",
+        siteName: "Auction11.live",
         type: "website",
         locale: "en_IN",
     },
     twitter: {
         card: "summary_large_image",
-        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11",
+        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11.live",
         description:
-            "Discover today's live player auctions on Auction11. Track player bidding, team formations, budgets, and auction results in real time.",
+            "Discover today's live player auctions on Auction11.live. Track player bidding, team formations, budgets, and auction results in real time.",
     },
 };
 

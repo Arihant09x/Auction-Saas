@@ -36,16 +36,16 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL("https://auction11.live"),
   title: {
-    default: "Auction11 – Live Player Auction Platform for Tournaments",
-    template: "%s | Auction 11",
+    default: "Auction11.live – Live Player Auction Platform for Tournaments",
+    template: "%s | Auction 11.live",
   },
   description:
-    "Auction11 helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
+    "Auction11.live helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
   keywords: ["cricket auction", "ipl auction software", "online cricket auction", "player auction platform", "real-time bidding", "Auction 11", "cricket team auction"],
   openGraph: {
-    title: "Auction11 – Live Player Auction Platform for Tournaments",
+    title: "Auction11.live – Live Player Auction Platform for Tournaments",
     description:
-      "Auction11 helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
+      "Auction11.live helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
     url: "https://auction11.live",
     siteName: "Auction11",
     type: "website",
@@ -53,8 +53,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Auction 11 — The Ultimate Cricket Auction Software",
-    description: "Run professional, real-time cricket player auctions online.",
+    title: "Auction11.live – Live Player Auction Platform for Tournaments",
+    description: "Auction11.live helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
   },
   robots: {
     index: true,

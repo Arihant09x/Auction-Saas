@@ -3,22 +3,22 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
     title: "Privacy Policy",
     description:
-        "Auction11's privacy policy explains how we collect, use and protect your data on our cricket auction platform. Your privacy matters - read how we keep it safe.",
-    keywords: ["upcoming auctions", "scheduled sports auctions", "cricket auction calendar", "football auction schedule", "kabaddi auction", " Auction11"],
+        "Auction11.live's privacy policy explains how we collect, use and protect your data on our cricket auction platform. Your privacy matters - read how we keep it safe.",
+    keywords: ["upcoming auctions", "scheduled sports auctions", "cricket auction calendar", "football auction schedule", "kabaddi auction", " Auction11.live"],
     openGraph: {
-        title: "Privacy Policy | Auction11",
+        title: "Privacy Policy | Auction11.live",
         description:
-            "Auction11's privacy policy explains how we collect, use and protect your data on our cricket auction platform. Your privacy matters - read how we keep it safe.",
+            "Auction11.live's privacy policy explains how we collect, use and protect your data on our cricket auction platform. Your privacy matters - read how we keep it safe.",
         url: "https://auctionxi.com/today-auction",
-        siteName: "Auction11",
+        siteName: "Auction11.live",
         type: "website",
         locale: "en_IN",
     },
     twitter: {
         card: "summary_large_image",
-        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11",
+        title: "Today's Auctions | Cricket, Football & Kabaddi | Auction11.live",
         description:
-            "Discover today's live player auctions on Auction11. Track player bidding, team formations, budgets, and auction results in real time.",
+            "Discover today's live player auctions on Auction11.live. Track player bidding, team formations, budgets, and auction results in real time.",
     },
 };
 
