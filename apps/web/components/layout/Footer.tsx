@@ -37,7 +37,7 @@ export function Footer() {
     ];
 
     return (
-        <footer className="relative pt-16 pb-8 overflow-hidden" style={{ background: "#012972" }}>
+        <footer data-anim="footer-fade" className="relative pt-16 pb-8 overflow-hidden" style={{ background: "#012972" }}>
             <GlobalBackground variants="footer" />
             <div className="absolute top-0 left-0 w-full h-px z-10 bg-white/15" />
 
@@ -77,9 +77,9 @@ export function Footer() {
 
                     {/* Quick Links */}
                     <div>
-                        <h4 className="text-white font-bold text-base mb-5 font-['Poppins'] tracking-wide">
+                        <h3 className="text-white font-bold text-base mb-5 font-['Poppins'] tracking-wide">
                             Quick Links
-                        </h4>
+                        </h3>
                         <ul className="space-y-3">
                             {quickLinks.map((link) => (
                                 <li key={link.label}>
@@ -96,9 +96,9 @@ export function Footer() {
 
                     {/* Follow Us (Socials as List with Icon + Name) */}
                     <div>
-                        <h4 className="text-white font-bold text-base mb-5 font-['Poppins'] tracking-wide">
+                        <h3 className="text-white font-bold text-base mb-5 font-['Poppins'] tracking-wide">
                             Follow Us On
-                        </h4>
+                        </h3>
                         <ul className="space-y-3">
                             {socialLinks.map((social) => (
                                 <li key={social.label}>
@@ -118,9 +118,9 @@ export function Footer() {
 
                     {/* Contact Info */}
                     <div>
-                        <h4 className="text-white font-bold text-base mb-5 font-['Poppins'] tracking-wide">
+                        <h3 className="text-white font-bold text-base mb-5 font-['Poppins'] tracking-wide">
                             Contact
-                        </h4>
+                        </h3>
                         <ul className="space-y-5">
                             <li className="flex items-center gap-3">
                                 <Phone size={16} color="white" className="shrink-0" />
@@ -143,7 +143,7 @@ export function Footer() {
                 {/* Bottom Legal Bar */}
                 <div className="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <p className="text-xs sm:text-sm text-white/70 font-medium font-['Poppins'] text-center sm:text-left">
-                        © {currentYear} Auction 11. All rights reserved.
+                        © {currentYear} Auction11.live All rights reserved.
                     </p>
                     <div className="flex flex-wrap justify-center sm:justify-end gap-x-6 gap-y-2">
                         <Link

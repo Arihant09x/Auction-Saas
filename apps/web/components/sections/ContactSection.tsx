@@ -56,6 +56,7 @@ export function ContactSection() {
     return (
         <section
             id="contact"
+            data-anim="scale-in"
             className="py-16 lg:py-24 relative z-10 w-full flex justify-center bg-transparent mt-[-10px]"
         >
             <motion.div
@@ -68,25 +69,25 @@ export function ContactSection() {
                 <div className="grid lg:grid-cols-2 gap-10 items-stretch">
 
                     {/* Left side: Illustration and Info */}
-                    <div className="flex flex-col h-full bg-[#f9fbff] p-8 rounded-[16px] border border-[#e2efff]">
+                    <div className="flex flex-col justify-center h-full bg-[#f9fbff] p-8 rounded-2xl border border-[#e2efff]">
                         <div className="relative w-full aspect-square max-w-[320px] mx-auto mb-8 bg-white/50 rounded-2xl flex items-center justify-center">
                             {/* Placeholder for customer support illustration */}
                             <div className="absolute inset-0 bg-[#0A307F] opacity-[0.03] rounded-2xl" />
                             <img src="https://tse1.mm.bing.net/th/id/OIP.gSkpI5uIEa8Qxa_qfvSSpwHaHa?pid=Api&P=0&w=300&h=300" alt="Customer Support" />
                         </div>
 
-                        <div className="flex flex-col gap-6 mt-auto">
+                        <div className="flex flex-col gap-6">
                             <div className="flex items-center gap-4">
                                 <Phone size={20} color="#00379d" className="shrink-0" />
-                                <span className="text-[14px] font-semibold text-[#012972]">+91 80731 82649</span>
+                                <span className="text-sm font-semibold text-[#012972]">+91 80731 82649</span>
                             </div>
                             <div className="flex items-center gap-4">
                                 <Mail size={20} color="#00379d" className="shrink-0" />
-                                <span className="text-[14px] font-semibold text-[#012972]">auction11.live@gmail.com</span>
+                                <span className="text-sm font-semibold text-[#012972]">auction11.live@gmail.com</span>
                             </div>
                             <div className="flex items-center gap-4">
                                 <MapPin size={24} color="#00379d" className="shrink-0" />
-                                <span className="text-[14px] font-semibold text-[#012972] leading-tight">
+                                <span className="text-sm font-semibold text-[#012972] leading-tight">
                                     Karnataka, India
                                 </span>
                             </div>
@@ -96,67 +97,63 @@ export function ContactSection() {
                     {/* Right side: Form */}
                     <div className="flex flex-col py-4">
                         <div className="mb-8 relative w-fit">
-                            <h2 className="text-[28px] font-bold text-[#012972] mb-2 font-['Poppins']">Get in Touch</h2>
-                            <p className="text-[14px] text-[#4a6090]">Any question or remarks? Let us know!</p>
+                            <h2 className="text-2xl font-bold text-[#012972] mb-2 font-['Poppins']">Get in Touch</h2>
+                            <p className="text-sm text-[#4a6090]">Any question or remarks? Let us know!</p>
                             <div className="absolute -bottom-3 left-0 w-1/2 h-[3px] bg-[#00379d] rounded-full" />
                         </div>
 
                         <form className="flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#012972]">Name *</label>
+                                <label className="text-xs font-bold text-[#012972]">Name *</label>
                                 <input
                                     {...register("name")}
                                     type="text"
                                     placeholder="Enter your name"
-                                    className={`w-full h-11 px-4 rounded-[8px] bg-white border text-[14px] text-[#012972] shadow-sm focus:outline-none transition-colors ${
-                                        errors.name
-                                            ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                                            : "border-[#d1d5db] focus:border-[#00379d]"
-                                    }`}
+                                    className={`w-full h-11 px-4 rounded-lg bg-white border text-sm text-[#012972] shadow-sm focus:outline-none transition-colors ${errors.name
+                                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                                        : "border-[#d1d5db] focus:border-[#00379d]"
+                                        }`}
                                 />
                                 {errors.name && <p className="text-red-500 text-xs mt-0.5 font-semibold">{errors.name.message}</p>}
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#012972]">Email ID *</label>
+                                <label className="text-xs font-bold text-[#012972]">Email ID *</label>
                                 <input
                                     {...register("email")}
                                     type="email"
                                     placeholder="Enter your email"
-                                    className={`w-full h-11 px-4 rounded-[8px] bg-white border text-[14px] text-[#012972] shadow-sm focus:outline-none transition-colors ${
-                                        errors.email
-                                            ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                                            : "border-[#d1d5db] focus:border-[#00379d]"
-                                    }`}
+                                    className={`w-full h-11 px-4 rounded-lg bg-white border text-sm text-[#012972] shadow-sm focus:outline-none transition-colors ${errors.email
+                                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                                        : "border-[#d1d5db] focus:border-[#00379d]"
+                                        }`}
                                 />
                                 {errors.email && <p className="text-red-500 text-xs mt-0.5 font-semibold">{errors.email.message}</p>}
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#012972]">Mobile Number</label>
+                                <label className="text-xs font-bold text-[#012972]">Mobile Number</label>
                                 <input
                                     {...register("mobile")}
                                     type="tel"
                                     placeholder="Enter your mobile number"
-                                    className={`w-full h-11 px-4 rounded-[8px] bg-white border text-[14px] text-[#012972] shadow-sm focus:outline-none transition-colors ${
-                                        errors.mobile
-                                            ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                                            : "border-[#d1d5db] focus:border-[#00379d]"
-                                    }`}
+                                    className={`w-full h-11 px-4 rounded-lg bg-white border text-sm text-[#012972] shadow-sm focus:outline-none transition-colors ${errors.mobile
+                                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                                        : "border-[#d1d5db] focus:border-[#00379d]"
+                                        }`}
                                 />
                                 {errors.mobile && <p className="text-red-500 text-xs mt-0.5 font-semibold">{errors.mobile.message}</p>}
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[13px] font-bold text-[#012972]">Your Message *</label>
+                                <label className="text-xs font-bold text-[#012972]">Your Message *</label>
                                 <textarea
                                     {...register("message")}
                                     placeholder="Enter your message"
-                                    className={`w-full h-28 p-4 rounded-[8px] bg-white border text-[14px] text-[#012972] resize-none shadow-sm focus:outline-none transition-colors ${
-                                        errors.message
-                                            ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                                            : "border-[#d1d5db] focus:border-[#00379d]"
-                                    }`}
+                                    className={`w-full h-28 p-4 rounded-lg bg-white border text-sm text-[#012972] resize-none shadow-sm focus:outline-none transition-colors ${errors.message
+                                        ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                                        : "border-[#d1d5db] focus:border-[#00379d]"
+                                        }`}
                                 />
                                 {errors.message && <p className="text-red-500 text-xs mt-0.5 font-semibold">{errors.message.message}</p>}
                             </div>
@@ -164,7 +161,7 @@ export function ContactSection() {
                             <Button
                                 type="submit"
                                 disabled={isSubmitting}
-                                className="mt-4 bg-[#012972] text-white font-bold py-3.5 px-10 rounded-[99px] border border-[#ffaf2e] hover:opacity-90 hover:scale-105 transition-all duration-200 w-full max-w-[180px] text-[15px] shadow-[0_4px_16px_rgba(0,55,157,0.2)] focus:ring-2 focus:ring-[#ffaf2e] focus:outline-none w-[160px] self-end font-epilogue disabled:opacity-50"
+                                className="mt-4 bg-[#00379d] text-white font-bold py-3.5 px-10 rounded-full border border-[#ffaf2e] hover:opacity-90 hover:scale-105 hover:bg-[#002a6e] transition-all duration-200 min-h-[44px] text-sm shadow-[0_4px_16px_rgba(0,55,157,0.2)] focus:ring-2 focus:ring-[#ffaf2e] focus:outline-none w-[160px] self-end font-epilogue disabled:opacity-50"
                             >
                                 {isSubmitting ? "Sending..." : "Submit"}
                             </Button>

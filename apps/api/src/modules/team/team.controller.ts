@@ -27,11 +27,11 @@ export class TeamController {
 
   // GET /team?auctionId=id
   @Get()
-  findAll(@Query("auctionId") auctionId: string) {
-    return this.teamService.findAllByAuction(auctionId);
+  findAll(@Query("auctionId") auctionId: string, @Request() req: any) {
+    return this.teamService.findAllByAuction(auctionId, req.user.id, req.user.role);
   }
 
-  //PATCH /team?auctionID=id
+  // PATCH /team/:id
   @Patch(":id")
   update(
     @Param("id") id: string,

@@ -6,6 +6,7 @@ import * as crypto from "crypto";
 import { PLAN_LIMITS } from "../../common/constants/plan-limits";
 import { PlanTier } from "@repo/database_postgres";
 import { config } from "dotenv";
+import { validateAuctionOwnership } from "../../common/helpers/ownership.helper";
 
 config();
 
@@ -28,7 +29,6 @@ export class PaymentService {
   ) {
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    console.log("KEYID AND KEY SECRET", keyId, keySecret);
     if (!keyId || !keySecret) {
       throw new Error("Razorpay configuration is missing");
     }
@@ -39,20 +39,23 @@ export class PaymentService {
     });
   }
 
-  // 1. Create Order
-  // 1. Create Order
+  // 1. Create Order with Authorization
   async createOrder(
     userId: string,
+    userRole: string,
     auctionId: string,
     targetPlan: keyof typeof PLAN_LIMITS
   ) {
-    const auction = await this.prisma.prisma.auction.findUnique({
-      where: { id: auctionId },
-    });
-    if (!auction) throw new BadRequestException("Auction not found");
+    // 🔒 Verify ownership before creating order for this auction
+    const auction = await validateAuctionOwnership(
+      this.prisma,
+      auctionId,
+      userId,
+      userRole
+    );
 
-    const currentPlan = auction.planTier as keyof typeof PLAN_LIMITS; // e.g., 'BASIC'
-    const currentPrice = PLAN_LIMITS[currentPlan].price || 0;
+    const currentPlan = auction.planTier as keyof typeof PLAN_LIMITS;
+    const currentPrice = PLAN_LIMITS[currentPlan]?.price || 0;
     const targetPrice = PLAN_LIMITS[targetPlan]?.price || 0;
 
     // 2. Validation
@@ -62,15 +65,12 @@ export class PaymentService {
     if (auction.isPaid && targetPlan === currentPlan) {
       throw new BadRequestException("Plan already active");
     }
-    // 3. PRORATED CALCULATION (Pay only the difference)
+
+    // 3. PRORATED CALCULATION
     let amountToPay = targetPrice;
 
-    // If they already paid for a plan, subtract that amount
     if (auction.isPaid && targetPrice > currentPrice) {
       amountToPay = targetPrice - currentPrice;
-      (
-        `User upgrading from ${currentPlan} to ${targetPlan}. Paying difference: ${amountToPay}`
-      );
     } else if (targetPrice <= currentPrice && auction.isPaid) {
       throw new BadRequestException(
         "You cannot downgrade or pay for a cheaper plan via this endpoint."
@@ -91,7 +91,7 @@ export class PaymentService {
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
-        key_id: "rzp_test_Rucoly3LqinHM4",
+        key_id: process.env.RAZORPAY_KEY_ID,
         plan: targetPlan,
       };
     } catch (error) {
@@ -100,15 +100,30 @@ export class PaymentService {
     }
   }
 
-  // 2. Verify Payment (Crucial Security Step)
-  async verifyPayment(dto: {
-    razorpayOrderId: string;
-    razorpayPaymentId: string;
-    razorpaySignature: string;
-    auctionId: string;
-    targetPlan: PlanTier; // Use Enum type if possible
-  }) {
-    const secret = this.configService.get("razorpay.key_secret");
+  // 2. Verify Payment with Authorization
+  async verifyPayment(
+    userId: string,
+    userRole: string,
+    dto: {
+      razorpayOrderId: string;
+      razorpayPaymentId: string;
+      razorpaySignature: string;
+      auctionId: string;
+      targetPlan: PlanTier;
+    }
+  ) {
+    // 🔒 Verify ownership before updating payment state
+    await validateAuctionOwnership(
+      this.prisma,
+      dto.auctionId,
+      userId,
+      userRole
+    );
+
+    const secret =
+      process.env.RAZORPAY_KEY_SECRET ||
+      this.configService.get("razorpay.key_secret") ||
+      "";
 
     // Formula provided by Razorpay to check signature
     const generated_signature = crypto
@@ -122,7 +137,6 @@ export class PaymentService {
 
     // 🔒 TRANSACTION START
     return this.prisma.prisma.$transaction(async (tx: any) => {
-      // 1️⃣ Lock auction row
       const auction = await tx.auction.findUnique({
         where: { id: dto.auctionId },
       });
@@ -130,20 +144,17 @@ export class PaymentService {
       if (!auction) throw new BadRequestException("Auction not found");
 
       const currentPlan = auction.planTier as PlanTier;
-      const currentPrice = PLAN_LIMITS[currentPlan].price;
-      const targetPrice = PLAN_LIMITS[dto.targetPlan].price;
+      const currentPrice = PLAN_LIMITS[currentPlan]?.price || 0;
+      const targetPrice = PLAN_LIMITS[dto.targetPlan]?.price || 0;
 
-      // 2️⃣ Validate plan upgrade
       if (targetPrice <= currentPrice) {
         throw new BadRequestException("Plan downgrade not allowed");
       }
 
-      // 3️⃣ Prevent duplicate payment
       if (auction.razorpayPaymentId === dto.razorpayPaymentId) {
         throw new BadRequestException("Payment already processed");
       }
 
-      // 4️⃣ Apply upgrade
       await tx.auction.update({
         where: { id: dto.auctionId },
         data: {

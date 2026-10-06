@@ -72,12 +72,15 @@ export class FirebaseStrategy extends PassportStrategy(Strategy, 'firebase-jwt')
         throw dbError;
       }
 
-      // No Postgres user → return firebase user (controller can handle)
       if (!user) {
         return firebaseUser;
       }
 
-      return user; // Attaches Postgres User (with .id and .role) to req.user
+      // Return Postgres user with decodedToken attached so service/controller can read claims
+      return {
+        ...user,
+        decodedToken: firebaseUser,
+      };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[FirebaseStrategy] Auth failed: ${msg}`);

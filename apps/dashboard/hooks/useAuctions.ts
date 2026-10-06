@@ -8,7 +8,10 @@ const handleAuthError = (res?: Response) => {
     // If res is undefined, it means we forcefully intercepted an expired token before fetching!
     if (!res || res.status === 401 || res.status === 403) {
         useAuthStore.getState().logout();
-        window.location.href = `${process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001"}/login`;
+        const currentUrl = typeof window !== "undefined" ? window.location.href : "";
+        const webUrl = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3001";
+        const redirectParam = currentUrl ? `?redirect=${encodeURIComponent(currentUrl)}` : "";
+        window.location.href = `${webUrl}/login${redirectParam}`;
     }
 };
 

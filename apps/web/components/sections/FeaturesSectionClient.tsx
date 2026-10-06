@@ -4,14 +4,14 @@ import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { GlobalBackground } from "../ui/GlobalBackground";
 import { motion } from "framer-motion";
-import { 
-    LayoutDashboard, 
-    Palette, 
-    Gamepad2, 
-    Tv2, 
-    Gavel, 
-    Calculator, 
-    RotateCw 
+import {
+    LayoutDashboard,
+    Palette,
+    Gamepad2,
+    Tv2,
+    Gavel,
+    Calculator,
+    RotateCw
 } from "lucide-react";
 
 const FEATURES_LIST = [
@@ -52,7 +52,7 @@ export function FeaturesSectionClient() {
     };
 
     return (
-        <section id="features" className="relative z-10 w-full flex justify-center bg-white overflow-hidden py-16 sm:py-24" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)", marginTop: "-32px" }}>
+        <section id="features" data-anim="fade-up" className="relative z-10 w-full flex justify-center bg-white overflow-hidden py-16 sm:py-24" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)", marginTop: "-32px" }}>
             <GlobalBackground variants="features" />
             <motion.div
                 initial={{ opacity: 0, y: 50 }}
@@ -73,12 +73,12 @@ export function FeaturesSectionClient() {
 
                 <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-between gap-8 lg:gap-20">
                     {/* Left Laptop Image — desktop only */}
-                    <motion.div 
+                    <motion.div
                         animate={{ y: [0, -12, 0] }}
                         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                         className="relative w-full max-w-[640px] aspect-[1180/869] hidden lg:block"
                     >
-                        <Image src="/images/0011/Graphite.png" width={1180} height={869} alt="Features Laptop" priority />
+                        <Image src="/images/0011/Graphite.webp" width={1180} height={869} alt="Features Laptop" priority={false} />
                     </motion.div>
 
                     {/* Right Features List with custom scrollbar */}

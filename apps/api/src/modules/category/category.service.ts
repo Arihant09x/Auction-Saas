@@ -9,6 +9,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import Redis from "ioredis";
 import { REDIS_CLIENT } from "../../redis/redis.provider";
+import { isAdminOrOwner, validateAuctionAccess } from "../../common/helpers/ownership.helper";
 
 @Injectable()
 export class CategoryService {
@@ -17,18 +18,16 @@ export class CategoryService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  async create(userId: string, dto: CreateCategoryDto) {
-    // 1. Validate Auction Ownership
+  async create(userId: string, userRole: string, dto: CreateCategoryDto) {
     const auction = await this.prisma.prisma.auction.findUnique({
       where: { id: dto.auctionId },
     });
 
     if (!auction) throw new NotFoundException("Auction not found");
-    if (auction.organizerId !== userId) {
+    if (!isAdminOrOwner(auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You do not own this auction");
     }
 
-    // 2. Create Category
     const newCategory = await this.prisma.prisma.category.create({
       data: {
         auctionId: dto.auctionId!,
@@ -44,15 +43,16 @@ export class CategoryService {
     return newCategory;
   }
 
-  async findAllByAuction(auctionId: string) {
+  async findAllByAuction(auctionId: string, userId: string, userRole: string) {
+    await validateAuctionAccess(this.prisma, auctionId, userId, userRole);
     return this.prisma.prisma.category.findMany({
       where: { auctionId },
       orderBy: { name: "asc" },
-      include: { _count: { select: { players: true } } }, // Show how many players in this category
+      include: { _count: { select: { players: true } } },
     });
   }
-  async update(id: string, userId: string, dto: UpdateCategoryDto) {
-    // 1. Fetch category with auction (ownership check)
+
+  async update(id: string, userId: string, userRole: string, dto: UpdateCategoryDto) {
     const category = await this.prisma.prisma.category.findUnique({
       where: { id },
       include: { auction: true },
@@ -62,11 +62,10 @@ export class CategoryService {
       throw new NotFoundException("Category not found");
     }
 
-    if (category.auction.organizerId !== userId) {
+    if (!isAdminOrOwner(category.auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You do not own this category");
     }
 
-    // 2. Build update object dynamically
     const updateData: any = {};
 
     if (dto.name !== undefined) updateData.name = dto.name;
@@ -77,7 +76,6 @@ export class CategoryService {
     if (dto.maxPlayersPerTeam !== undefined)
       updateData.maxPlayersPerTeam = dto.maxPlayersPerTeam;
 
-    // 3. Update category
     const updated = await this.prisma.prisma.category.update({
       where: { id },
       data: updateData,
@@ -87,14 +85,14 @@ export class CategoryService {
     return updated;
   }
 
-  async remove(id: string, userId: string) {
+  async remove(id: string, userId: string, userRole: string) {
     const category = await this.prisma.prisma.category.findUnique({
       where: { id },
       include: { auction: true },
     });
 
     if (!category) throw new NotFoundException("Category not found");
-    if (category.auction.organizerId !== userId) {
+    if (!isAdminOrOwner(category.auction.organizerId, userId, userRole)) {
       throw new ForbiddenException("You do not own this category");
     }
 

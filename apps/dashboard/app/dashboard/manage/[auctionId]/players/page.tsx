@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
@@ -12,6 +12,25 @@ import { usePlayers, useCategories, useTeams, useAuctionDetails } from "../../..
 import { useQueryClient } from "@tanstack/react-query";
 import { SearchableSelect } from "../../../../../components/ui/SearchableSelect";
 import { uploadImage } from "../../../../../app/actions/cloudinary";
+
+// ── Upload constraints ─────────────────────────────────────────────────────
+const MAX_PROFILE_PIC_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+const ACCEPTED_IMAGE_TYPES = [
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/gif",
+];
+const MAX_CSV_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const ACCEPTED_CSV_EXTENSIONS = [".csv", ".xlsx", ".xls"];
+const ACCEPTED_CSV_MIME_TYPES = [
+    "text/csv",
+    "application/csv",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/octet-stream", // some browsers report this for CSV/XLSX
+];
 
 export default function ManagePlayersPage() {
     const router = useRouter();
@@ -63,6 +82,15 @@ export default function ManagePlayersPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
+    // ── Profile picture upload state ───────────────────────────────────────
+    const [isUploadingProfilePic, setIsUploadingProfilePic] = useState(false);
+    const profilePicInputRef = useRef<HTMLInputElement>(null);
+
+    // ── Refetch skeleton state ─────────────────────────────────────────────
+    // While true, the full-page skeleton is shown so the user never sees
+    // stale data after add/edit/delete while the refetch is in flight.
+    const [isRefreshingList, setIsRefreshingList] = useState(false);
+
     // UPLOAD STATES
     const [uploadMethod, setUploadMethod] = useState<"MANUAL" | "BULK">("MANUAL");
     const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -88,6 +116,18 @@ export default function ManagePlayersPage() {
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+
+    // ── Helper: refetch players and keep the skeleton visible until done ──
+    const triggerListRefresh = async () => {
+        setIsRefreshingList(true);
+        try {
+            await queryClient.invalidateQueries({ queryKey: ['players', auctionId] });
+        } catch {
+            // non-fatal
+        } finally {
+            setIsRefreshingList(false);
+        }
+    };
 
     const startEditing = (player: any) => {
         setUploadMethod("MANUAL");
@@ -122,22 +162,40 @@ export default function ManagePlayersPage() {
             profilePic: ""
         });
         setFormErrors({});
+        if (profilePicInputRef.current) profilePicInputRef.current.value = "";
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
         const file = e.target.files?.[0];
-        if (file) {
-            try {
-                toast.info("Uploading the profile picture... Please wait.");
-                const formData = new FormData();
-                formData.append("file", file);
-                const url = await uploadImage(formData);
-                callback(url);
-                toast.success("Profile picture uploaded successfully!");
-            } catch (error: any) {
-                console.error("Upload error:", error);
-                toast.error("We couldn't upload the profile picture. Please try again.");
-            }
+        if (!file) return;
+
+        // ── Validate: images only ──────────────────────────────────────────
+        if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+            toast.error("Only image files are allowed (PNG, JPG, JPEG, WEBP, GIF).");
+            if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+            return;
+        }
+
+        // ── Validate: size ─────────────────────────────────────────────────
+        if (file.size > MAX_PROFILE_PIC_SIZE_BYTES) {
+            toast.error("Image is too large. Please upload a file under 2MB.");
+            if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+            return;
+        }
+
+        try {
+            setIsUploadingProfilePic(true);
+            const formData = new FormData();
+            formData.append("file", file);
+            const url = await uploadImage(formData);
+            callback(url);
+            toast.success("Profile picture uploaded successfully!");
+        } catch (error: any) {
+            console.error("Upload error:", error);
+            toast.error("We couldn't upload the profile picture. Please try again.");
+            if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+        } finally {
+            setIsUploadingProfilePic(false);
         }
     };
 
@@ -189,7 +247,10 @@ export default function ManagePlayersPage() {
                 tshirtSize: "", trouserSize: "", jerseyNumber: "", jerseyName: "",
                 profilePic: ""
             });
-            queryClient.invalidateQueries({ queryKey: ['players', auctionId] });
+            if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+
+            // ── Refetch with skeleton so user never sees stale list ────────
+            await triggerListRefresh();
         } catch (error: any) {
             toast.error(error.message || "Something went wrong while saving the player.");
         } finally {
@@ -200,6 +261,25 @@ export default function ManagePlayersPage() {
     const handleCsvPreview = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        // ── Validate CSV/XLSX extension ────────────────────────────────────
+        const lowerName = file.name.toLowerCase();
+        const hasValidExt = ACCEPTED_CSV_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
+        const hasValidMime = ACCEPTED_CSV_MIME_TYPES.includes(file.type);
+
+        if (!hasValidExt && !hasValidMime) {
+            toast.error("Only CSV or Excel files are allowed (.csv, .xlsx, .xls).");
+            if (e.target) e.target.value = "";
+            return;
+        }
+
+        // ── Validate size ──────────────────────────────────────────────────
+        if (file.size > MAX_CSV_SIZE_BYTES) {
+            toast.error("File is too large. Please upload a file under 5MB.");
+            if (e.target) e.target.value = "";
+            return;
+        }
+
         setCsvFile(file);
         setIsLoading(true);
 
@@ -216,7 +296,6 @@ export default function ManagePlayersPage() {
             const resData = await res.json();
             if (!res.ok) throw new Error(resData.message || "Failed to preview file");
 
-            // Store the full response structure
             setBulkPreview({
                 previewData: resData.data.previewData || [],
                 errors: resData.data.errors || [],
@@ -260,7 +339,9 @@ export default function ManagePlayersPage() {
             toast.success(`${resData.data?.count || bulkPreview.previewData.length} players have been added to the pool!`);
             setBulkPreview(null);
             setCsvFile(null);
-            queryClient.invalidateQueries({ queryKey: ['players', auctionId] });
+
+            // ── Refetch with skeleton ──────────────────────────────────────
+            await triggerListRefresh();
         } catch (error: any) {
             toast.error(error.message || "Something went wrong during the upload. Please try again.");
         } finally {
@@ -279,7 +360,9 @@ export default function ManagePlayersPage() {
             if (!res.ok) throw new Error(resData.message || "Failed to delete player");
 
             toast.success("The player has been removed.");
-            queryClient.invalidateQueries({ queryKey: ['players', auctionId] });
+
+            // ── Refetch with skeleton ──────────────────────────────────────
+            await triggerListRefresh();
         } catch (error: any) {
             toast.error("We couldn't delete the player. Please try again.");
         }
@@ -289,7 +372,8 @@ export default function ManagePlayersPage() {
     const listVariants: any = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
     const itemVariants: any = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } } };
 
-    if (isFetching) {
+    // ── Show skeleton on first load AND during refetch after mutations ─────
+    if (isFetching || isRefreshingList) {
         return (
             <div className="w-full pb-20 animate-pulse font-poppins">
                 <div className="flex items-center gap-2 mb-6">
@@ -383,7 +467,7 @@ export default function ManagePlayersPage() {
                         <motion.div variants={listVariants} initial="hidden" animate="show" className={`grid gap-3 overflow-y-auto pr-2 custom-scrollbar  flex-1 ${showForm ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"}`}>
                             <AnimatePresence>
                                 {players.map((p: any, idx: number) => (
-                                    <motion.div variants={itemVariants} initial="hidden" animate="show" exit={{ opacity: 0, scale: 0.9 }} key={p.id || idx} className="bg-white border border-gray-200 p-4 rounded-xl flex flex-col gap-2 shadow-sm relative group overflow-hidden hover:translate-y-[-2px] h-[100%]">
+                                    <motion.div variants={itemVariants} initial="hidden" animate="show" exit={{ opacity: 0, scale: 0.9 }} key={p.id || idx} className="bg-white border border-gray-200 p-4 rounded-xl flex flex-col gap-2 shadow-sm relative group overflow-hidden hover:translate-y-[-2px] h-fit">
                                         <div className="flex items-center gap-3">
                                             {p.profilePic ? (
                                                 <img src={p.profilePic} alt={p.name} className="w-10 h-10 rounded-full object-cover border" />
@@ -491,20 +575,62 @@ export default function ManagePlayersPage() {
                                                 </button>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-4 border-2 border-dashed border-gray-300 rounded-xl p-6 bg-white justify-center relative hover:bg-gray-50 transition-colors mb-4">
-                                            {playerData.profilePic ? (
-                                                <img src={playerData.profilePic} alt="Preview" className="w-12 h-12 rounded-full object-cover border border-gray-100 shadow-sm" />
+
+                                        {/* ── Profile picture upload box ─────────────────────
+                                            Three states:
+                                            1. Uploading → spinner + "Uploading..."
+                                            2. Has pic → preview + remove button
+                                            3. Empty → upload prompt
+                                        ────────────────────────────────────────────────── */}
+                                        <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 bg-white hover:bg-gray-50 transition-colors mb-4 overflow-hidden">
+                                            {isUploadingProfilePic ? (
+                                                <div className="flex flex-col items-center justify-center gap-2 py-2">
+                                                    <Loader2 className="text-[#012972] animate-spin" size={28} />
+                                                    <span className="text-[13px] font-bold text-[#012972]">Uploading photo...</span>
+                                                    <span className="text-[11px] text-gray-500">Please wait while we process your image</span>
+                                                </div>
+                                            ) : playerData.profilePic ? (
+                                                <div className="flex items-center gap-4 justify-center">
+                                                    <img
+                                                        src={playerData.profilePic}
+                                                        alt="Player preview"
+                                                        className="w-16 h-16 rounded-full object-cover border border-gray-200 shadow-sm bg-white"
+                                                    />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-[#012972] text-[14px]">Photo uploaded</span>
+                                                        <span className="text-[11px] text-gray-500 mt-0.5">It will be saved with the player.</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setPlayerData((prev) => ({ ...prev, profilePic: "" }));
+                                                                if (profilePicInputRef.current) profilePicInputRef.current.value = "";
+                                                            }}
+                                                            className="text-[11px] text-red-500 font-semibold hover:underline text-left mt-1 w-fit"
+                                                        >
+                                                            Remove &amp; upload different
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             ) : (
-                                                <UploadCloud className="text-gray-400" size={32} />
+                                                <div className="flex items-center gap-4 justify-center">
+                                                    <UploadCloud className="text-gray-400" size={32} />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-[#012972] text-[14px]">Upload Photo <span className="text-gray-400 font-normal ml-1 text-[11px]">(Optional)</span></span>
+                                                        <span className="text-[12px] text-gray-500">PNG, JPG, WEBP · Max size 2MB</span>
+                                                    </div>
+                                                </div>
                                             )}
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-[#012972] text-[14px]">
-                                                    {playerData.profilePic ? "Change Photo" : "Upload Photo"}
-                                                    <span className="text-gray-400 font-normal ml-1 text-[11px]">(Optional)</span>
-                                                </span>
-                                                <span className="text-[12px] text-gray-500">Max size 2MB</span>
-                                            </div>
-                                            <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handleFileUpload(e, (url) => setPlayerData({ ...playerData, profilePic: url }))} />
+
+                                            {/* File input only mounted when no pic yet and not uploading */}
+                                            {!playerData.profilePic && !isUploadingProfilePic && (
+                                                <input
+                                                    ref={profilePicInputRef}
+                                                    type="file"
+                                                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                    onChange={(e) => handleFileUpload(e, (url) => setPlayerData((prev) => ({ ...prev, profilePic: url })))}
+                                                />
+                                            )}
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
@@ -554,7 +680,13 @@ export default function ManagePlayersPage() {
                                             <InputField label="T-Shirt Size" name="tshirtSize" value={playerData.tshirtSize} onChange={(e: any) => setPlayerData({ ...playerData, tshirtSize: e.target.value })} />
                                             <InputField label="Trouser Size" name="trouserSize" value={playerData.trouserSize} onChange={(e: any) => setPlayerData({ ...playerData, trouserSize: e.target.value })} />
                                         </div>
-                                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={isLoading} className="mt-4 w-full bg-[#0C3278] text-white font-bold py-3.5 rounded-xl hover:opacity-90 cursor-pointer border border-[#FFBA00] shadow-md transition-colors disabled:opacity-70 shadow-lg shadow-[#0C3278]/20">
+                                        <motion.button
+                                            whileHover={{ scale: isLoading || isUploadingProfilePic ? 1 : 1.02 }}
+                                            whileTap={{ scale: isLoading || isUploadingProfilePic ? 1 : 0.98 }}
+                                            type="submit"
+                                            disabled={isLoading || isUploadingProfilePic}
+                                            className="mt-4 w-full bg-[#0C3278] text-white font-bold py-3.5 rounded-xl hover:opacity-90 cursor-pointer border border-[#FFBA00] shadow-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-[#0C3278]/20"
+                                        >
                                             {isLoading ? "Saving..." : (editingPlayerId ? "Update Player" : "Add Player")}
                                         </motion.button>
                                     </motion.form>
@@ -583,7 +715,12 @@ export default function ManagePlayersPage() {
                                                 <span className="font-bold text-[#012972] text-[16px]">Drag & Drop or Click</span>
                                                 <span className="text-[13px] text-gray-500 mt-1">.csv, .xlsx limits 5MB</span>
                                             </div>
-                                            <input type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleCsvPreview} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                            <input
+                                                type="file"
+                                                accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                                                onChange={handleCsvPreview}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            />
                                         </div>
 
                                         <a href="/template.csv" download className="text-[#012972] font-semibold text-sm underline mt-2 self-center hover:text-blue-800 flex items-center justify-center">

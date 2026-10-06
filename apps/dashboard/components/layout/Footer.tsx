@@ -131,7 +131,7 @@ export function Footer() {
                 {/* Bottom Legal Bar */}
                 <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-[14px] text-white/70 font-medium font-['Poppins']">
-                        © {new Date().getFullYear()} Auction 11. All rights reserved.
+                        © {new Date().getFullYear()} Auction11.Live All rights reserved.
                     </p>
                     <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2">
                         <a href={`${MAIN_WEBSITE_URL}/privacy-policy`} target="_blank" rel="noopener noreferrer" className="text-[14px] text-white/70 hover:text-[#FFBA00] transition-colors font-medium font-['Poppins']">

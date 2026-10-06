@@ -617,8 +617,8 @@ export default function OrganizerLiveDashboard() {
                 <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none z-0 overflow-hidden">
                     {auctionLogo ? (
                         <div className="flex items-center justify-center">
-                            <img src="/circle.png" alt="Auction Logo" className="absolute w-[280px] h-[280px] object-contain grayscale brightness-100 blur-[1px]" />
-                            <img src="/final-1.png" alt="Auction Logo" className="absolute w-[200px] h-[200px] object-contain grayscale brightness-200 blur-[1px]" />
+                            <img src="/circle.png" alt="Auction Logo" className="absolute w-[280px] h-[280px] object-contain grayscale brightness-100" />
+                            <img src="/final-1.png" alt="Auction Logo" className="absolute w-[180px] h-[180px] object-contain grayscale brightness-200 pt-3" />
 
                         </div>
                     ) : (

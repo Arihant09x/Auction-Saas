@@ -104,7 +104,7 @@ export function BlogList({ limit = 6 }: BlogListProps) {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border border-[#012972]/20 text-[#012972] bg-white hover:bg-[#012972] hover:text-white transition-all duration-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-[#012972] disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border border-[#012972]/20 text-[#012972] bg-white disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <ArrowLeft size={16} />
             Previous
@@ -118,7 +118,7 @@ export function BlogList({ limit = 6 }: BlogListProps) {
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border border-[#FFBA00] bg-[#FFBA00] text-[#012972] hover:bg-[#e5a800] transition-all duration-200 disabled:opacity-40 disabled:hover:bg-[#FFBA00] disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border border-[#FFBA00] bg-[#FFBA00] text-[#012972] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Next
             <ArrowRight size={16} />
@@ -136,7 +136,7 @@ function BlogCard({ article }: { article: BlogArticle }) {
 
   return (
     <article
-      className="blog-card rounded-2xl overflow-hidden border border-[#e0e7f5] flex flex-col h-full bg-white shadow-sm cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(1,41,114,0.15)] shrink-0 w-[290px] md:w-auto md:shrink group"
+      className="blog-card rounded-2xl overflow-hidden border border-[#e0e7f5] flex flex-col h-full bg-white shadow-sm cursor-pointer shrink-0 w-[290px] md:w-auto md:shrink group"
     >
       {/* Image Container */}
       <div className="h-48 w-full relative overflow-hidden bg-gray-100">
@@ -144,7 +144,7 @@ function BlogCard({ article }: { article: BlogArticle }) {
           src={imgSrc}
           alt={article.title}
           fill={true}
-          className="transition-transform duration-500 group-hover:scale-105"
+          className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
         <div className="absolute top-4 left-4 bg-[#FFBA00] text-[#012972] text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full">
@@ -177,7 +177,7 @@ function BlogCard({ article }: { article: BlogArticle }) {
 
         <a
           href={`/blogs/${article.slug}`}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#072460] group-hover:text-[#FFBA00] hover:underline w-fit pt-2"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#072460] w-fit pt-2"
         >
           Read Article
           <ExternalLink size={14} />

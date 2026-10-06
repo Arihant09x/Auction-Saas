@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutList, Tag, Trash2, Pencil, X, Plus } from "lucide-react";
@@ -12,7 +12,6 @@ import { useCategories } from "../../../../../hooks/useManageAuction";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function ManageCategoriesPage() {
-    const router = useRouter();
     const params = useParams();
     const { firebaseToken } = useAuthStore();
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -24,12 +23,29 @@ export default function ManageCategoriesPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
+    // ── Refetch skeleton state ─────────────────────────────────────────────
+    // While true, the full-page skeleton is shown so the user never sees
+    // stale data after add/edit/delete while the refetch is in flight.
+    const [isRefreshingList, setIsRefreshingList] = useState(false);
+
     // MANUAL DATA
     const [categoryData, setCategoryData] = useState({
         name: "", color: "#e2e8f0", baseBid: "", minIncrement: "", minPlayersPerTeam: "", maxPlayersPerTeam: ""
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [editingCatId, setEditingCatId] = useState<string | null>(null);
+
+    // ── Helper: refetch categories and keep the skeleton visible until done ─
+    const triggerListRefresh = async () => {
+        setIsRefreshingList(true);
+        try {
+            await queryClient.invalidateQueries({ queryKey: ['categories', auctionId] });
+        } catch {
+            // non-fatal
+        } finally {
+            setIsRefreshingList(false);
+        }
+    };
 
     const startEditing = (cat: any) => {
         setEditingCatId(cat.id);
@@ -55,6 +71,19 @@ export default function ManageCategoriesPage() {
 
     const handleManualAdd = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // ── Duplicate name check (case-insensitive), skipped when editing self
+        const trimmedName = categoryData.name.trim().toLowerCase();
+        const isDuplicate = categories.some((c: any) =>
+            c.id !== editingCatId &&
+            c.name?.toLowerCase() === trimmedName
+        );
+        if (isDuplicate) {
+            toast.error(`A category with the name "${categoryData.name.trim()}" already exists.`);
+            setFormErrors({ name: "Category name already in use" });
+            return;
+        }
+
         const result = categorySchema.safeParse(categoryData);
         if (!result.success) {
             setFormErrors(formatZodErrors(result.error));
@@ -90,7 +119,9 @@ export default function ManageCategoriesPage() {
             setEditingCatId(null);
             setShowForm(false);
             setCategoryData({ name: "", color: "#e2e8f0", baseBid: "", minIncrement: "", minPlayersPerTeam: "", maxPlayersPerTeam: "" });
-            queryClient.invalidateQueries({ queryKey: ['categories', auctionId] });
+
+            // ── Refetch with skeleton so user never sees stale list ────────
+            await triggerListRefresh();
         } catch (error: any) {
             toast.error(error.message);
         } finally {
@@ -109,7 +140,9 @@ export default function ManageCategoriesPage() {
             if (!res.ok) throw new Error(resData.message || "Failed to delete category");
 
             toast.success("Category deleted");
-            queryClient.invalidateQueries({ queryKey: ['categories', auctionId] });
+
+            // ── Refetch with skeleton ──────────────────────────────────────
+            await triggerListRefresh();
         } catch (error: any) {
             toast.error(error.message);
         }
@@ -118,7 +151,8 @@ export default function ManageCategoriesPage() {
     const listVariants: any = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
     const itemVariants: any = { hidden: { opacity: 0, x: -15 }, show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } };
 
-    if (isFetching) {
+    // ── Show skeleton on first load AND during refetch after mutations ─────
+    if (isFetching || isRefreshingList) {
         return (
             <div className="w-full pb-20 animate-pulse font-poppins">
                 <div className="flex items-center gap-2 mb-6">
@@ -184,7 +218,7 @@ export default function ManageCategoriesPage() {
                             setShowForm(true);
                         }
                     }}
-                    className="w-full sm:w-auto bg-[#0C3278] flex gap-2 justify-center items-center text-white px-6 py-2.5 text-sm rounded-full font-bold shadow-md hover:bg-[#082254] transition-colors border border-[#FFBA00]"
+                    className="w-full sm:w-auto bg-[#0C3278] flex gap-2 justify-center items-center text-white px-6 py-2.5 text-sm rounded-full font-bold shadow-md hover:bg-[#082254] transition-colors border border-[#FFBA00] cursor-pointer"
                 >
                     {showForm && !editingCatId ? <> <X size={20} />Close</> : <> <Plus size={20} /> Add Category</>}
                 </button>
@@ -221,8 +255,8 @@ export default function ManageCategoriesPage() {
                                             {c.maxPlayersPerTeam && <div className="text-[10px] font-bold text-gray-500 bg-gray-50 p-1.5 rounded">Cap: <span className="text-indigo-600 block text-xs">Max {c.maxPlayersPerTeam} / Tm</span></div>}
                                         </div>
                                         <div className="absolute top-2 right-2 flex items-center gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur rounded-lg shadow-sm border border-gray-100 p-1">
-                                            <button onClick={() => startEditing(c)} className="text-gray-600 hover:text-blue-600 transition-colors p-1.5"><Pencil size={14} /></button>
-                                            <button onClick={() => deleteCategory(c.id)} className="text-gray-600 hover:text-red-500 transition-colors p-1.5"><Trash2 size={14} /></button>
+                                            <button onClick={() => startEditing(c)} className="text-gray-600 hover:text-blue-600 transition-colors p-1.5 cursor-pointer"><Pencil size={14} /></button>
+                                            <button onClick={() => deleteCategory(c.id)} className="text-gray-600 hover:text-red-500 transition-colors p-1.5 cursor-pointer"><Trash2 size={14} /></button>
                                         </div>
                                     </motion.div>
 
@@ -246,12 +280,12 @@ export default function ManageCategoriesPage() {
                                         </h3>
                                     </div>
                                     {editingCatId && (
-                                        <button type="button" onClick={cancelEditing} className="text-gray-400 hover:text-gray-600">
+                                        <button type="button" onClick={cancelEditing} className="text-gray-400 hover:text-gray-600 cursor-pointer">
                                             <X size={20} />
                                         </button>
                                     )}
                                 </div>
-                                <p className="text-sm text-gray-500 mt(-4)">Categories allow you to group players (e.g., Marquee, Set 1) and enforce specific custom limits.</p>
+                                <p className="text-sm text-gray-500 -mt-4">Categories allow you to group players (e.g., Marquee, Set 1) and enforce specific custom limits.</p>
 
                                 <div className="grid grid-cols-2 gap-4 mt-2">
                                     <InputField label="Category Name" req name="name" value={categoryData.name} onChange={(e: any) => setCategoryData({ ...categoryData, name: e.target.value })} placeholder="e.g. Marquee" error={formErrors.name} />
@@ -277,7 +311,7 @@ export default function ManageCategoriesPage() {
                                     <InputField label="Max Players Bound" type="number" name="maxPlayersPerTeam" value={categoryData.maxPlayersPerTeam} onChange={(e: any) => setCategoryData({ ...categoryData, maxPlayersPerTeam: e.target.value })} placeholder="e.g. 4" error={formErrors.maxPlayersPerTeam} />
                                 </div>
 
-                                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={isLoading} className="mt-4 w-full bg-[#0C3278] text-white font-bold py-3.5 rounded-xl hover:opacity-90 cursor-pointer border border-[#FFBA00] shadow-md transition-colors disabled:opacity-70 shadow-lg shadow-[#0C3278]/20">
+                                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={isLoading} className="mt-4 w-full bg-[#0C3278] text-white font-bold py-3.5 rounded-xl hover:opacity-90 cursor-pointer border border-[#FFBA00] shadow-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-[#0C3278]/20">
                                     {isLoading ? "Saving..." : (editingCatId ? "Update Category System" : "Create Category System")}
                                 </motion.button>
                             </form>

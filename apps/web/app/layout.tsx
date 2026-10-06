@@ -41,20 +41,29 @@ export const metadata: Metadata = {
   },
   description:
     "Auction11.live helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
-  keywords: ["cricket auction", "ipl auction software", "online cricket auction", "player auction platform", "real-time bidding", "Auction 11", "cricket team auction"],
+  keywords: [
+    "cricket auction",
+    "ipl auction software",
+    "online cricket auction",
+    "player auction platform",
+    "real-time bidding",
+    "Auction 11",
+    "cricket team auction",
+  ],
   openGraph: {
     title: "Auction11.live – Live Player Auction Platform for Tournaments",
     description:
       "Auction11.live helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
     url: "https://auction11.live",
-    siteName: "Auction11",
+    siteName: "Auction11.live",
     type: "website",
     locale: "en_IN",
   },
   twitter: {
     card: "summary_large_image",
     title: "Auction11.live – Live Player Auction Platform for Tournaments",
-    description: "Auction11.live helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
+    description:
+      "Auction11.live helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
   },
   robots: {
     index: true,
@@ -62,7 +71,7 @@ export const metadata: Metadata = {
   },
 };
 
-import { ReactLenis } from "lenis/react";
+// import { ReactLenis } from "lenis/react";
 
 export default function RootLayout({
   children,
@@ -76,9 +85,17 @@ export default function RootLayout({
       className={`${poppins.variable} ${epilogue.variable} ${geistSans.variable} ${geistMono.variable}`}
     >
       <meta name="apple-mobile-web-app-capable" content="yes" />
-      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      <meta
+        name="apple-mobile-web-app-status-bar-style"
+        content="black-translucent"
+      />
       <meta name="apple-mobile-web-app-title" content="Auction 11" />
-      <link rel="icon" href="/favicon.ico" sizes="128x128" type="image/x-icon " />
+      <link
+        rel="icon"
+        href="/favicon.ico"
+        sizes="128x128"
+        type="image/x-icon "
+      />
       <GoogleAnalytics gaId="G-RCB2M0CT5W" />
       <body className="min-h-screen bg-background font-sans antialiased">
         <Script id="microsoft-clarity" strategy="afterInteractive">
@@ -91,9 +108,19 @@ export default function RootLayout({
           `}
         </Script>
         <CanonicalHeader />
-        <ReactLenis root options={{ lerp: 0.08, duration: 1.5, smoothWheel: true }}>
-          <Providers>{children}</Providers>
-        </ReactLenis>
+        {/* <ReactLenis
+          root
+          options={{
+            lerp: 0.1,              // slightly snappier than 0.08
+            smoothWheel: true,
+            wheelMultiplier: 1.05,  // respects user's scroll speed
+            touchMultiplier: 1.5,
+            syncTouch: false,       // native momentum on touch devices
+            autoResize: true,       // re-measures page height on layout change
+          }}
+        > */}
+        <Providers>{children}</Providers>
+        {/* </ReactLenis> */}
       </body>
     </html>
   );

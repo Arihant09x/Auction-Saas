@@ -79,8 +79,8 @@ export class AuctionController {
   }
 
   @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.auctionService.findOne(id);
+  findOne(@Param("id") id: string, @Request() req: any) {
+    return this.auctionService.findOne(id, req.user.id, req.user.role);
   }
 
   @Delete(":id")

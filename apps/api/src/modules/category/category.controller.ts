@@ -22,27 +22,26 @@ export class CategoryController {
 
   @Post()
   create(@Request() req: any, @Body() createCategoryDto: CreateCategoryDto) {
-    return this.categoryService.create(req.user.id, createCategoryDto);
+    return this.categoryService.create(req.user.id, req.user.role, createCategoryDto);
   }
 
   // GET /category?auctionId=...
   @Get()
-  findAll(@Query("auctionId") auctionId: string) {
-    return this.categoryService.findAllByAuction(auctionId);
+  findAll(@Query("auctionId") auctionId: string, @Request() req: any) {
+    return this.categoryService.findAllByAuction(auctionId, req.user.id, req.user.role);
   }
 
   @Patch(":id")
   update(
     @Param("id") id: string,
-    @Body() UpdateCategoryDto: UpdateCategoryDto,
+    @Body() updateCategoryDto: UpdateCategoryDto,
     @Request() req: any
   ) {
-    // Pass user ID to ensure they own the auction they are editing!
-    return this.categoryService.update(id, req.user.id, UpdateCategoryDto);
+    return this.categoryService.update(id, req.user.id, req.user.role, updateCategoryDto);
   }
 
   @Delete(":id")
   remove(@Param("id") id: string, @Request() req: any) {
-    return this.categoryService.remove(id, req.user.id);
+    return this.categoryService.remove(id, req.user.id, req.user.role);
   }
 }

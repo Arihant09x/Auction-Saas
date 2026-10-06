@@ -38,6 +38,7 @@ export function FAQSection() {
     return (
         <section
             id="faq"
+            data-anim="scale-in"
             className="py-16 lg:py-24 relative z-10 w-[100%] flex justify-center bg-transparent mt-[-10px]"
         >
             <motion.div
@@ -55,12 +56,13 @@ export function FAQSection() {
                 </div>
 
                 {/* Accordion List */}
-                <div className="space-y-4">
+                <div className="space-y-4" data-anim-group="stagger">
                     {FAQS.map((faq, i) => {
                         const isOpen = open === i;
                         return (
                             <div
                                 key={i}
+                                data-anim-item
                                 className={`transition-all duration-300 rounded-[12px] overflow-hidden flex flex-col`}
                                 style={{
                                     background: isOpen ? "#f4f7fe" : "#ffffff",

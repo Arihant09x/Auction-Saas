@@ -8,7 +8,7 @@ import {
 import { CreateTeamDto } from "./dto/create-team.dto";
 import { UpdateTeamDto } from "./dto/update-team.dto";
 import { PrismaService } from "../../prisma/prisma.service";
-import { isAdminOrOwner } from "../../common/helpers/ownership.helper";
+import { isAdminOrOwner, validateAuctionAccess } from "../../common/helpers/ownership.helper";
 import Redis from "ioredis";
 import { REDIS_CLIENT } from "../../redis/redis.provider";
 
@@ -82,8 +82,9 @@ export class TeamService {
     return newTeam;
   }
 
-  // 2. GET ALL TEAMS (For a specific auction)
-  async findAllByAuction(auctionId: string) {
+  // 2. GET ALL TEAMS (For a specific auction with authorization check)
+  async findAllByAuction(auctionId: string, userId: string, userRole: string) {
+    await validateAuctionAccess(this.prisma, auctionId, userId, userRole);
     return this.prisma.prisma.team.findMany({
       where: { auctionId },
       orderBy: { name: "asc" },

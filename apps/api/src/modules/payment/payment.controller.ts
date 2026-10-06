@@ -8,7 +8,7 @@ import { PlanTier } from "@repo/database_postgres";
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) { }
 
-  // Step 1: Frontend calls this when user clicks "Pay 5000"
+  // Step 1: Frontend calls this when user clicks "Pay"
   @Post("create-order")
   createOrder(
     @Request() req: any,
@@ -16,6 +16,7 @@ export class PaymentController {
   ) {
     return this.paymentService.createOrder(
       req.user.id,
+      req.user.role,
       body.auctionId,
       body.planTier as PlanTier
     );
@@ -24,6 +25,7 @@ export class PaymentController {
   // Step 2: Frontend calls this AFTER Razorpay Popup closes successfully
   @Post("verify")
   verifyPayment(
+    @Request() req: any,
     @Body()
     body: {
       razorpayOrderId: string;
@@ -33,6 +35,10 @@ export class PaymentController {
       planTier: string;
     }
   ) {
-    return this.paymentService.verifyPayment(body as any);
+    return this.paymentService.verifyPayment(
+      req.user.id,
+      req.user.role,
+      body as any
+    );
   }
 }

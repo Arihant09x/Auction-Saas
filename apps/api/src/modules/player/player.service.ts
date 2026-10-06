@@ -12,7 +12,7 @@ import { REDIS_CLIENT } from "../../redis/redis.provider";
 import { UpdatePlayerDto } from "./dto/update-player.dto";
 import * as XLSX from "xlsx";
 import { Multer } from "multer";
-import { isAdminOrOwner } from "../../common/helpers/ownership.helper";
+import { isAdminOrOwner, validateAuctionAccess } from "../../common/helpers/ownership.helper";
 
 import {
   PLAN_LIMITS,
@@ -570,7 +570,8 @@ export class PlayerService {
   }
 
   // Get Players (Filter by Category is optional)
-  async findAll(auctionId: string, page: number = 1, limit: number = 20) {
+  async findAll(auctionId: string, userId: string, userRole: string, page: number = 1, limit: number = 20) {
+    await validateAuctionAccess(this.prisma, auctionId, userId, userRole);
     const skip = (page - 1) * limit;
 
     // 1. Get Data

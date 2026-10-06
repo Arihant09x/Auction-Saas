@@ -1,14 +1,13 @@
-import { Controller, Post, Body, UseGuards, Request, UnauthorizedException, HttpCode, HttpStatus } from "@nestjs/common";
+import { Controller, Post, Body, UseGuards, Request, HttpCode, HttpStatus } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
 import { Throttle } from "@nestjs/throttler";
-import * as firebase from "firebase-admin";
 
 @Controller("auth")
 export class AuthController {
   constructor(private authService: AuthService) { }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post("register")
   @UseGuards(AuthGuard("firebase-jwt")) // Verifies Token first
   async register(
@@ -18,15 +17,35 @@ export class AuthController {
     return this.authService.validateUser(req.user, body);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 15, ttl: 60000 } })
   @Post("login")
   @UseGuards(AuthGuard("firebase-jwt")) // Verifies Token first
   async login(
     @Request() req: any,
     @Body() body: any
   ) {
-    // 2. If valid, find/create in DB
     return this.authService.validateUser(req.user, body);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post("verify-email")
+  @UseGuards(AuthGuard("firebase-jwt"))
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(
+    @Request() req: any
+  ) {
+    return this.authService.verifyEmail(req.user);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post("set-password")
+  @UseGuards(AuthGuard("firebase-jwt"))
+  @HttpCode(HttpStatus.OK)
+  async setPassword(
+    @Request() req: any,
+    @Body("password") password: string
+  ) {
+    return this.authService.setPasswordForLoggedInUser(req.user, password);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })

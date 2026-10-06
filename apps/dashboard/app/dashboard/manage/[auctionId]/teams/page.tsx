@@ -1,16 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { UploadCloud, Users, Trash2, Pencil, X, Plus } from "lucide-react";
+import { UploadCloud, Users, Trash2, Pencil, X, Plus, Loader2 } from "lucide-react";
 import { useAuthStore } from "../../../../../store/auth.store";
 import { teamSchema, formatZodErrors } from "../../../../../lib/validations";
 import { useTeams, useAuctionDetails } from "../../../../../hooks/useManageAuction";
 import { uploadImage } from "../../../../../app/actions/cloudinary";
 import { useQueryClient } from "@tanstack/react-query";
+
+// ── Logo upload constraints ────────────────────────────────────────────────
+const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+const ACCEPTED_IMAGE_TYPES = [
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/gif",
+];
 
 export default function ManageTeamsPage() {
     const router = useRouter();
@@ -40,12 +50,37 @@ export default function ManageTeamsPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
+    // ── Logo upload state ──────────────────────────────────────────────────
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // ── Refetch skeleton state ─────────────────────────────────────────────
+    // Set to true right before we invalidate the teams query after a
+    // successful add/edit/delete. Kept true until the refetch completes so
+    // the user sees a skeleton instead of the stale list.
+    const [isRefreshingList, setIsRefreshingList] = useState(false);
+
     // MANUAL DATA
     const [teamData, setTeamData] = useState({
         name: "", shortName: "", shortcutKey: "", logo: ""
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+
+    // ── Helper: invalidate teams query and keep the skeleton visible until
+    //    the network call finishes. `invalidateQueries` returns a Promise
+    //    that resolves when all refetches are complete.
+    const triggerListRefresh = async () => {
+        setIsRefreshingList(true);
+        try {
+            await queryClient.invalidateQueries({ queryKey: ['teams', auctionId] });
+        } catch {
+            // Non-fatal — if invalidation fails we just fall through
+            // and let the flag reset in the `finally` below.
+        } finally {
+            setIsRefreshingList(false);
+        }
+    };
 
     const startEditing = (team: any) => {
         setEditingTeamId(team.id);
@@ -65,22 +100,40 @@ export default function ManageTeamsPage() {
         setShowForm(false);
         setTeamData({ name: "", shortName: "", shortcutKey: "", logo: "" });
         setFormErrors({});
+        if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
         const file = e.target.files?.[0];
-        if (file) {
-            try {
-                toast.info("Uploading the logo... Please wait.");
-                const formData = new FormData();
-                formData.append("file", file);
-                const url = await uploadImage(formData);
-                callback(url);
-                toast.success("Logo uploaded successfully!");
-            } catch (error: any) {
-                console.error("Upload error:", error);
-                toast.error("We couldn't upload the logo. Please try again.");
-            }
+        if (!file) return;
+
+        // ── Validate file type: images only ────────────────────────────────
+        if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+            toast.error("Only image files are allowed (PNG, JPG, JPEG, WEBP, GIF).");
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            return;
+        }
+
+        // ── Validate file size ─────────────────────────────────────────────
+        if (file.size > MAX_LOGO_SIZE_BYTES) {
+            toast.error("Image is too large. Please upload a file under 2MB.");
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            return;
+        }
+
+        try {
+            setIsUploadingLogo(true);
+            const formData = new FormData();
+            formData.append("file", file);
+            const url = await uploadImage(formData);
+            callback(url);
+            toast.success("Logo uploaded successfully!");
+        } catch (error: any) {
+            console.error("Upload error:", error);
+            toast.error("We couldn't upload the logo. Please try again.");
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        } finally {
+            setIsUploadingLogo(false);
         }
     };
 
@@ -142,7 +195,11 @@ export default function ManageTeamsPage() {
             setEditingTeamId(null);
             setShowForm(false);
             setTeamData({ name: "", shortName: "", shortcutKey: "", logo: "" });
-            queryClient.invalidateQueries({ queryKey: ['teams', auctionId] });
+            if (fileInputRef.current) fileInputRef.current.value = "";
+
+            // ── Refetch teams. The full-page skeleton will appear while the
+            //    new list is loading so the user never sees stale data.
+            await triggerListRefresh();
         } catch (error: any) {
             toast.error("Something went wrong while saving the team.");
         } finally {
@@ -161,7 +218,9 @@ export default function ManageTeamsPage() {
             if (!res.ok) throw new Error(resData.message || "Failed to delete team");
 
             toast.success("The team has been removed.");
-            queryClient.invalidateQueries({ queryKey: ['teams', auctionId] });
+
+            // ── Refetch teams with skeleton ───────────────────────────────
+            await triggerListRefresh();
         } catch (error: any) {
             toast.error("We couldn't delete the team. Please try again.");
         }
@@ -170,7 +229,8 @@ export default function ManageTeamsPage() {
     const listVariants: any = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
     const itemVariants: any = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } } };
 
-    if (isFetching) {
+    // ── Show skeleton on first load AND while we refresh after add/edit/delete
+    if (isFetching || isRefreshingList) {
         return (
             <div className="w-full pb-20 animate-pulse font-poppins">
                 <div className="flex items-center gap-2 mb-6">
@@ -238,7 +298,7 @@ export default function ManageTeamsPage() {
                     }}
                     className="w-full sm:w-auto bg-[#0C3278] flex gap-2 justify-center items-center text-white px-6 py-2.5 text-sm rounded-full font-bold shadow-md hover:bg-[#082254] transition-colors border border-[#FFBA00]"
                 >
-                    {showForm && !editingTeamId ? <> <X size={20} />Close</> : <> <Plus size={20} /> Add Team</>}
+                    {showForm && !editingTeamId ? <> <X size={20} />Close</> : <> <Plus size={20} /> Add a Team</>}
                 </button>
             </div>
 
@@ -301,13 +361,57 @@ export default function ManageTeamsPage() {
                                     )}
                                 </div>
 
-                                <div className="flex items-center gap-4 border-2 border-dashed border-gray-300 rounded-xl p-6 bg-white justify-center relative hover:bg-gray-50 transition-colors">
-                                    <UploadCloud className="text-gray-400" size={32} />
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-[#012972] text-[14px]">Upload Logo <span className="text-gray-400 font-normal ml-1 text-[11px]">(Optional)</span></span>
-                                        <span className="text-[12px] text-gray-500">Max size 2MB</span>
-                                    </div>
-                                    <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handleFileUpload(e, (url) => setTeamData({ ...teamData, logo: url }))} />
+                                {/* ── Logo upload box: shows spinner while uploading,
+                                       preview after upload, or the empty prompt. ── */}
+                                <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 bg-white hover:bg-gray-50 transition-colors overflow-hidden">
+                                    {isUploadingLogo ? (
+                                        <div className="flex flex-col items-center justify-center gap-2 py-2">
+                                            <Loader2 className="text-[#012972] animate-spin" size={28} />
+                                            <span className="text-[13px] font-bold text-[#012972]">Uploading logo...</span>
+                                            <span className="text-[11px] text-gray-500">Please wait while we process your image</span>
+                                        </div>
+                                    ) : teamData.logo ? (
+                                        <div className="flex items-center gap-4">
+                                            <img
+                                                src={teamData.logo}
+                                                alt="Team logo preview"
+                                                className="w-16 h-16 rounded-lg object-cover border border-gray-200 shadow-sm bg-white"
+                                            />
+                                            <div className="flex flex-col">
+                                                <span className="text-[13px] font-bold text-[#012972]">Logo uploaded</span>
+                                                <span className="text-[11px] text-gray-500 mt-0.5">It will be saved with the team.</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTeamData((prev) => ({ ...prev, logo: "" }));
+                                                        if (fileInputRef.current) fileInputRef.current.value = "";
+                                                    }}
+                                                    className="text-[11px] text-red-500 font-semibold hover:underline text-left mt-1 w-fit"
+                                                >
+                                                    Remove &amp; upload different
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-4 justify-center">
+                                            <UploadCloud className="text-gray-400" size={32} />
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-[#012972] text-[14px]">Upload Logo <span className="text-gray-400 font-normal ml-1 text-[11px]">(Optional)</span></span>
+                                                <span className="text-[12px] text-gray-500">PNG, JPG, WEBP · Max size 2MB</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* File input only mounted when no logo yet and not uploading */}
+                                    {!teamData.logo && !isUploadingLogo && (
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            onChange={(e) => handleFileUpload(e, (url) => setTeamData((prev) => ({ ...prev, logo: url })))}
+                                        />
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">
@@ -318,8 +422,14 @@ export default function ManageTeamsPage() {
                                     <InputField label="Shortcut Key" name="shortcutKey" value={teamData.shortcutKey} onChange={(e: any) => setTeamData({ ...teamData, shortcutKey: e.target.value })} placeholder="e.g. R" error={formErrors.shortcutKey} />
                                 </div>
 
-                                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={isLoading} className="mt-4 w-full flex items-center gap-2 justify-center bg-[#0C3278] text-white font-bold py-3.5 rounded-xl hover:opacity-90 cursor-pointer border border-[#FFBA00] shadow-md transition-colors disabled:opacity-70 shadow-lg shadow-[#0C3278]/20">
-                                    {isLoading ? "Saving..." : (editingTeamId ? <> <Pencil size={15} /> Update</> : <> <Plus size={20} /> Add</>)}
+                                <motion.button
+                                    whileHover={{ scale: isLoading || isUploadingLogo ? 1 : 1.02 }}
+                                    whileTap={{ scale: isLoading || isUploadingLogo ? 1 : 0.98 }}
+                                    type="submit"
+                                    disabled={isLoading || isUploadingLogo}
+                                    className="mt-4 w-full flex items-center gap-2 justify-center bg-[#0C3278] text-white font-bold py-3.5 rounded-xl hover:opacity-90 cursor-pointer border border-[#FFBA00] shadow-md transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-[#0C3278]/20"
+                                >
+                                    {isLoading ? "Saving..." : (editingTeamId ? <> <Pencil size={15} /> Update</> : <> <Plus size={20} /> Add a Team</>)}
                                 </motion.button>
                             </form>
                         </motion.div>

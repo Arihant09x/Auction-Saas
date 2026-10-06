@@ -28,6 +28,10 @@ model User {
   status         UserStatus @default(ACTIVE)
   deletedAt      DateTime?
   sessionVersion Int       @default(0)
+  phoneVerified  Boolean   @default(false)
+  emailVerified  Boolean   @default(false)
+  authProvider   String?   @default("email")
+  lastLoginAt    DateTime?
   auctions       Auction[]
   joinedAuctions JoinedAuction[]
   auditLogs      AuditLog[]
