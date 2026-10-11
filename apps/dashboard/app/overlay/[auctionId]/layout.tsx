@@ -1,15 +1,21 @@
 
 import type { Metadata } from "next";
+import { getAuctionMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-    title: "Overlay",
-    description: "Watch the live auction in real-time. See players, bids, and teams as action unfolds.",
-};
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ auctionId: string }> | { auctionId: string };
+}): Promise<Metadata> {
+    const resolved = await Promise.resolve(params);
+    return getAuctionMetadata(resolved.auctionId, "overlay");
+}
 
-export default function ViewerLayout({ children }: { children: React.ReactNode }) {
+export default function OverlayLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="min-h-screen w-full overflow-x-hidden bg-transparent">
             {children}
         </div>
     );
 }
+

@@ -475,4 +475,29 @@ export class AuctionService {
       },
     };
   }
+
+  // 8. Safe Public Preview (Open Graph & Social Previews)
+  async getPublicPreview(id: string) {
+    const auction = await this.prisma.prisma.auction.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        location: true,
+        logo: true,
+        sportsType: true,
+        season: true,
+        auctionDate: true,
+        auctionStartTime: true,
+        status: true,
+      },
+    });
+
+    if (!auction) {
+      throw new NotFoundException("Auction not found");
+    }
+
+    return auction;
+  }
 }
+

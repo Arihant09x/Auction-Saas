@@ -25,3 +25,20 @@ export class LiveAuctionController {
     return this.liveAuctionService.getCurrentState(auctionId);
   }
 }
+
+/**
+ * Public live-auction controller — zero auth required.
+ * Exposes lightweight read-only views for Viewer and Overlay pages (SSR + Polling).
+ * Data is served directly from Redis cache without database overhead.
+ */
+@Controller("live-auction")
+export class LiveAuctionPublicController {
+  constructor(private readonly liveAuctionService: LiveAuctionService) {}
+
+  // GET /live-auction/:id/view — public read-only live auction state
+  @Get(":id/view")
+  getReadOnlyView(@Param("id") auctionId: string) {
+    return this.liveAuctionService.getReadOnlyLiveView(auctionId);
+  }
+}
+

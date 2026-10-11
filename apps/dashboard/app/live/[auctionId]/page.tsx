@@ -8,6 +8,7 @@ import { io, Socket } from "socket.io-client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, LayoutDashboard, Settings, User, Trophy, Play, CheckCircle, XCircle, RotateCcw, AlertTriangle, Menu, Maximize, Monitor, Loader2 } from "lucide-react";
 import confetti from "canvas-confetti";
+import { posthog } from "@/lib/posthog";
 
 const auctionLogo = "/final-1.png";
 
@@ -57,6 +58,10 @@ export default function OrganizerLiveDashboard() {
             setShowDesktopWarning(false);
         }
     }, [isDesktop, windowWidth]);
+
+    useEffect(() => {
+        posthog.capture("organizer_live_opened", { auction_id: auctionId });
+    }, [auctionId]);
 
     // Customization states
     const [isSold, setIsSold] = useState(false);

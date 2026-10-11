@@ -267,10 +267,12 @@ export default function LoginPage() {
       // 4. Sync initial user profile to PostgreSQL DB (emailVerified will default to false)
       await syncUserToDatabase(createdUser.uid, dbPayload, idToken);
 
+      posthog.capture("user_registration_success", { method: "email" });
       setRegStep("verify_sent");
       toast.success("Account created! A verification email has been sent to your inbox.");
     } catch (err: any) {
       console.error("Registration error:", err);
+      posthog.capture("user_registration_failed", { error_category: err.code || "unknown" });
 
       if (createdUser) {
         try {
@@ -402,6 +404,7 @@ export default function LoginPage() {
         role: role,
         plan: "free",
       });
+      posthog.capture("user_login_success", { method: "password", role });
 
       toast.success("Glad to see you back! Opening your dashboard...");
 
@@ -413,6 +416,7 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error("Login error:", err);
+      posthog.capture("user_login_failed", { method: "password", error_category: err.code || "unknown" });
       let message = "Invalid email or password. Please check your details.";
       if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
         message = "Incorrect email or password. Please try again.";
@@ -464,6 +468,7 @@ export default function LoginPage() {
         role: role,
         plan: "free",
       });
+      posthog.capture("user_login_success", { method: "google", role });
 
       toast.success("Successfully signed in with Google!");
 
@@ -475,6 +480,7 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error("Google login error:", err);
+      posthog.capture("user_login_failed", { method: "google", error_category: err.code || "unknown" });
       let message = "Failed to sign in with Google. Please try again.";
       if (err.code === "auth/popup-closed-by-user" || err.message?.includes("popup-closed-by-user")) {
         message = "Sign-in window was closed. Please try again.";
@@ -571,13 +577,6 @@ export default function LoginPage() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-white/80 text-sm font-medium">Password</label>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode("forgot")}
-                      className="text-xs text-[#ffba00] hover:underline font-medium"
-                    >
-                      Forgot Password?
-                    </button>
                   </div>
                   <div className="relative">
                     <input
@@ -595,6 +594,15 @@ export default function LoginPage() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-white/80 hover:text-white transition-colors"
                     >
                       {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-end mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("forgot")}
+                      className="text-xs text-[#ffba00] hover:underline font-medium"
+                    >
+                      Forgot Password?
                     </button>
                   </div>
                   {loginForm.formState.errors.password && <p className="text-[#fe7c0a] text-xs mt-1">{loginForm.formState.errors.password.message}</p>}

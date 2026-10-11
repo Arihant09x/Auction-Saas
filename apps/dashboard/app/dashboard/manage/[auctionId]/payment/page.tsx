@@ -9,6 +9,7 @@ import Script from "next/script";
 import { useAuctionDetails } from "../../../../../hooks/useManageAuction";
 import { usePayment } from "../../../../../hooks/usePayment";
 import { PageSkeleton } from "../../../../../components/ui/PageSkeleton";
+import { posthog } from "../../../../../lib/posthog";
 import {
     Crown, Check, Zap, Shield, Star,
     Sparkles, Loader2, ChevronRight, XCircle,
@@ -160,6 +161,13 @@ export default function PaymentPage() {
                 return;
             }
 
+            posthog.capture("payment_order_initiated", {
+                auction_id: auctionId,
+                plan: tierKey,
+                amount: orderData.amount / 100,
+                currency: orderData.currency,
+            });
+
             const options = {
                 key: orderData.key_id,
                 amount: orderData.amount,
@@ -172,6 +180,12 @@ export default function PaymentPage() {
                     const verifyResult = await verifyPayment(response, tierKey);
 
                     if (verifyResult.success) {
+                        posthog.capture("payment_verification_success", {
+                            auction_id: auctionId,
+                            plan: tierKey,
+                            amount: orderData.amount / 100,
+                            order_id: orderData.orderId,
+                        });
                         toast.success("Payment received! Your plan has been upgraded.", { id: "payment-verify" });
                         setSuccessData({
                             plan: tierKey,
@@ -181,6 +195,11 @@ export default function PaymentPage() {
                         setView("SUCCESS");
                         refetchAuction();
                     } else {
+                        posthog.capture("payment_verification_failed", {
+                            auction_id: auctionId,
+                            plan: tierKey,
+                            error_category: verifyResult.message || "verification_failed",
+                        });
                         toast.error("Verification failed.", { id: "payment-verify" });
                         setErrorMsg(verifyResult.message || "We could not verify your payment with the backend. Please contact support if your amount was deducted.");
                         setView("FAILURE");
@@ -202,6 +221,11 @@ export default function PaymentPage() {
 
             const rzp = new window.Razorpay(options);
             rzp.on("payment.failed", (res: any) => {
+                posthog.capture("payment_verification_failed", {
+                    auction_id: auctionId,
+                    plan: tierKey,
+                    error_category: res?.error?.description || "payment_failed",
+                });
                 setErrorMsg("The payment window was closed or the transaction failed.");
                 setView("FAILURE");
                 setIsProcessing(false);
@@ -209,6 +233,11 @@ export default function PaymentPage() {
             });
             rzp.open();
         } catch (error: any) {
+            posthog.capture("payment_order_failed", {
+                auction_id: auctionId,
+                plan: tierKey,
+                error_category: error?.message || "order_creation_failed",
+            });
             toast.error("We couldn't start the payment process. Please try again.");
             setIsProcessing(false);
             setProcessingPlanKey(null);

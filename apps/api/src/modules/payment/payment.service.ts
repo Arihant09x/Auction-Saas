@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException, Logger } from "@nestjs/common";
 import Razorpay from "razorpay";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -10,18 +10,10 @@ import { validateAuctionOwnership } from "../../common/helpers/ownership.helper"
 
 config();
 
-const PLAN_PRIORITY = {
-  BASIC: 1,
-  STANDARD: 2,
-  PREMIUM: 3,
-  ELITE: 4,
-  ULTIMATE: 5,
-  MEGA: 6,
-} as const;
-
 @Injectable()
 export class PaymentService {
   private razorpay: any;
+  private readonly logger = new Logger(PaymentService.name);
 
   constructor(
     private configService: ConfigService,
@@ -30,16 +22,18 @@ export class PaymentService {
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keyId || !keySecret) {
-      throw new Error("Razorpay configuration is missing");
+      this.logger.warn("Razorpay credentials are missing from environment");
     }
 
-    this.razorpay = new Razorpay({
-      key_id: keyId,
-      key_secret: keySecret,
-    });
+    if (keyId && keySecret) {
+      this.razorpay = new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret,
+      });
+    }
   }
 
-  // 1. Create Order with Authorization
+  // 1. Create Order with Authorization and Server-side Price Verification
   async createOrder(
     userId: string,
     userRole: string,
@@ -58,15 +52,16 @@ export class PaymentService {
     const currentPrice = PLAN_LIMITS[currentPlan]?.price || 0;
     const targetPrice = PLAN_LIMITS[targetPlan]?.price || 0;
 
-    // 2. Validation
-    if (targetPrice === 0)
+    // Validation
+    if (targetPrice === 0) {
       throw new BadRequestException("Cannot pay for Free plan");
+    }
 
     if (auction.isPaid && targetPlan === currentPlan) {
       throw new BadRequestException("Plan already active");
     }
 
-    // 3. PRORATED CALCULATION
+    // Prorated calculation strictly derived from trusted server constants
     let amountToPay = targetPrice;
 
     if (auction.isPaid && targetPrice > currentPrice) {
@@ -77,16 +72,20 @@ export class PaymentService {
       );
     }
 
-    // 4. Create Razorpay Order
+    if (!this.razorpay) {
+      throw new BadRequestException("Payment provider is not configured");
+    }
+
     const options = {
       amount: amountToPay, // Amount in Paise
       currency: "INR",
-      receipt: `upg_${auctionId.substring(0, 8)}`,
+      receipt: `upg_${auctionId.substring(0, 8)}_${Date.now().toString().slice(-4)}`,
       notes: { auctionId, userId, targetPlan, type: "UPGRADE" },
     };
 
     try {
       const order = await this.razorpay.orders.create(options);
+      this.logger.log(`Razorpay order created: orderId=${order.id} for auctionId=${auctionId}`);
       return {
         orderId: order.id,
         amount: order.amount,
@@ -94,13 +93,13 @@ export class PaymentService {
         key_id: process.env.RAZORPAY_KEY_ID,
         plan: targetPlan,
       };
-    } catch (error) {
-      console.error("❌ RAZORPAY ERROR DETAILS:", error);
+    } catch (error: any) {
+      this.logger.error(`Razorpay order creation failed for auctionId=${auctionId}: ${error?.message}`);
       throw new BadRequestException("Razorpay Order Creation Failed");
     }
   }
 
-  // 2. Verify Payment with Authorization
+  // 2. Verify Payment with Authorization, Idempotency, and Signature Checking
   async verifyPayment(
     userId: string,
     userRole: string,
@@ -112,6 +111,10 @@ export class PaymentService {
       targetPlan: PlanTier;
     }
   ) {
+    if (!dto.razorpayOrderId || !dto.razorpayPaymentId || !dto.razorpaySignature || !dto.auctionId || !dto.targetPlan) {
+      throw new BadRequestException("Missing required payment verification fields");
+    }
+
     // 🔒 Verify ownership before updating payment state
     await validateAuctionOwnership(
       this.prisma,
@@ -125,17 +128,52 @@ export class PaymentService {
       this.configService.get("razorpay.key_secret") ||
       "";
 
-    // Formula provided by Razorpay to check signature
-    const generated_signature = crypto
+    if (!secret) {
+      throw new BadRequestException("Payment configuration secret missing");
+    }
+
+    // Timing-safe HMAC SHA256 Signature Verification
+    const expectedSignature = crypto
       .createHmac("sha256", secret)
       .update(`${dto.razorpayOrderId}|${dto.razorpayPaymentId}`)
       .digest("hex");
 
-    if (generated_signature !== dto.razorpaySignature) {
+    const expectedBuf = Buffer.from(expectedSignature);
+    const providedBuf = Buffer.from(dto.razorpaySignature);
+
+    const isValidSignature =
+      expectedBuf.length === providedBuf.length &&
+      crypto.timingSafeEqual(expectedBuf, providedBuf);
+
+    if (!isValidSignature) {
+      this.logger.warn(`Invalid payment signature attempt for auctionId=${dto.auctionId}`);
       throw new BadRequestException("Invalid payment signature");
     }
 
-    // 🔒 TRANSACTION START
+    // Optional Provider-level verification check if Razorpay client is available
+    if (this.razorpay?.payments?.fetch) {
+      try {
+        const payment = await this.razorpay.payments.fetch(dto.razorpayPaymentId);
+        if (payment) {
+          if (payment.status !== "captured" && payment.status !== "authorized") {
+            throw new BadRequestException(`Payment status is ${payment.status}, expected captured`);
+          }
+          if (payment.order_id && payment.order_id !== dto.razorpayOrderId) {
+            throw new BadRequestException("Payment does not match the generated order ID");
+          }
+          if (payment.currency && payment.currency !== "INR") {
+            throw new BadRequestException("Invalid payment currency");
+          }
+        }
+      } catch (err: any) {
+        if (err instanceof BadRequestException || err?.name === "BadRequestException" || err?.status === 400) {
+          throw err;
+        }
+        this.logger.warn(`Razorpay provider API lookup skipped/failed: ${err?.message}`);
+      }
+    }
+
+    // 🔒 ATOMIC TRANSACTION WITH IDEMPOTENCY
     return this.prisma.prisma.$transaction(async (tx: any) => {
       const auction = await tx.auction.findUnique({
         where: { id: dto.auctionId },
@@ -143,16 +181,29 @@ export class PaymentService {
 
       if (!auction) throw new BadRequestException("Auction not found");
 
+      // IDEMPOTENT HANDLING: If already processed with this payment ID and plan, return success
+      if (
+        auction.isPaid &&
+        auction.planTier === dto.targetPlan &&
+        auction.razorpayPaymentId === dto.razorpayPaymentId
+      ) {
+        this.logger.log(`Idempotent verify payment hit for auctionId=${dto.auctionId}`);
+        return {
+          success: true,
+          message: "Payment already processed",
+          alreadyProcessed: true,
+          previousPlan: auction.planTier,
+          currentPlan: auction.planTier,
+          paidAmount: 0,
+        };
+      }
+
       const currentPlan = auction.planTier as PlanTier;
       const currentPrice = PLAN_LIMITS[currentPlan]?.price || 0;
       const targetPrice = PLAN_LIMITS[dto.targetPlan]?.price || 0;
 
-      if (targetPrice <= currentPrice) {
+      if (targetPrice <= currentPrice && auction.isPaid) {
         throw new BadRequestException("Plan downgrade not allowed");
-      }
-
-      if (auction.razorpayPaymentId === dto.razorpayPaymentId) {
-        throw new BadRequestException("Payment already processed");
       }
 
       await tx.auction.update({
@@ -166,6 +217,8 @@ export class PaymentService {
         },
       });
 
+      this.logger.log(`Payment successfully verified and upgraded: auctionId=${dto.auctionId}, plan=${dto.targetPlan}`);
+
       return {
         success: true,
         message: "Payment verified & plan upgraded",
@@ -174,5 +227,84 @@ export class PaymentService {
         paidAmount: targetPrice - currentPrice,
       };
     });
+  }
+
+  // 3. Webhook Processing with Signature Verification & Idempotency
+  async handleWebhook(signature: string, rawBody: string | Buffer, payload: any) {
+    const webhookSecret =
+      process.env.RAZORPAY_WEBHOOK_SECRET ||
+      process.env.RAZORPAY_KEY_SECRET ||
+      "";
+
+    if (!webhookSecret) {
+      this.logger.warn("Webhook secret not configured, skipping webhook processing");
+      throw new BadRequestException("Webhook configuration missing");
+    }
+
+    const bodyString = typeof rawBody === "string" ? rawBody : rawBody.toString("utf8");
+
+    const expectedSignature = crypto
+      .createHmac("sha256", webhookSecret)
+      .update(bodyString)
+      .digest("hex");
+
+    const expectedBuf = Buffer.from(expectedSignature);
+    const providedBuf = Buffer.from(signature || "");
+
+    const isMatch =
+      expectedBuf.length === providedBuf.length &&
+      crypto.timingSafeEqual(expectedBuf, providedBuf);
+
+    if (!isMatch) {
+      this.logger.warn("Invalid webhook signature received");
+      throw new BadRequestException("Invalid webhook signature");
+    }
+
+    const event = payload?.event;
+    this.logger.log(`Processing Razorpay webhook event: ${event}`);
+
+    if (event === "payment.captured" || event === "order.paid") {
+      const paymentEntity = payload?.payload?.payment?.entity;
+      const orderEntity = payload?.payload?.order?.entity;
+
+      const notes = paymentEntity?.notes || orderEntity?.notes || {};
+      const auctionId = notes.auctionId;
+      const targetPlan = notes.targetPlan as PlanTier;
+      const paymentId = paymentEntity?.id;
+      const orderId = paymentEntity?.order_id || orderEntity?.id;
+
+      if (auctionId && targetPlan && paymentId) {
+        return this.prisma.prisma.$transaction(async (tx: any) => {
+          const auction = await tx.auction.findUnique({
+            where: { id: auctionId },
+          });
+
+          if (!auction) {
+            this.logger.warn(`Auction not found for webhook: ${auctionId}`);
+            return { status: "ignored_not_found" };
+          }
+
+          // Idempotency: if already upgraded to targetPlan, acknowledge safely
+          if (auction.isPaid && auction.planTier === targetPlan) {
+            return { status: "already_processed" };
+          }
+
+          await tx.auction.update({
+            where: { id: auctionId },
+            data: {
+              isPaid: true,
+              planTier: targetPlan,
+              razorpayOrderId: orderId || auction.razorpayOrderId,
+              razorpayPaymentId: paymentId,
+            },
+          });
+
+          this.logger.log(`Webhook successfully fulfilled upgrade: auctionId=${auctionId}, plan=${targetPlan}`);
+          return { status: "success" };
+        });
+      }
+    }
+
+    return { status: "ignored" };
   }
 }

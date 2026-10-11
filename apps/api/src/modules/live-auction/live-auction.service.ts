@@ -114,14 +114,19 @@ export class LiveAuctionService {
       teamName: p.team?.name || null,
     });
 
-    const mapTeam = (t: any) => ({
-      id: t.id,
-      name: t.name,
-      shortName: t.shortName,
-      logo: t.logo,
-      playersCount: t.playersCount,
-      purseSpent: t.purseSpent,
-    });
+    const mapTeam = (t: any) => {
+      const original = Number(t.originalPurse || auction.budgetPerTeam || 10000000);
+      return {
+        id: t.id,
+        name: t.name,
+        shortName: t.shortName,
+        logo: t.logo,
+        playersCount: t.playersCount,
+        purseSpent: t.purseSpent,
+        originalPurse: original,
+        purse: original - Number(t.purseSpent || 0),
+      };
+    };
 
     const snapshot = {
       auctionId,
@@ -773,9 +778,19 @@ export class LiveAuctionService {
 
       this.prisma.prisma.auction.findUnique({
         where: { id: auctionId },
-        select: { logo: true },
+        select: { logo: true, budgetPerTeam: true },
       }),
     ]);
+
+    const defaultBudget = Number(auction?.budgetPerTeam || 10000000);
+    const mappedTeams = teams.map((t: any) => {
+      const original = Number(t.originalPurse || defaultBudget);
+      return {
+        ...t,
+        originalPurse: original,
+        purse: original - Number(t.purseSpent || 0),
+      };
+    });
 
     const snapshot = {
       auctionId,
@@ -785,7 +800,7 @@ export class LiveAuctionService {
         unsold: players.filter((p: any) => p.status === "UNSOLD"),
         upcoming: players.filter((p: any) => p.status === "UPCOMING"),
       },
-      teams,
+      teams: mappedTeams,
       categories,
     };
 
@@ -1362,4 +1377,79 @@ export class LiveAuctionService {
 
     return insight;
   }
+
+  // ==========================================
+  // READ-ONLY LIVE VIEW (Viewer & Overlay SSR / Polling)
+  // Served primarily from Redis cache; zero DB writes
+  // ==========================================
+  async getReadOnlyLiveView(auctionId: string) {
+    const auction = await this.prisma.prisma.auction.findUnique({
+      where: { id: auctionId },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        logo: true,
+        auctionDate: true,
+        auctionStartTime: true,
+        location: true,
+        sportsType: true,
+        soldEffect: true,
+        overlayTheme: true,
+        overlayLayout: true,
+        budgetPerTeam: true,
+      },
+    });
+
+    if (!auction) {
+      throw new NotFoundException("Auction not found");
+    }
+
+    // 1. Get Snapshot (cached in Redis, fallback to DB builder)
+    let snapshot = await this.redisService.getDashboardSnapshot(auctionId);
+    if (!snapshot) {
+      snapshot = await this.buildDashboardSnapshot(auctionId);
+    }
+
+    // 2. Get Live State (from Redis)
+    const state = await this.getCurrentState(auctionId, true);
+
+    // 3. Merge live purse & original budget from state.teams into snapshot.teams
+    const defaultBudget = Number(auction.budgetPerTeam || 10000000);
+    if (snapshot?.teams) {
+      const stateTeamsMap = new Map((state?.teams || []).map((t: any) => [t.id, t]));
+      snapshot.teams = snapshot.teams.map((t: any) => {
+        const live = stateTeamsMap.get(t.id);
+        const original = Number(t.originalPurse || defaultBudget);
+        const currentPurse = live?.purse !== undefined 
+          ? Number(live.purse) 
+          : (t.purse !== undefined ? Number(t.purse) : (original - Number(t.purseSpent || 0)));
+        return {
+          ...t,
+          originalPurse: original,
+          purse: currentPurse,
+        };
+      });
+    }
+
+    return {
+      auctionId,
+      status: state.status || auction.status,
+      auctionName: (state as any).auctionName || auction.name,
+      logo: (state as any).logo || auction.logo,
+      auctionDate: auction.auctionDate ? auction.auctionDate.toISOString() : "",
+      auctionStartTime: auction.auctionStartTime || "",
+      location: auction.location || "",
+      sportsType: auction.sportsType || "",
+      snapshot,
+      state,
+      settings: {
+        soldEffect: auction.soldEffect || "confetti-center",
+        overlayTheme: auction.overlayTheme || "default",
+        overlayLayout: auction.overlayLayout || "player-card",
+      },
+      serverTime: Date.now(),
+    };
+  }
 }
+

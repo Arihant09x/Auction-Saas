@@ -17,6 +17,7 @@ import { SearchableSelect } from "../../../components/ui/SearchableSelect";
 import { ChronoSelect } from "../../../components/ui/chrono-select";
 import { TimePicker } from "../../../components/ui/time-picker";
 import { format } from "date-fns";
+import { posthog } from "../../../lib/posthog";
 
 const steps = ["Basic Auction Info", "Add Auction's Teams", "Add Auction's Players"];
 
@@ -121,6 +122,10 @@ export default function CreateAuctionWizard() {
             }
 
             setAuctionId(resData.data.id);
+            posthog.capture("auction_created", {
+                auction_id: resData.data.id,
+                sports_type: validation.data.sportsType,
+            });
             toast.success("Hooray! Your auction has been created.");
             setActiveStep(1);
         } catch (error: any) {

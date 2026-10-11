@@ -17,6 +17,7 @@ import admin from 'firebase-admin';
 import helmet from 'helmet';
 import 'dotenv/config';
 import { json, urlencoded } from 'express';
+import https from 'https';
 
 // ── Process-Level Safety Net ─────────────────────────────────────────────────
 // Prevents any unhandled Promise rejection from silently killing the Node process.
@@ -37,7 +38,46 @@ process.on('uncaughtException', (err: Error) => {
   setTimeout(() => process.exit(1), 2000);
 });
 
+async function syncClockSkew(): Promise<void> {
+  return new Promise((resolve) => {
+    const req = https.request('https://oauth2.googleapis.com', { method: 'HEAD', timeout: 4000 }, (res) => {
+      const serverDate = res.headers.date;
+      if (serverDate) {
+        const remoteMs = new Date(serverDate).getTime();
+        const localMs = Date.now();
+        const diffMs = remoteMs - localMs;
+        if (Math.abs(diffMs) > 10000) {
+          console.log(`[TimeSync] Detected ${Math.round(diffMs / 1000)}s clock skew with Google servers. Compensating runtime Date...`);
+          const originalDateNow = Date.now;
+          Date.now = () => originalDateNow() + diffMs;
+
+          const originalDate = global.Date;
+          function SyncedDate(this: any, ...args: any[]) {
+            if (args.length === 0) {
+              return new originalDate(originalDateNow() + diffMs);
+            }
+            return new (originalDate as any)(...args);
+          }
+          SyncedDate.prototype = originalDate.prototype;
+          SyncedDate.now = () => originalDateNow() + diffMs;
+          SyncedDate.UTC = originalDate.UTC;
+          SyncedDate.parse = originalDate.parse;
+          global.Date = SyncedDate as any;
+        }
+      }
+      resolve();
+    });
+    req.on('error', () => resolve());
+    req.on('timeout', () => {
+      req.destroy();
+      resolve();
+    });
+    req.end();
+  });
+}
+
 async function bootstrap() {
+  await syncClockSkew();
   let serviceAccount: any = null;
 
   const cleanEnvVar = (val: string | undefined): string | undefined => {
@@ -93,7 +133,14 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  app.use(json({ limit: '50mb' }));
+  app.use(
+    json({
+      limit: '50mb',
+      verify: (req: any, _res: any, buf: Buffer) => {
+        req.rawBody = buf;
+      },
+    }),
+  );
   app.use(urlencoded({ limit: '50mb', extended: true }));
 
   // 1. Security
@@ -115,7 +162,8 @@ async function bootstrap() {
   app.enableCors({
     origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: 'Content-Type, Authorization, X-Requested-With',
+    allowedHeaders:
+      'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires, Accept, x-razorpay-signature, x-razorpay-event-id',
     credentials: true,
   });
 

@@ -71,8 +71,6 @@ export const metadata: Metadata = {
   },
 };
 
-// import { ReactLenis } from "lenis/react";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -108,19 +106,7 @@ export default function RootLayout({
           `}
         </Script>
         <CanonicalHeader />
-        {/* <ReactLenis
-          root
-          options={{
-            lerp: 0.1,              // slightly snappier than 0.08
-            smoothWheel: true,
-            wheelMultiplier: 1.05,  // respects user's scroll speed
-            touchMultiplier: 1.5,
-            syncTouch: false,       // native momentum on touch devices
-            autoResize: true,       // re-measures page height on layout change
-          }}
-        > */}
         <Providers>{children}</Providers>
-        {/* </ReactLenis> */}
       </body>
     </html>
   );

@@ -48,6 +48,12 @@ export class AuctionPublicController {
     const limitNumber = parseInt(limit || "10", 10);
     return this.auctionService.getUpcomingAuctions(pageNumber, limitNumber);
   }
+
+  /** GET /auction/:id/public-preview — safe, sanitized metadata for Open Graph & social previews */
+  @Get(":id/public-preview")
+  getPublicPreview(@Param("id") id: string) {
+    return this.auctionService.getPublicPreview(id);
+  }
 }
 
 /**
