@@ -58,12 +58,26 @@ export const metadata: Metadata = {
     siteName: "Auction11.live",
     type: "website",
     locale: "en_IN",
+    images: [
+      {
+        url: "https://auction11.live/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Auction11.live — Live player auction platform for tournaments",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Auction11.live – Live Player Auction Platform for Tournaments",
     description:
       "Auction11.live helps sports organizers conduct live player auctions with real-time bidding, team creation, customizable themes, and live updates for cricket, football, kabaddi, and other sports.",
+    images: [
+      {
+        url: "https://auction11.live/og.png",
+        alt: "Auction11.live — Live player auction platform for tournaments",
+      },
+    ],
   },
   robots: {
     index: true,
