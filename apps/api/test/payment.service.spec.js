@@ -401,4 +401,80 @@ test("Payment Hardening Test Suite", async (t) => {
       { message: "Database deadlocked or connection lost" }
     );
   });
+
+  await t.test("12. Whitespace trimming in credentials handles trailing spaces cleanly", async () => {
+    const mockPrisma = createMockPrisma();
+    mockPrisma._setAuction("auc-ws-1", {
+      id: "auc-ws-1",
+      organizerId: "user-1",
+      planTier: "FREE",
+      isPaid: false,
+    });
+
+    // Simulate environment variables with accidental trailing whitespace (as found in production)
+    process.env.RAZORPAY_KEY_ID = "rzp_test_TkbOvMnnEzPIq3   ";
+    process.env.RAZORPAY_KEY_SECRET = "cP5VZVRDLlpTN76D5wUPUScK  ";
+
+    const service = new PaymentService(mockConfigService, mockPrisma);
+    service.razorpay = {
+      orders: {
+        create: async (opts) => ({
+          id: "order_ws_123",
+          amount: opts.amount,
+          currency: opts.currency,
+        }),
+      },
+    };
+
+    const order = await service.createOrder("user-1", "USER", "auc-ws-1", "STANDARD");
+    assert.equal(order.key_id, "rzp_test_TkbOvMnnEzPIq3", "key_id should be trimmed of trailing spaces");
+
+    // Also verify signature calculation with trimmed secret
+    const orderId = "order_ws_123";
+    const paymentId = "pay_ws_456";
+    // Clean secret
+    const validSig = crypto.createHmac("sha256", "cP5VZVRDLlpTN76D5wUPUScK").update(`${orderId}|${paymentId}`).digest("hex");
+
+    const res = await service.verifyPayment("user-1", "USER", {
+      auctionId: "auc-ws-1",
+      razorpayOrderId: orderId,
+      razorpayPaymentId: paymentId,
+      razorpaySignature: validSig,
+      targetPlan: "STANDARD",
+    });
+    assert.equal(res.success, true);
+  });
+
+  await t.test("13. Failed order creation logs safe provider diagnostic details and throws formatted exception", async () => {
+    const mockPrisma = createMockPrisma();
+    mockPrisma._setAuction("auc-err-1", {
+      id: "auc-err-1",
+      organizerId: "user-1",
+      planTier: "FREE",
+      isPaid: false,
+    });
+
+    const service = new PaymentService(mockConfigService, mockPrisma);
+    service.razorpay = {
+      orders: {
+        create: async () => {
+          const err = new Error("Authentication failed");
+          err.statusCode = 401;
+          err.error = { code: "BAD_REQUEST_ERROR", description: "The key_id or key_secret provided is invalid" };
+          throw err;
+        },
+      },
+    };
+
+    await assert.rejects(
+      async () => {
+        await service.createOrder("user-1", "USER", "auc-err-1", "STANDARD");
+      },
+      (err) => {
+        assert.equal(err.name, "BadRequestException");
+        assert.ok(err.message.includes("BAD_REQUEST_ERROR"), `Expected error to contain code, got: ${err.message}`);
+        return true;
+      }
+    );
+  });
 });

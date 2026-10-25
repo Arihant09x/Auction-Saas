@@ -206,7 +206,11 @@ export class LiveAuctionGateway
       );
 
       if (!player) {
-        throw new Error("No player found matching criteria");
+        throw new Error(
+          data.categoryId
+            ? `No available players found in category "${data.categoryId}"`
+            : "No upcoming players remaining in this auction"
+        );
       }
       await this.redisService.setCurrentPlayer(data.auctionId, player);
 
@@ -223,6 +227,7 @@ export class LiveAuctionGateway
           name: player.name,
           role: player.role,
           category: player.category,
+          categoryId: player.categoryId || player.category?.id,
           profilePic: player.profilePic,
           battingStyle: player.battingStyle,
           bowlingStyle: player.bowlingStyle,
@@ -673,15 +678,25 @@ export class LiveAuctionGateway
       }
 
       ("✅ Ownership Verified. Initializing Redis...");
-      const settings = await this.redisService.getSettings(data.auctionId);
+      const [settings, unsoldCount, currentPlayer] = await Promise.all([
+        this.redisService.getSettings(data.auctionId),
+        this.redisService.redis.llen(`auction:${data.auctionId}:unsold`),
+        this.redisService.getCurrentPlayer(data.auctionId),
+      ]);
 
-      if (settings) {
-        // Redis already initialized → just sync state (full state sync)
+      const dbUpcomingCount = await this.prisma.prisma.player.count({
+        where: { auctionId: data.auctionId, status: "UPCOMING" },
+      });
+
+      // If Redis has settings AND (has unsold players in queue OR an active current player OR DB has no upcoming players remaining),
+      // then Redis state is already active and authoritative → do not wipe or re-init!
+      if (settings && (unsoldCount > 0 || currentPlayer || dbUpcomingCount === 0)) {
         const state = await this.liveAuctionService.getCurrentState(data.auctionId, true);
         client.emit("auction_state_update", state);
         return state;
       }
-      ("🆕 First time init → loading from DB");
+
+      console.log(`🆕 Loading auction ${data.auctionId} into Redis (unsoldCount in Redis: ${unsoldCount}, upcoming in DB: ${dbUpcomingCount})`);
       const state = await this.liveAuctionService.initAuction(data.auctionId);
       await this.pushSnapshot(data.auctionId);
       // Send the current state back to the Organizer

@@ -178,9 +178,11 @@ export class LiveAuctionRedisService {
       pipeline.expire(`${baseKey}:unsold`, AUCTION_TTL_SECONDS);
     }
 
-    // E. Set Auction Status
+    // E. Set Auction Status & Initialized Flag
     pipeline.set(`${baseKey}:status`, "WAITING");
     pipeline.expire(`${baseKey}:status`, AUCTION_TTL_SECONDS);
+    pipeline.set(`${baseKey}:initialized`, "1");
+    pipeline.expire(`${baseKey}:initialized`, AUCTION_TTL_SECONDS);
 
     await pipeline.exec();
   }
@@ -267,12 +269,8 @@ export class LiveAuctionRedisService {
       // SEQUENCE (Default): Take the first one in the list
       selectedPlayer = players[0];
     }
-    //  ("🔎 First Redis Player Sample:", players[0]);
-    await this.redis.lrem(
-      `auction:${auctionId}:unsold`,
-      1,
-      JSON.stringify(selectedPlayer),
-    );
+    // Remove selected player by ID from Redis unsold queue
+    await this.removePlayerFromUnsold(auctionId, selectedPlayer.id);
 
     return selectedPlayer;
   }

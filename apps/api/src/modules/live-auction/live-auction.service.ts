@@ -193,12 +193,82 @@ export class LiveAuctionService {
     playerNo?: number,
   ) {
     // 1. Get from Redis
-    const player = await this.redisService.getNextPlayer(
+    let player = await this.redisService.getNextPlayer(
       auctionId,
       mode,
       categoryId,
       playerNo,
     );
+
+    // 1b. Self-Healing Reconciliation: If Redis returned null, check if Redis was initialized
+    if (!player) {
+      const rawCount = await this.redisService.redis.llen(`auction:${auctionId}:unsold`);
+      const isInitialized = await this.redisService.redis.get(`auction:${auctionId}:initialized`);
+      console.log(`[selectPlayer] Redis unsold count: ${rawCount}, isInitialized: ${isInitialized}, categoryFilter: ${categoryId || "ALL"}`);
+
+      // If Redis was NEVER initialized (or restarted) and queue is empty, reconcile from DB
+      if (!isInitialized && rawCount === 0) {
+        const currentPlayer = await this.redisService.getCurrentPlayer(auctionId);
+        const unsoldPool = await this.redisService.getUnsoldPool(auctionId);
+        const excludeIds = new Set([
+          ...(currentPlayer?.id ? [currentPlayer.id] : []),
+          ...(unsoldPool || []).map((p: any) => p.id),
+        ]);
+
+        const dbUpcomingPlayers = await this.prisma.prisma.player.findMany({
+          where: {
+            auctionId,
+            status: "UPCOMING",
+          },
+          orderBy: { name: "asc" },
+          include: { category: true },
+        });
+
+        const eligiblePlayers = dbUpcomingPlayers.filter((p: any) => !excludeIds.has(p.id));
+
+        if (eligiblePlayers.length > 0) {
+          console.log(`[selectPlayer] Reconciling ${eligiblePlayers.length} UPCOMING players from DB to Redis for auction: ${auctionId}`);
+          const redisPlayers = eligiblePlayers.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            profilePic: p.profilePic,
+            role: p.role,
+            age: p.age,
+            battingStyle: p.battingStyle,
+            bowlingStyle: p.bowlingStyle,
+            basePrice: Number(p.basePrice || 0),
+            status: "UPCOMING",
+            categoryId: p.categoryId,
+            category: p.category
+              ? {
+                id: p.category.id || p.categoryId,
+                name: p.category.name,
+                color: p.category.color,
+              }
+              : {
+                id: "UNCATEGORIZED",
+                name: "UNCATEGORIZED",
+                color: "#999",
+              },
+          }));
+
+          await this.redisService.addPlayersToQueue(auctionId, redisPlayers);
+          await this.redisService.redis.set(`auction:${auctionId}:initialized`, "1");
+
+          // Retry player selection after reconciliation
+          player = await this.redisService.getNextPlayer(
+            auctionId,
+            mode,
+            categoryId,
+            playerNo,
+          );
+        } else {
+          // No upcoming players in DB; mark initialized so we don't query repeatedly
+          await this.redisService.redis.set(`auction:${auctionId}:initialized`, "1");
+        }
+      }
+    }
+
     if (!player) return null;
 
     // 2. Set as Current Player in Redis
@@ -217,6 +287,7 @@ export class LiveAuctionService {
     return {
       ...player,
       category: player.category,
+      categoryId: player.categoryId || player.category?.id,
     };
   }
 
@@ -744,6 +815,10 @@ export class LiveAuctionService {
         select: {
           id: true,
           auctionId: true,
+          categoryId: true,
+          category: {
+            select: { id: true, name: true, color: true },
+          },
           name: true,
           age: true,
           profilePic: true,
@@ -1150,6 +1225,8 @@ export class LiveAuctionService {
         snap.players.sold.push({
           id: p.id,
           auctionId: auctionId,
+          categoryId: p.categoryId || p.category?.id,
+          category: p.category,
           name: p.name,
           age: p.age,
           profilePic: p.profilePic,
@@ -1209,6 +1286,8 @@ export class LiveAuctionService {
         snap.players.upcoming.push({
           id: p.id,
           auctionId: auctionId,
+          categoryId: p.categoryId || p.category?.id,
+          category: p.category,
           name: p.name,
           age: p.age,
           profilePic: p.profilePic,

@@ -1,28 +1,42 @@
+import { Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 import { captureError } from '../common/monitoring/sentry';
-import "dotenv/config"
+import 'dotenv/config';
+
 export const REDIS_CLIENT = 'REDIS_CLIENT';
+
+const logger = new Logger('RedisProvider');
 
 export const RedisProvider = {
   provide: REDIS_CLIENT,
   useFactory: () => {
+    const host = process.env.REDIS_HOST || '127.0.0.1';
+    const port = Number(process.env.REDIS_PORT) || 6379;
+    const db = Number(process.env.REDIS_DB) || 0;
+    const hasPassword = Boolean(process.env.REDIS_PASSWORD);
+
+    logger.log(
+      `🔌 Initializing Redis client for ${host}:${port} (DB: ${db}, Auth: ${hasPassword ? 'Enabled' : 'None'})`,
+    );
+
     const redis = new Redis({
-      host: process.env.REDIS_HOST || '127.0.0.1',
-      port: Number(process.env.REDIS_PORT) || 6379,
-      db: Number(process.env.REDIS_DB) || 0,
+      host,
+      port,
+      db,
       maxRetriesPerRequest: null,
-      ...(process.env.REDIS_PASSWORD && {
-        password: process.env.REDIS_PASSWORD
+      ...(hasPassword && {
+        password: process.env.REDIS_PASSWORD,
       }),
       // Resilience settings
       retryStrategy: (times) => {
         const delay = Math.min(times * 200, 5000); // cap at 5s
-        console.warn(`⚠️  Redis retry #${times} in ${delay}ms...`);
+        logger.warn(`⚠️  Redis connection retry #${times} in ${delay}ms...`);
         return delay;
       },
       reconnectOnError: (err) => {
         const targetErrors = ['READONLY', 'ECONNRESET'];
         if (targetErrors.some((e) => err.message.includes(e))) {
+          logger.warn(`🔄 Redis auto-reconnecting on error: ${err.message}`);
           return true; // auto-reconnect on these
         }
         return false;
@@ -31,48 +45,62 @@ export const RedisProvider = {
       lazyConnect: false,
     });
 
-    // Redis event handlers
+    // ── Keep-Alive: prevents idle socket termination by NAT/firewalls ─────────
+    const keepAliveTimer = setInterval(async () => {
+      try {
+        await redis.ping();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.warn(`⚠️  Redis keep-alive ping failed: ${msg}`);
+      }
+    }, 120000); // 2 minutes
+
+    // Don't let the keep-alive timer prevent Node from exiting
+    keepAliveTimer.unref();
+
+    // ── Redis Event Handlers ────────────────────────────────────────────────
     redis.on('connect', () => {
-      console.log(
-        `[Redis] 🟢 TCP connection established to ${redis.options.host}:${redis.options.port}`,
-      );
+      logger.log(`🟢 TCP connection established to ${host}:${port}`);
     });
 
     redis.on('ready', () => {
-      console.log('[Redis] 🟢 Client ready');
+      logger.log(`🟢 Redis client ready and operational on db ${db}`);
 
       redis
         .ping()
         .then((response) => {
-          console.log(`[Redis] ✅ Health check: ${response}`);
+          logger.log(`✅ Health check PING: ${response}`);
         })
         .catch((err: Error) => {
-          console.error('[Redis] 🔴 PING failed:', err.message);
+          logger.error(`🔴 PING failed: ${err.message}`, err.stack);
           captureError(err, { layer: 'redis', operation: 'ping' });
         });
     });
 
     redis.on('error', (err: Error) => {
-      console.error('[Redis] 🔴 Connection error:', err.message);
+      logger.error(`🔴 Redis client error: ${err.message}`, err.stack);
       captureError(err, {
         layer: 'redis',
-        host: redis.options.host,
-        port: redis.options.port,
+        host,
+        port,
       });
     });
 
     redis.on('close', () => {
-      console.warn('[Redis] ⚠️ Connection closed');
+      logger.warn('⚠️  Redis connection closed');
     });
 
     redis.on('reconnecting', (delay: number) => {
-      console.warn(`[Redis] 🔄 Reconnecting in ${delay}ms`);
+      logger.warn(`🔄 Redis reconnecting in ${delay}ms...`);
     });
 
     redis.on('end', () => {
-      console.error('[Redis] 🔴 Connection ended permanently');
+      clearInterval(keepAliveTimer);
+      logger.error('💀 Redis connection ended permanently');
       captureError(new Error('Redis connection ended permanently'), {
         layer: 'redis',
+        host,
+        port,
       });
     });
 

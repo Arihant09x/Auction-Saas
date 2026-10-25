@@ -19,8 +19,15 @@ export class PaymentService {
     private configService: ConfigService,
     private prisma: PrismaService
   ) {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    const keyId = (
+      process.env.RAZORPAY_KEY_ID ||
+      this.configService.get<string>("razorpay.key_id")
+    )?.trim();
+    const keySecret = (
+      process.env.RAZORPAY_KEY_SECRET ||
+      this.configService.get<string>("razorpay.key_secret")
+    )?.trim();
+
     if (!keyId || !keySecret) {
       this.logger.warn("Razorpay credentials are missing from environment");
     }
@@ -30,6 +37,7 @@ export class PaymentService {
         key_id: keyId,
         key_secret: keySecret,
       });
+      this.logger.log(`Razorpay SDK initialized (Key ID prefix: ${keyId.substring(0, 8)}...)`);
     }
   }
 
@@ -83,6 +91,11 @@ export class PaymentService {
       notes: { auctionId, userId, targetPlan, type: "UPGRADE" },
     };
 
+    const keyId = (
+      process.env.RAZORPAY_KEY_ID ||
+      this.configService.get<string>("razorpay.key_id")
+    )?.trim();
+
     try {
       const order = await this.razorpay.orders.create(options);
       this.logger.log(`Razorpay order created: orderId=${order.id} for auctionId=${auctionId}`);
@@ -90,12 +103,17 @@ export class PaymentService {
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
-        key_id: process.env.RAZORPAY_KEY_ID,
+        key_id: keyId,
         plan: targetPlan,
       };
     } catch (error: any) {
-      this.logger.error(`Razorpay order creation failed for auctionId=${auctionId}: ${error?.message}`);
-      throw new BadRequestException("Razorpay Order Creation Failed");
+      const statusCode = error?.statusCode || error?.status || "UNKNOWN";
+      const errorCode = error?.error?.code || error?.code || "ORDER_CREATION_FAILED";
+      const errorDescription = error?.error?.description || error?.message || "Unknown error";
+      this.logger.error(
+        `Razorpay order creation failed for auctionId=${auctionId}: HTTP ${statusCode}, Code: ${errorCode}, Description: ${errorDescription}`
+      );
+      throw new BadRequestException(`Razorpay Order Creation Failed: ${errorCode}`);
     }
   }
 
@@ -123,12 +141,14 @@ export class PaymentService {
       userRole
     );
 
-    const secret =
+    const secret = (
       process.env.RAZORPAY_KEY_SECRET ||
-      this.configService.get("razorpay.key_secret") ||
-      "";
+      this.configService.get<string>("razorpay.key_secret") ||
+      ""
+    ).trim();
 
     if (!secret) {
+      this.logger.error("Payment configuration secret missing for signature verification");
       throw new BadRequestException("Payment configuration secret missing");
     }
 
@@ -231,10 +251,12 @@ export class PaymentService {
 
   // 3. Webhook Processing with Signature Verification & Idempotency
   async handleWebhook(signature: string, rawBody: string | Buffer, payload: any) {
-    const webhookSecret =
+    const webhookSecret = (
       process.env.RAZORPAY_WEBHOOK_SECRET ||
       process.env.RAZORPAY_KEY_SECRET ||
-      "";
+      this.configService.get<string>("razorpay.key_secret") ||
+      ""
+    ).trim();
 
     if (!webhookSecret) {
       this.logger.warn("Webhook secret not configured, skipping webhook processing");
