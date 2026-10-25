@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import { cleanEnvString } from '../sanitize-env';
+
 export default () => ({
   port: process.env.PORT || 3000,
   database: {
@@ -10,15 +12,15 @@ export default () => ({
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
   },
   razorpay: {
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
+    key_id: cleanEnvString(process.env.RAZORPAY_KEY_ID),
+    key_secret: cleanEnvString(process.env.RAZORPAY_KEY_SECRET),
   },
   // ── Observability (opt-in; no-op if blank) ────────────────────────────
   sentry: {
-    dsn: process.env.SENTRY_DSN || '',
+    dsn: cleanEnvString(process.env.SENTRY_DSN || ''),
   },
   newrelic: {
-    licenseKey: process.env.NEW_RELIC_LICENSE_KEY || '',
-    appName: process.env.NEW_RELIC_APP_NAME || 'auction-saas-api',
+    licenseKey: cleanEnvString(process.env.NEW_RELIC_LICENSE_KEY || ''),
+    appName: cleanEnvString(process.env.NEW_RELIC_APP_NAME || 'auction-saas-api'),
   },
 });

@@ -10,6 +10,18 @@ import { validateAuctionOwnership } from "../../common/helpers/ownership.helper"
 
 config();
 
+export function cleanCredential(val?: string | null): string {
+  if (!val) return "";
+  let clean = String(val).trim();
+  while (
+    (clean.startsWith('"') && clean.endsWith('"')) ||
+    (clean.startsWith("'") && clean.endsWith("'"))
+  ) {
+    clean = clean.slice(1, -1).trim();
+  }
+  return clean;
+}
+
 @Injectable()
 export class PaymentService {
   private razorpay: any;
@@ -19,14 +31,14 @@ export class PaymentService {
     private configService: ConfigService,
     private prisma: PrismaService
   ) {
-    const keyId = (
+    const keyId = cleanCredential(
       process.env.RAZORPAY_KEY_ID ||
       this.configService.get<string>("razorpay.key_id")
-    )?.trim();
-    const keySecret = (
+    );
+    const keySecret = cleanCredential(
       process.env.RAZORPAY_KEY_SECRET ||
       this.configService.get<string>("razorpay.key_secret")
-    )?.trim();
+    );
 
     if (!keyId || !keySecret) {
       this.logger.warn("Razorpay credentials are missing from environment");
@@ -37,7 +49,9 @@ export class PaymentService {
         key_id: keyId,
         key_secret: keySecret,
       });
-      this.logger.log(`Razorpay SDK initialized (Key ID prefix: ${keyId.substring(0, 8)}...)`);
+      this.logger.log(
+        `Razorpay SDK initialized (Key ID prefix: ${keyId.substring(0, 8)}..., length: ${keyId.length}, Secret length: ${keySecret.length})`,
+      );
     }
   }
 
@@ -91,10 +105,10 @@ export class PaymentService {
       notes: { auctionId, userId, targetPlan, type: "UPGRADE" },
     };
 
-    const keyId = (
+    const keyId = cleanCredential(
       process.env.RAZORPAY_KEY_ID ||
       this.configService.get<string>("razorpay.key_id")
-    )?.trim();
+    );
 
     try {
       const order = await this.razorpay.orders.create(options);
@@ -141,11 +155,10 @@ export class PaymentService {
       userRole
     );
 
-    const secret = (
+    const secret = cleanCredential(
       process.env.RAZORPAY_KEY_SECRET ||
-      this.configService.get<string>("razorpay.key_secret") ||
-      ""
-    ).trim();
+      this.configService.get<string>("razorpay.key_secret")
+    );
 
     if (!secret) {
       this.logger.error("Payment configuration secret missing for signature verification");
@@ -251,12 +264,12 @@ export class PaymentService {
 
   // 3. Webhook Processing with Signature Verification & Idempotency
   async handleWebhook(signature: string, rawBody: string | Buffer, payload: any) {
-    const webhookSecret = (
+    const webhookSecret = cleanCredential(
       process.env.RAZORPAY_WEBHOOK_SECRET ||
       process.env.RAZORPAY_KEY_SECRET ||
       this.configService.get<string>("razorpay.key_secret") ||
       ""
-    ).trim();
+    );
 
     if (!webhookSecret) {
       this.logger.warn("Webhook secret not configured, skipping webhook processing");

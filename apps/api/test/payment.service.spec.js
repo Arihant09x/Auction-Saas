@@ -477,4 +477,41 @@ test("Payment Hardening Test Suite", async (t) => {
       }
     );
   });
+
+  await t.test("14. cleanCredential strips Docker-injected quotes and handles surrounding quotes cleanly", async () => {
+    const { cleanCredential } = require("../dist/modules/payment/payment.service.js");
+    assert.equal(cleanCredential('"rzp_test_TkbOvMnnEzPIq3"'), "rzp_test_TkbOvMnnEzPIq3");
+    assert.equal(cleanCredential("'cP5VZVRDLlpTN76D5wUPUScK'"), "cP5VZVRDLlpTN76D5wUPUScK");
+    assert.equal(cleanCredential('  "rzp_test_123"  '), "rzp_test_123");
+    assert.equal(cleanCredential('""double_quoted""'), "double_quoted");
+    assert.equal(cleanCredential(undefined), "");
+    assert.equal(cleanCredential(null), "");
+
+    const mockPrisma = createMockPrisma();
+    mockPrisma._setAuction("auc-quote-1", {
+      id: "auc-quote-1",
+      organizerId: "user-1",
+      planTier: "FREE",
+      isPaid: false,
+    });
+
+    // Simulate Docker --env-file preserving quotes literally
+    process.env.RAZORPAY_KEY_ID = '"rzp_test_TkbOvMnnEzPIq3"';
+    process.env.RAZORPAY_KEY_SECRET = '"cP5VZVRDLlpTN76D5wUPUScK"';
+
+    const service = new PaymentService(mockConfigService, mockPrisma);
+    service.razorpay = {
+      orders: {
+        create: async (opts) => ({
+          id: "order_quote_123",
+          amount: opts.amount,
+          currency: opts.currency,
+        }),
+      },
+    };
+
+    const order = await service.createOrder("user-1", "USER", "auc-quote-1", "STANDARD");
+    assert.equal(order.key_id, "rzp_test_TkbOvMnnEzPIq3", "key_id must not contain literal quotes");
+  });
 });
+

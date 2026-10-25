@@ -3,6 +3,7 @@
  * The initSentry() call is a no-op when SENTRY_DSN is not set.
  */
 
+import './sanitize-env';
 import 'newrelic';
 
 import { initSentry, captureError } from './common/monitoring/sentry';
