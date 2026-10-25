@@ -31,30 +31,46 @@ export const RedisProvider = {
       lazyConnect: false,
     });
 
-    // ── Event handlers ──────────────────────────────────────────────────
+    // Redis event handlers
     redis.on('connect', () => {
-      (`🔴 Redis connected to ${redis.options.host}:${redis.options.port} [db=${redis.options.db}]`);
+      console.log(
+        `[Redis] 🟢 TCP connection established to ${redis.options.host}:${redis.options.port}`,
+      );
     });
 
     redis.on('ready', () => {
-      ('✅ Redis ready');
+      console.log('[Redis] 🟢 Client ready');
+
+      redis
+        .ping()
+        .then((response) => {
+          console.log(`[Redis] ✅ Health check: ${response}`);
+        })
+        .catch((err: Error) => {
+          console.error('[Redis] 🔴 PING failed:', err.message);
+          captureError(err, { layer: 'redis', operation: 'ping' });
+        });
     });
 
     redis.on('error', (err: Error) => {
-      console.error('❌ Redis error:', err.message);
-      captureError(err, { layer: 'redis', host: redis.options.host });
+      console.error('[Redis] 🔴 Connection error:', err.message);
+      captureError(err, {
+        layer: 'redis',
+        host: redis.options.host,
+        port: redis.options.port,
+      });
     });
 
     redis.on('close', () => {
-      console.warn('⚠️  Redis connection closed');
+      console.warn('[Redis] ⚠️ Connection closed');
     });
 
     redis.on('reconnecting', (delay: number) => {
-      console.warn(`🔄 Redis reconnecting in ${delay}ms...`);
+      console.warn(`[Redis] 🔄 Reconnecting in ${delay}ms`);
     });
 
     redis.on('end', () => {
-      console.error('🔴 Redis connection ended permanently');
+      console.error('[Redis] 🔴 Connection ended permanently');
       captureError(new Error('Redis connection ended permanently'), {
         layer: 'redis',
       });
